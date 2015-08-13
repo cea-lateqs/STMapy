@@ -140,9 +140,3 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #Store the parameters in a dictonnary to use them later
         self.m_params={"xPx":xPx,"yPx":yPx,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":abs(vEnd-vStart)/zPt}
         return True
-
-if __name__ == "__main__":
-    app=QApplication(sys.argv)
-    mw=CitsWidget(None)
-    mw.show()
-    app.exec_()
