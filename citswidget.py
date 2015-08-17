@@ -10,7 +10,6 @@ from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import pylab
-import sys
 
 class CitsWidget(QDockWidget, Ui_CitsWidget):
     def __init__(self,parent):
@@ -18,7 +17,6 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.setAutoFillBackground(True)
-        self.connect()
         self.m_data=np.ndarray([])
         self.m_params={}
         #Set up figures
@@ -29,7 +27,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.axes_spec=self.fig_spec.add_subplot(1,1,1)
         self.axes_spec.hold(True)
         self.fig_spec.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
-        self.loadCITS()
+        #Boolean that is True if a map is laoded
+        self.dataLoaded=False
+        self.connect()
         
     def getMapData(self,v,bwd=False):
         """ Returns an array constructed from the data loaded that can be used to display a map at fixed voltage """
@@ -51,8 +51,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def loadCITS(self):
         #filename=QFileDialog.getOpenFileName(self,"Choose a CITS Ascii file","H:\\Experiments","Ascii file (*.asc);;Text file (*.txt)")
-        dataLoaded=self.readCITS("H:\\testCITS.asc")
-        if(dataLoaded): self.updateWidgets()
+        self.dataLoaded=self.readCITS("H:\\testCITS.asc")
+        if(self.dataLoaded): self.updateWidgets()
         
     def updateVoltageBox(self,Vmin,Vmax,zPt):
         #self.m_voltageBox.setMinimum(Vmin)
@@ -71,16 +71,26 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_bwdButton.toggled.connect(self.updateWidgets)
         self.m_voltageBox.valueChanged.connect(self.drawXYMap)
         self.m_mapWidget.mpl_connect('button_press_event',self.drawSpectrum)
+        self.m_clearSpec.clicked.connect(self.clearSpectrum)
         
     def drawSpectrum(self,event):
-        if(event.xdata!=None and event.ydata!=None):
+        if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
             PixelX=int(event.xdata)
             PixelY=int(event.ydata)
+            print PixelX,PixelY
             bwd=self.m_bwdButton.isChecked()
             fb=["_Fwd","_Bwd"]
             self.axes_spec.plot(self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
             self.axes_spec.legend(loc=0)
             self.m_specWidget.draw()
+            
+    def clearSpectrum(self):
+        self.axes_spec.clear()
+        self.m_specWidget.draw()
+        
+    def clearMap(self):
+        self.m_mapWidget.figure.clear()
+        self.dataLoaded=False
         
     def drawXYMap(self,voltage):
         #Some operations
@@ -117,6 +127,10 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 xPx=int(line.split()[-1])
             if("y-pixels" in line):
                 yPx=int(line.split()[-1])
+            if("x-length" in line):
+                xL=int(line.split()[-1])
+            if("y-length" in line):
+                yL=int(line.split()[-1])
             if("z-points" in line):
                 zPt=int(line.split()[-1])
             if("Device_1_Start" in line):
@@ -138,5 +152,5 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 self.m_data[1][y][x]=(data_list[zPt/2:zPt])[::-1]
         f.close()
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":abs(vEnd-vStart)/zPt}
+        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":abs(vEnd-vStart)/zPt}
         return True

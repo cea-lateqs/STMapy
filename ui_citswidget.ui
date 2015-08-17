@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>535</height>
+    <height>540</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>DockWidget</string>
+   <string>CITS Map</string>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
@@ -54,7 +54,14 @@
      </layout>
     </item>
     <item row="3" column="3">
-     <widget class="MatplotlibWidget" name="m_mapWidget"/>
+     <widget class="MatplotlibWidget" name="m_mapWidget">
+      <property name="minimumSize">
+       <size>
+        <width>440</width>
+        <height>440</height>
+       </size>
+      </property>
+     </widget>
     </item>
     <item row="1" column="3">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -76,6 +83,13 @@
        </widget>
       </item>
      </layout>
+    </item>
+    <item row="1" column="4">
+     <widget class="QPushButton" name="m_clearSpec">
+      <property name="text">
+       <string>Clear spectra</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

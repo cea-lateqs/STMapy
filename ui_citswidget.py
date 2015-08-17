@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Thu Aug 13 09:50:39 2015
+# Created: Mon Aug 17 09:07:08 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_CitsWidget(object):
     def setupUi(self, CitsWidget):
         CitsWidget.setObjectName(_fromUtf8("CitsWidget"))
-        CitsWidget.resize(698, 535)
+        CitsWidget.resize(698, 540)
         self.dockWidgetContents = QtGui.QWidget()
         self.dockWidgetContents.setObjectName(_fromUtf8("dockWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.dockWidgetContents)
@@ -53,6 +53,7 @@ class Ui_CitsWidget(object):
         self.horizontalLayout.addWidget(self.m_voltageBox)
         self.gridLayout_2.addLayout(self.horizontalLayout, 0, 3, 1, 1)
         self.m_mapWidget = MatplotlibWidget(self.dockWidgetContents)
+        self.m_mapWidget.setMinimumSize(QtCore.QSize(440, 440))
         self.m_mapWidget.setObjectName(_fromUtf8("m_mapWidget"))
         self.gridLayout_2.addWidget(self.m_mapWidget, 3, 3, 1, 1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
@@ -65,16 +66,20 @@ class Ui_CitsWidget(object):
         self.m_bwdButton.setObjectName(_fromUtf8("m_bwdButton"))
         self.horizontalLayout_2.addWidget(self.m_bwdButton)
         self.gridLayout_2.addLayout(self.horizontalLayout_2, 1, 3, 1, 1)
+        self.m_clearSpec = QtGui.QPushButton(self.dockWidgetContents)
+        self.m_clearSpec.setObjectName(_fromUtf8("m_clearSpec"))
+        self.gridLayout_2.addWidget(self.m_clearSpec, 1, 4, 1, 1)
         CitsWidget.setWidget(self.dockWidgetContents)
 
         self.retranslateUi(CitsWidget)
         QtCore.QMetaObject.connectSlotsByName(CitsWidget)
 
     def retranslateUi(self, CitsWidget):
-        CitsWidget.setWindowTitle(_translate("CitsWidget", "DockWidget", None))
+        CitsWidget.setWindowTitle(_translate("CitsWidget", "CITS Map", None))
         self.m_openButton.setText(_translate("CitsWidget", "Open CITS", None))
         self.label.setText(_translate("CitsWidget", "Voltage", None))
         self.m_fwdButton.setText(_translate("CitsWidget", "Forward", None))
         self.m_bwdButton.setText(_translate("CitsWidget", "Backward", None))
+        self.m_clearSpec.setText(_translate("CitsWidget", "Clear spectra", None))
 
 from matplotlibwidget import MatplotlibWidget
