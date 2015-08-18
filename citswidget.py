@@ -10,6 +10,7 @@ from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import pylab
+import matplotlib.animation as animation
 
 class CitsWidget(QDockWidget, Ui_CitsWidget):
     def __init__(self,parent):
@@ -21,7 +22,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_params={}
         #Set up figures
         self.m_fwdButton.setChecked(True)
+        self.toolbar_map = NavigationToolbar(self.m_mapWidget,self)
         self.toolbar_spec = NavigationToolbar(self.m_specWidget,self)
+        self.map_layout.insertWidget(0,self.toolbar_map)
         self.spec_layout.insertWidget(0,self.toolbar_spec)
         self.fig_spec=self.m_specWidget.figure
         self.axes_spec=self.fig_spec.add_subplot(1,1,1)
@@ -49,9 +52,13 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                     elif(val>valMax): valMax=val
         return mapData,valMin,valMax
         
+    def launchAni(self):
+        line_ani = animation.FuncAnimation(self.m_mapWidget.figure, self.drawXYMap, 25, fargs=(range(0,50)),interval=500, blit=True)
+        
     def loadCITS(self):
-        #filename=QFileDialog.getOpenFileName(self,"Choose a CITS Ascii file","H:\\Experiments","Ascii file (*.asc);;Text file (*.txt)")
-        self.dataLoaded=self.readCITS("H:\\testCITS.asc")
+        filename=QFileDialog.getOpenFileName(self,"Choose a CITS Ascii file","H:\\Experiments\\STM","Ascii file (*.asc);;Text file (*.txt)")
+        #filename="H:\\testCITS.asc"
+        self.dataLoaded=self.readCITS(filename)
         if(self.dataLoaded): self.updateWidgets()
         
     def updateVoltageBox(self,Vmin,Vmax,zPt):
@@ -59,7 +66,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #self.m_voltageBox.setMaximum(Vmax)
         #self.m_voltageBox.setSingleStep(dV)
         self.m_voltageBox.setMinimum(0)
-        self.m_voltageBox.setMaximum(zPt/2)
+        self.m_voltageBox.setMaximum(zPt/2-1)
         self.m_voltageBox.setSingleStep(1)
         
     def updateWidgets(self):
@@ -72,17 +79,53 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_voltageBox.valueChanged.connect(self.drawXYMap)
         self.m_mapWidget.mpl_connect('button_press_event',self.drawSpectrum)
         self.m_clearSpec.clicked.connect(self.clearSpectrum)
+        self.m_scaleVoltage.toggled.connect(self.clearSpectrum)
+        self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
+        #self.m_testButton.clicked.connect(self.launchAni)
         
     def drawSpectrum(self,event):
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
             PixelX=int(event.xdata)
             PixelY=int(event.ydata)
-            print PixelX,PixelY
             bwd=self.m_bwdButton.isChecked()
             fb=["_Fwd","_Bwd"]
-            self.axes_spec.plot(self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
+            if(self.m_scaleVoltage.isChecked()):
+                vStart=self.m_params["vStart"]
+                vEnd=self.m_params["vEnd"]
+                dV=self.m_params["dV"]
+                self.axes_spec.plot(np.arange(vStart,vEnd,dV),self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
+            else:
+                self.axes_spec.plot(self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
             self.axes_spec.legend(loc=0)
             self.m_specWidget.draw()
+            
+    def launchAvgSpectrum(self):
+        if(self.dataLoaded):
+            xPx=self.m_params["xPx"]
+            yPx=self.m_params["yPx"]
+            self.averageSpectrum(0,0,xPx,yPx)
+            
+    def averageSpectrum(self,Xs,Ys,Xe,Ye):
+        if(self.dataLoaded):
+            zPt=self.m_params["zPt"]
+            bwd=self.m_bwdButton.isChecked()
+            fb=["_Fwd","_Bwd"]
+            avg_data=np.zeros(shape=(zPt/2))
+            N=(Ye-Ys)*(Xe-Xs) #Number of spectra averaged
+            for y in range(Ys,Ye):
+                for x in range(Xs,Xe):
+                    for v in range(0,zPt/2):
+                        avg_data[v]+=(self.m_data[bwd][y][x][v]/N)
+            if(self.m_scaleVoltage.isChecked()):
+                vStart=self.m_params["vStart"]
+                vEnd=self.m_params["vEnd"]
+                dV=self.m_params["dV"]
+                self.axes_spec.plot(np.arange(vStart,vEnd,dV),avg_data,label="Avg"+fb[bwd])
+            else:
+                self.axes_spec.plot(avg_data,label="Avg"+fb[bwd])
+            self.axes_spec.legend(loc=0)
+            self.m_specWidget.draw()
+        
             
     def clearSpectrum(self):
         self.axes_spec.clear()
@@ -100,13 +143,16 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         fig_map.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         xPx=self.m_params["xPx"]
         yPx=self.m_params["yPx"]
+        zPt=self.m_params["zPt"]
         #Get the data of the map and draw it
         mapData,mapMin,mapMax=self.getMapData(voltage)
         XYmap=ax_map.pcolormesh(mapData)
         #XYmap=ax_map.imshow(mapData,origin="lower")
         #Set axis limits and title
-        ax_map.axis([0,xPx,0,yPx])
-        ax_map.set_title("CITS Map\n"+str(xPx)+"x"+str(yPx)+" pixels - V="+str(voltage*self.m_params["dV"]))
+        ax_map.axis([0,xPx,yPx,0])
+        ax_map.set_title("CITS Map\n"
+        +str(xPx)+"x"+str(yPx)+" pixels - "+str(zPt/2)+" points\n"
+        +"V="+str(self.m_params["vStart"]+voltage*self.m_params["dV"]))
         #Colorbar stuff
         cbar = fig_map.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
         cbar.ax.yaxis.set_ticks_position('both')
@@ -128,9 +174,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             if("y-pixels" in line):
                 yPx=int(line.split()[-1])
             if("x-length" in line):
-                xL=int(line.split()[-1])
+                xL=float(line.split()[-1])
             if("y-length" in line):
-                yL=int(line.split()[-1])
+                yL=float(line.split()[-1])
             if("z-points" in line):
                 zPt=int(line.split()[-1])
             if("Device_1_Start" in line):
@@ -140,7 +186,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             if("Start of Data" in line):
                 break
         # Matlab convention : columns first then rows hence [y][x]
-        self.m_data=np.ndarray(shape=(2,yPx,xPx,zPt/2))
+        self.m_data=np.zeros(shape=(2,yPx,xPx,zPt/2))
         for y in range(0,yPx):
             for x in range(0,xPx):
                 #The line read is an array containing the dI/dV values indexed by the voltage index
@@ -148,9 +194,10 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 #0 means Backwards=False so forward data, 1 means Backwards=True so backward data
                 data_list=f.readline().strip().split()
                 self.m_data[0][y][x]=data_list[0:zPt/2]
-                #I need to reverse the backward data as it was from Vmax to Vmin in the file and I want it to be as the fwd data from Vmin to Vmax
-                self.m_data[1][y][x]=(data_list[zPt/2:zPt])[::-1]
+                #No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
+                #self.m_data[1][y][x]=(data_list[zPt/2:zPt])[::-1]
+                self.m_data[1][y][x]=(data_list[zPt/2:zPt])
         f.close()
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":abs(vEnd-vStart)/zPt}
+        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":2*abs(vEnd-vStart)/zPt}
         return True

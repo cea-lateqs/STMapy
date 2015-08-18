@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>540</height>
+    <height>571</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="3" column="4">
+    <item row="4" column="4">
      <layout class="QVBoxLayout" name="spec_layout">
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
@@ -53,16 +53,6 @@
       </item>
      </layout>
     </item>
-    <item row="3" column="3">
-     <widget class="MatplotlibWidget" name="m_mapWidget">
-      <property name="minimumSize">
-       <size>
-        <width>440</width>
-        <height>440</height>
-       </size>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="3">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="sizeConstraint">
@@ -88,6 +78,50 @@
      <widget class="QPushButton" name="m_clearSpec">
       <property name="text">
        <string>Clear spectra</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="4">
+     <widget class="QPushButton" name="m_avgSpec">
+      <property name="text">
+       <string>Average on map</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="3">
+     <widget class="QPushButton" name="m_testButton">
+      <property name="text">
+       <string>Test</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="3">
+     <layout class="QVBoxLayout" name="map_layout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="MatplotlibWidget" name="m_mapWidget">
+        <property name="minimumSize">
+         <size>
+          <width>440</width>
+          <height>440</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="2" column="4">
+     <widget class="QCheckBox" name="m_scaleVoltage">
+      <property name="text">
+       <string>Scale in Volts</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
       </property>
      </widget>
     </item>

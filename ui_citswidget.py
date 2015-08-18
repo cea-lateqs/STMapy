@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Mon Aug 17 09:07:08 2015
+# Created: Tue Aug 18 10:25:26 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_CitsWidget(object):
     def setupUi(self, CitsWidget):
         CitsWidget.setObjectName(_fromUtf8("CitsWidget"))
-        CitsWidget.resize(698, 540)
+        CitsWidget.resize(698, 571)
         self.dockWidgetContents = QtGui.QWidget()
         self.dockWidgetContents.setObjectName(_fromUtf8("dockWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.dockWidgetContents)
@@ -38,7 +38,7 @@ class Ui_CitsWidget(object):
         self.m_specWidget = MatplotlibWidget(self.dockWidgetContents)
         self.m_specWidget.setObjectName(_fromUtf8("m_specWidget"))
         self.spec_layout.addWidget(self.m_specWidget)
-        self.gridLayout_2.addLayout(self.spec_layout, 3, 4, 1, 1)
+        self.gridLayout_2.addLayout(self.spec_layout, 4, 4, 1, 1)
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
         self.m_openButton = QtGui.QPushButton(self.dockWidgetContents)
@@ -52,10 +52,6 @@ class Ui_CitsWidget(object):
         self.m_voltageBox.setObjectName(_fromUtf8("m_voltageBox"))
         self.horizontalLayout.addWidget(self.m_voltageBox)
         self.gridLayout_2.addLayout(self.horizontalLayout, 0, 3, 1, 1)
-        self.m_mapWidget = MatplotlibWidget(self.dockWidgetContents)
-        self.m_mapWidget.setMinimumSize(QtCore.QSize(440, 440))
-        self.m_mapWidget.setObjectName(_fromUtf8("m_mapWidget"))
-        self.gridLayout_2.addWidget(self.m_mapWidget, 3, 3, 1, 1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
@@ -69,6 +65,24 @@ class Ui_CitsWidget(object):
         self.m_clearSpec = QtGui.QPushButton(self.dockWidgetContents)
         self.m_clearSpec.setObjectName(_fromUtf8("m_clearSpec"))
         self.gridLayout_2.addWidget(self.m_clearSpec, 1, 4, 1, 1)
+        self.m_avgSpec = QtGui.QPushButton(self.dockWidgetContents)
+        self.m_avgSpec.setObjectName(_fromUtf8("m_avgSpec"))
+        self.gridLayout_2.addWidget(self.m_avgSpec, 0, 4, 1, 1)
+        self.m_testButton = QtGui.QPushButton(self.dockWidgetContents)
+        self.m_testButton.setObjectName(_fromUtf8("m_testButton"))
+        self.gridLayout_2.addWidget(self.m_testButton, 2, 3, 1, 1)
+        self.map_layout = QtGui.QVBoxLayout()
+        self.map_layout.setContentsMargins(0, 0, -1, -1)
+        self.map_layout.setObjectName(_fromUtf8("map_layout"))
+        self.m_mapWidget = MatplotlibWidget(self.dockWidgetContents)
+        self.m_mapWidget.setMinimumSize(QtCore.QSize(440, 440))
+        self.m_mapWidget.setObjectName(_fromUtf8("m_mapWidget"))
+        self.map_layout.addWidget(self.m_mapWidget)
+        self.gridLayout_2.addLayout(self.map_layout, 4, 3, 1, 1)
+        self.m_scaleVoltage = QtGui.QCheckBox(self.dockWidgetContents)
+        self.m_scaleVoltage.setChecked(True)
+        self.m_scaleVoltage.setObjectName(_fromUtf8("m_scaleVoltage"))
+        self.gridLayout_2.addWidget(self.m_scaleVoltage, 2, 4, 1, 1)
         CitsWidget.setWidget(self.dockWidgetContents)
 
         self.retranslateUi(CitsWidget)
@@ -81,5 +95,8 @@ class Ui_CitsWidget(object):
         self.m_fwdButton.setText(_translate("CitsWidget", "Forward", None))
         self.m_bwdButton.setText(_translate("CitsWidget", "Backward", None))
         self.m_clearSpec.setText(_translate("CitsWidget", "Clear spectra", None))
+        self.m_avgSpec.setText(_translate("CitsWidget", "Average on map", None))
+        self.m_testButton.setText(_translate("CitsWidget", "Test", None))
+        self.m_scaleVoltage.setText(_translate("CitsWidget", "Scale in Volts", None))
 
 from matplotlibwidget import MatplotlibWidget
