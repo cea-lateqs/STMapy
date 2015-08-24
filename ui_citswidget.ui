@@ -88,13 +88,6 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="3">
-     <widget class="QPushButton" name="m_testButton">
-      <property name="text">
-       <string>Test</string>
-      </property>
-     </widget>
-    </item>
     <item row="4" column="3">
      <layout class="QVBoxLayout" name="map_layout">
       <property name="leftMargin">
@@ -122,6 +115,13 @@
       </property>
       <property name="checked">
        <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="3">
+     <widget class="QCheckBox" name="m_avgBox">
+      <property name="text">
+       <string>Average spectra by selection</string>
       </property>
      </widget>
     </item>

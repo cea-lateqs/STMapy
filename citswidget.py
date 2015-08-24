@@ -19,6 +19,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.setupUi(self)
         self.setAutoFillBackground(True)
         self.m_data=np.ndarray([])
+        self.tot_data=np.ndarray([])
+        self.nAvgSpectra=0
         self.m_params={}
         #Set up figures
         self.m_fwdButton.setChecked(True)
@@ -69,6 +71,27 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_voltageBox.setMaximum(zPt/2-1)
         self.m_voltageBox.setSingleStep(1)
         
+    def updateAvgVariables(self):
+        if(self.dataLoaded):
+            #If toggled on, put everything to zero to be ready to store data
+            if(self.m_avgBox.isChecked()):
+                self.tot_data=np.zeros(shape=(self.m_params["zPt"]/2))
+                self.nAvgSpectra=0
+            #If toggled off, plot the data stored
+            else:
+                if(self.nAvgSpectra==0): return
+                dataToPlot=self.tot_data/(self.nAvgSpectra)
+                if(self.m_scaleVoltage.isChecked()):
+                    vStart=self.m_params["vStart"]
+                    vEnd=self.m_params["vEnd"]
+                    dV=self.m_params["dV"]
+                    self.axes_spec.plot(np.arange(vStart,vEnd,dV),dataToPlot,label=str(self.nAvgSpectra)+" spectra averaged")
+                else:
+                    self.axes_spec.plot(dataToPlot,label=str(self.nAvgSpectra)+" spectra averaged")
+                self.axes_spec.legend(loc=0)
+                self.m_specWidget.draw()
+            
+        
     def updateWidgets(self):
         self.updateVoltageBox(self.m_params["vStart"],self.m_params["vEnd"],self.m_params["zPt"])
         self.drawXYMap(self.m_voltageBox.value())
@@ -81,6 +104,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_clearSpec.clicked.connect(self.clearSpectrum)
         self.m_scaleVoltage.toggled.connect(self.clearSpectrum)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
+        self.m_avgBox.toggled.connect(self.updateAvgVariables)
         #self.m_testButton.clicked.connect(self.launchAni)
         
     def drawSpectrum(self,event):
@@ -89,13 +113,23 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             PixelY=int(event.ydata)
             bwd=self.m_bwdButton.isChecked()
             fb=["_Fwd","_Bwd"]
+            #Add data to the total data to average if needed
+            if(self.m_avgBox.isChecked()):
+                zPt=self.m_params["zPt"]
+                #for v in range(0,zPt/2):
+                self.tot_data+=self.m_data[bwd][PixelY][PixelX]
+                self.nAvgSpectra+=1
+                print(self.nAvgSpectra)
+                #dataToPlot=self.tot_data/self.nAvgSpectra
+            #Plot the data with the desired scale (Volts or index)
+            dataToPlot=self.m_data[bwd][PixelY][PixelX]
             if(self.m_scaleVoltage.isChecked()):
                 vStart=self.m_params["vStart"]
                 vEnd=self.m_params["vEnd"]
                 dV=self.m_params["dV"]
-                self.axes_spec.plot(np.arange(vStart,vEnd,dV),self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
+                self.axes_spec.plot(np.arange(vStart,vEnd,dV),dataToPlot,label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
             else:
-                self.axes_spec.plot(self.m_data[bwd][PixelY][PixelX],label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
+                self.axes_spec.plot(dataToPlot,label="["+str(PixelX)+","+str(PixelY)+"]"+fb[bwd])
             self.axes_spec.legend(loc=0)
             self.m_specWidget.draw()
             

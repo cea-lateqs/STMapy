@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Tue Aug 18 10:25:26 2015
+# Created: Mon Aug 24 09:01:54 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -68,9 +68,6 @@ class Ui_CitsWidget(object):
         self.m_avgSpec = QtGui.QPushButton(self.dockWidgetContents)
         self.m_avgSpec.setObjectName(_fromUtf8("m_avgSpec"))
         self.gridLayout_2.addWidget(self.m_avgSpec, 0, 4, 1, 1)
-        self.m_testButton = QtGui.QPushButton(self.dockWidgetContents)
-        self.m_testButton.setObjectName(_fromUtf8("m_testButton"))
-        self.gridLayout_2.addWidget(self.m_testButton, 2, 3, 1, 1)
         self.map_layout = QtGui.QVBoxLayout()
         self.map_layout.setContentsMargins(0, 0, -1, -1)
         self.map_layout.setObjectName(_fromUtf8("map_layout"))
@@ -83,6 +80,9 @@ class Ui_CitsWidget(object):
         self.m_scaleVoltage.setChecked(True)
         self.m_scaleVoltage.setObjectName(_fromUtf8("m_scaleVoltage"))
         self.gridLayout_2.addWidget(self.m_scaleVoltage, 2, 4, 1, 1)
+        self.m_avgBox = QtGui.QCheckBox(self.dockWidgetContents)
+        self.m_avgBox.setObjectName(_fromUtf8("m_avgBox"))
+        self.gridLayout_2.addWidget(self.m_avgBox, 2, 3, 1, 1)
         CitsWidget.setWidget(self.dockWidgetContents)
 
         self.retranslateUi(CitsWidget)
@@ -96,7 +96,7 @@ class Ui_CitsWidget(object):
         self.m_bwdButton.setText(_translate("CitsWidget", "Backward", None))
         self.m_clearSpec.setText(_translate("CitsWidget", "Clear spectra", None))
         self.m_avgSpec.setText(_translate("CitsWidget", "Average on map", None))
-        self.m_testButton.setText(_translate("CitsWidget", "Test", None))
         self.m_scaleVoltage.setText(_translate("CitsWidget", "Scale in Volts", None))
+        self.m_avgBox.setText(_translate("CitsWidget", "Average spectra by selection", None))
 
 from matplotlibwidget import MatplotlibWidget
