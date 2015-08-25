@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>698</width>
-    <height>571</height>
+    <width>941</width>
+    <height>588</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -122,6 +122,13 @@
      <widget class="QCheckBox" name="m_avgBox">
       <property name="text">
        <string>Average spectra by selection</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="3">
+     <widget class="QCheckBox" name="m_derivBox">
+      <property name="text">
+       <string>Plot derivative</string>
       </property>
      </widget>
     </item>

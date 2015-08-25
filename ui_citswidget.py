@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Mon Aug 24 09:01:54 2015
+# Created: Tue Aug 25 10:01:03 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_CitsWidget(object):
     def setupUi(self, CitsWidget):
         CitsWidget.setObjectName(_fromUtf8("CitsWidget"))
-        CitsWidget.resize(698, 571)
+        CitsWidget.resize(941, 588)
         self.dockWidgetContents = QtGui.QWidget()
         self.dockWidgetContents.setObjectName(_fromUtf8("dockWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.dockWidgetContents)
@@ -83,6 +83,9 @@ class Ui_CitsWidget(object):
         self.m_avgBox = QtGui.QCheckBox(self.dockWidgetContents)
         self.m_avgBox.setObjectName(_fromUtf8("m_avgBox"))
         self.gridLayout_2.addWidget(self.m_avgBox, 2, 3, 1, 1)
+        self.m_derivBox = QtGui.QCheckBox(self.dockWidgetContents)
+        self.m_derivBox.setObjectName(_fromUtf8("m_derivBox"))
+        self.gridLayout_2.addWidget(self.m_derivBox, 3, 3, 1, 1)
         CitsWidget.setWidget(self.dockWidgetContents)
 
         self.retranslateUi(CitsWidget)
@@ -98,5 +101,6 @@ class Ui_CitsWidget(object):
         self.m_avgSpec.setText(_translate("CitsWidget", "Average on map", None))
         self.m_scaleVoltage.setText(_translate("CitsWidget", "Scale in Volts", None))
         self.m_avgBox.setText(_translate("CitsWidget", "Average spectra by selection", None))
+        self.m_derivBox.setText(_translate("CitsWidget", "Plot derivative", None))
 
 from matplotlibwidget import MatplotlibWidget
