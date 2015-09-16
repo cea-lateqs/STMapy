@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Tue Aug 25 10:01:03 2015
+# Created: Wed Sep 16 12:27:29 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -92,7 +92,7 @@ class Ui_CitsWidget(object):
         QtCore.QMetaObject.connectSlotsByName(CitsWidget)
 
     def retranslateUi(self, CitsWidget):
-        CitsWidget.setWindowTitle(_translate("CitsWidget", "CITS Map", None))
+        CitsWidget.setWindowTitle(_translate("CitsWidget", "STM Data Analysis", None))
         self.m_openButton.setText(_translate("CitsWidget", "Open CITS", None))
         self.label.setText(_translate("CitsWidget", "Voltage", None))
         self.m_fwdButton.setText(_translate("CitsWidget", "Forward", None))

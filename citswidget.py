@@ -24,6 +24,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.setAutoFillBackground(True)
         self.m_data=np.ndarray([])
         self.tot_data=np.ndarray([])
+        self.pts_clicked=[[],[],[]]
         self.nAvgSpectra=0
         self.m_params={}
         self.mapName=""
@@ -40,6 +41,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #Boolean that is True if a map is laoded
         self.dataLoaded=False
         self.connect()
+        #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -64,8 +66,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         if(self.dataLoaded): self.updateWidgets()
         
     def readCITS(self,filepath):
-        """ Reads a CITS file and store all the parameters"""
+        """ Reads a CITS file and stores all the parameters"""
         f=open(filepath)
+        divider=1
         while(True):
             #Read the parameters of the map until "Start of Data"
             line=f.readline()
@@ -83,6 +86,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 vStart=float(line.split()[-2])
             if("Device_1_End" in line):
                 vEnd=float(line.split()[-2])
+            if("divider" in line):
+                divider=int(line.split()[-1])
             if("Start of Data" in line):
                 break
         # Matlab convention : columns first then rows hence [y][x]
@@ -99,7 +104,33 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 self.m_data[1][y][x]=(data_list[zPt/2:zPt])
         f.close()
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":2*abs(vEnd-vStart)/zPt}
+        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart/divider,"vEnd":vEnd/divider,"dV":2*abs(vEnd-vStart)/(divider*zPt),"Div":divider}
+        if(divider!=1):
+            print "A divider of "+str(divider)+" was found and applied"
+        return True
+        
+### Reading and loading topo images methods (not finished yet)
+        
+    def readTopo(self,filepath):
+        """ Reads a topography file """
+        f=open(filepath)
+        topo_data=[[]]
+        for line in f:
+            #Treat the headers differently"
+            if(line[0]=='#'):
+                if("Width" in line):
+                    w=float(line.split()[-2])
+                if("Height" in line):
+                    h=float(line.split()[-2])
+            else:
+                topo_data.append(line.strip().split())
+        f.close()
+        fig_map=self.m_mapWidget.figure
+        fig_map.clear()
+        ax_map = fig_map.add_subplot(1,1,1,aspect='equal')
+        fig_map.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+        XYmap=ax_map.pcolormesh(np.ndarray(topo_data))
+        self.m_mapWidget.draw()
         return True
         
 ### Updating methods. Usually called by signals
@@ -161,6 +192,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def clearSpectrum(self):
         """ Clears the spectrum window """
         self.axes_spec.clear()
+        self.clearPtsClicked()
         self.m_specWidget.draw()
             
     def drawSpectrum(self,dataToPlot,label):
@@ -195,17 +227,41 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def pickSpectrum(self,event):
         """ Slot called when clicking on the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
+            color='black'
             PixelX=int(event.xdata)
             PixelY=int(event.ydata)
             bwd=self.m_bwdButton.isChecked()
+            self.m_mapWidget.draw()
             #Add data to the total data to average if in average mod
             if(self.m_avgBox.isChecked()):
                 self.tot_data+=self.m_data[bwd][PixelY][PixelX]
                 self.nAvgSpectra+=1
+                color='white'
             #Plot the data with the desired scale (Volts or index) if in normal mode
             else:
                 dataToPlot=self.m_data[bwd][PixelY][PixelX]
                 self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
+            self.addToPtsClicked(PixelX+0.5,PixelY+0.5,color)
+            self.drawPtsClicked()
+            
+### Methods related to the indicators (points clicked) on the map
+    
+    def addToPtsClicked(self,x,y,color):
+        self.pts_clicked[0].append(x)
+        self.pts_clicked[1].append(y)
+        #color_cycle = self.axes_spec._get_lines.color_cycle
+        self.pts_clicked[2].append(color)
+        
+    def drawPtsClicked(self):
+        pts_x=np.array(self.pts_clicked[0])
+        pts_y=np.array(self.pts_clicked[1])
+        pts_c=np.array(self.pts_clicked[2])
+        self.ax_map.scatter(pts_x,pts_y,color=pts_c)
+        self.m_mapWidget.draw()
+        
+    def clearPtsClicked(self):
+        self.pts_clicked=[[],[],[]]
+        self.drawXYMap(self.m_voltageBox.value())
             
 ### Methods related to the map
         
@@ -219,18 +275,19 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #Start everything anew
         fig_map=self.m_mapWidget.figure
         fig_map.clear()
-        ax_map = fig_map.add_subplot(1,1,1,aspect='equal')
+        self.ax_map = fig_map.add_subplot(1,1,1,aspect='equal')
+        self.ax_map.hold(True)
         fig_map.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         xPx=self.m_params["xPx"]
         yPx=self.m_params["yPx"]
         zPt=self.m_params["zPt"]
         #Get the data of the map and draw it
         mapData,mapMin,mapMax=self.getMapData(voltage)
-        XYmap=ax_map.pcolormesh(mapData)
+        XYmap=self.ax_map.pcolormesh(mapData)
         #XYmap=ax_map.imshow(mapData,origin="lower")
         #Set axis limits and title
-        ax_map.axis([0,xPx,yPx,0])
-        ax_map.set_title("CITS Map\n"
+        self.ax_map.axis([0,xPx,yPx,0])
+        self.ax_map.set_title("CITS Map\n"
         +str(xPx)+"x"+str(yPx)+" pixels - "+str(zPt/2)+" points\n"
         +"V="+str(self.m_params["vStart"]+voltage*self.m_params["dV"]))
         #Colorbar stuff
@@ -241,6 +298,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         XYmap.set_clim(mapMin,mapMax)
         #Plot a dashed line at X=voltage
         #self.axes_spec.plot([voltage,voltage],[mapMin,mapMax],'k--')
+        self.drawPtsClicked()
         self.m_mapWidget.draw()
         
     def getMapData(self,v,bwd=False):
