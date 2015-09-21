@@ -24,7 +24,6 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.setAutoFillBackground(True)
         self.m_data=np.ndarray([])
         self.tot_data=np.ndarray([])
-        self.pts_clicked=[[],[],[]]
         self.nAvgSpectra=0
         self.m_params={}
         self.mapName=""
@@ -38,6 +37,10 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.axes_spec=self.fig_spec.add_subplot(1,1,1)
         self.axes_spec.hold(True)
         self.fig_spec.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+        #Variables linked to clicks on map
+        self.pts_clicked=[[],[],[]]
+        self.origin_x=0
+        self.origin_y=0
         #Boolean that is True if a map is laoded
         self.dataLoaded=False
         self.connect()
@@ -48,7 +51,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_openButton.clicked.connect(self.loadCITS)
         self.m_bwdButton.toggled.connect(self.updateWidgets)
         self.m_voltageBox.valueChanged.connect(self.drawXYMap)
-        self.m_mapWidget.mpl_connect('button_press_event',self.pickSpectrum)
+        self.m_mapWidget.mpl_connect('button_press_event',self.onPressOnMap)
+        self.m_mapWidget.mpl_connect('button_release_event',self.onReleaseOnMap)
         self.m_specWidget.mpl_connect('button_press_event',self.updateToPointedX)
         self.m_clearSpec.clicked.connect(self.clearSpectrum)
         self.m_scaleVoltage.toggled.connect(self.clearSpectrum)
@@ -244,7 +248,62 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             self.addToPtsClicked(PixelX+0.5,PixelY+0.5,color)
             self.drawPtsClicked()
             
-### Methods related to the indicators (points clicked) on the map
+### Methods related to the clicks on the map
+            
+    def onPressOnMap(self,event):
+        if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
+            self.origin_x=int(event.xdata)
+            self.origin_y=int(event.ydata)
+            
+    def onReleaseOnMap(self,event):
+        if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
+            xf=int(event.xdata)
+            yf=int(event.ydata)
+            xi=self.origin_x
+            yi=self.origin_y
+            # Cut along the XY line if a line is traced (X or Y different)
+            if(xf!=xi or yf!=yi):
+                # If the line is not vertical, determine its equation y=k*x+c
+                if(xf!=xi):
+                    k=float(yf-yi)/(xf-xi)
+                    c=yi-k*xi                
+                    #Check if there is more y or more x to have to most precise arrangment
+                    if(abs(xf-xi)>abs(yf-yi)):
+                        if(xi>xf):
+                            x_plot=np.arange(xf,xi+1)[::-1]
+                        else:
+                            x_plot=np.arange(xi,xf+1)
+                        y_plot=k*x_plot+c
+                    else:
+                        if(yi>yf):
+                            y_plot=np.arange(yf,yi+1)[::-1]
+                        else:
+                            y_plot=np.arange(yi,yf+1)
+                        x_plot=(y_plot-c)/k
+                #It the line is vertical, the equation is x=xi with y varying from yi to yf
+                else:
+                    y_plot=np.arange(yi,yf+1)
+                    x_plot=np.full(shape=y_plot.size,fill_value=xi)
+                # Plot a black dashed line along the line traced
+                self.ax_map.plot((xi, xf), (yi, yf), 'k--')
+                self.m_mapWidget.draw()
+                #Build the data to plot with v as Y and z (number of pixels gone through) as X
+                zPt=self.m_params['zPt']
+                voltages=np.arange(0,zPt/2)
+                bwd=self.m_bwdButton.isChecked()
+                z_plot=np.arange(0,x_plot.size)
+                dataToPlot=np.ndarray(shape=(zPt/2,z_plot.size))
+                # Matlab convention : Y (v) first then X (z)
+                for v in voltages:
+                    for z in z_plot:
+                        dataToPlot[v][z]=self.m_data[bwd][int(y_plot[z])][int(x_plot[z])][v]
+                        self.addToPtsClicked(int(x_plot[z])+0.5,int(y_plot[z])+0.5,color='yellow')
+                # Plot the built map is a new figure
+                pylab.figure()
+                pylab.pcolormesh(dataToPlot,cmap='coolwarm')
+                self.drawPtsClicked()
+            else:
+                self.pickSpectrum(event)
     
     def addToPtsClicked(self,x,y,color):
         self.pts_clicked[0].append(x)
@@ -283,7 +342,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         zPt=self.m_params["zPt"]
         #Get the data of the map and draw it
         mapData,mapMin,mapMax=self.getMapData(voltage)
-        XYmap=self.ax_map.pcolormesh(mapData)
+        XYmap=self.ax_map.pcolormesh(mapData,cmap='coolwarm')
         #XYmap=ax_map.imshow(mapData,origin="lower")
         #Set axis limits and title
         self.ax_map.axis([0,xPx,yPx,0])
@@ -300,6 +359,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #self.axes_spec.plot([voltage,voltage],[mapMin,mapMax],'k--')
         self.drawPtsClicked()
         self.m_mapWidget.draw()
+        
         
     def getMapData(self,v,bwd=False):
         """ Returns an array constructed from the data loaded that can be used to display a map at fixed voltage """
