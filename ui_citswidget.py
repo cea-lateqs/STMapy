@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Wed Sep 16 12:27:29 2015
+# Created: Tue Sep 22 18:27:16 2015
 #      by: PyQt4 UI code generator 4.9.6
 #
 # WARNING! All changes made in this file will be lost!
@@ -86,6 +86,9 @@ class Ui_CitsWidget(object):
         self.m_derivBox = QtGui.QCheckBox(self.dockWidgetContents)
         self.m_derivBox.setObjectName(_fromUtf8("m_derivBox"))
         self.gridLayout_2.addWidget(self.m_derivBox, 3, 3, 1, 1)
+        self.m_vLineBox = QtGui.QCheckBox(self.dockWidgetContents)
+        self.m_vLineBox.setObjectName(_fromUtf8("m_vLineBox"))
+        self.gridLayout_2.addWidget(self.m_vLineBox, 3, 4, 1, 1)
         CitsWidget.setWidget(self.dockWidgetContents)
 
         self.retranslateUi(CitsWidget)
@@ -102,5 +105,6 @@ class Ui_CitsWidget(object):
         self.m_scaleVoltage.setText(_translate("CitsWidget", "Scale in Volts", None))
         self.m_avgBox.setText(_translate("CitsWidget", "Average spectra by selection", None))
         self.m_derivBox.setText(_translate("CitsWidget", "Plot derivative", None))
+        self.m_vLineBox.setText(_translate("CitsWidget", "Voltage guideline", None))
 
 from matplotlibwidget import MatplotlibWidget

@@ -34,13 +34,14 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.map_layout.insertWidget(0,self.toolbar_map)
         self.spec_layout.insertWidget(0,self.toolbar_spec)
         self.fig_spec=self.m_specWidget.figure
-        self.axes_spec=self.fig_spec.add_subplot(1,1,1)
-        self.axes_spec.hold(True)
+        self.ax_spec=self.fig_spec.add_subplot(1,1,1)
+        self.ax_spec.hold(True)
         self.fig_spec.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         #Variables linked to clicks on map
         self.pts_clicked=[[],[],[]]
         self.origin_x=0
         self.origin_y=0
+        self.voltageLine=0
         #Boolean that is True if a map is laoded
         self.dataLoaded=False
         self.connect()
@@ -58,6 +59,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_scaleVoltage.toggled.connect(self.clearSpectrum)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
+        self.m_vLineBox.toggled.connect(self.clearVoltageLine)
         
 ### Reading and loading CITS methods
         
@@ -154,7 +156,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 
     def updateToPointedX(self,event):
         """ Slot called when clicking on the spectrum window. Updates the map according to the position of the cursor when clicked """
-        if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
+        if(event.xdata!=None and event.ydata!=None and self.dataLoaded and self.toolbar_spec._active is None):
             #If the scale is in volts, need to divide by dV to have the index
             if(self.m_scaleVoltage.isChecked()):
                 pointedIndex=int((event.xdata-self.m_params["vStart"])/self.m_params["dV"])
@@ -195,7 +197,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             
     def clearSpectrum(self):
         """ Clears the spectrum window """
-        self.axes_spec.clear()
+        self.ax_spec.clear()
+        self.voltageLine=0
         self.clearPtsClicked()
         self.m_specWidget.draw()
             
@@ -210,15 +213,15 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             if(self.m_scaleVoltage.isChecked()):
                 vStart=self.m_params["vStart"]
                 vEnd=self.m_params["vEnd"]
-                self.axes_spec.plot(np.arange(vStart,vEnd,dV),dataToPlot,label=label+fb[bwd])
+                self.ax_spec.plot(np.arange(vStart,vEnd,dV),dataToPlot,label=label+fb[bwd])
                 if(self.m_derivBox.isChecked()):
-                    self.axes_spec.plot(np.arange(vStart,vEnd,dV),deriv,label="Derivative of "+label+fb[bwd])
+                    self.ax_spec.plot(np.arange(vStart,vEnd,dV),deriv,label="Derivative of "+label+fb[bwd])
             else:
-                self.axes_spec.plot(dataToPlot,label=label+fb[bwd])
+                self.ax_spec.plot(dataToPlot,label=label+fb[bwd])
                 if(self.m_derivBox.isChecked()):
-                    self.axes_spec.plot(deriv,label="Derivative of "+label+fb[bwd])
+                    self.ax_spec.plot(deriv,label="Derivative of "+label+fb[bwd])
         
-        self.axes_spec.legend(loc=0)
+        self.ax_spec.legend(loc=0)
         self.m_specWidget.draw()
         
     def launchAvgSpectrum(self):
@@ -229,7 +232,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             self.averageSpectrum(0,0,xPx,yPx)
             
     def pickSpectrum(self,event):
-        """ Slot called when clicking on the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
+        """ Method called when a press-and-release event is done at the same location of the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
             color='black'
             PixelX=int(event.xdata)
@@ -251,11 +254,13 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
 ### Methods related to the clicks on the map
             
     def onPressOnMap(self,event):
+        """ Slot called when a press event is detected. Keeps the pressed location in integer variables """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
             self.origin_x=int(event.xdata)
             self.origin_y=int(event.ydata)
             
     def onReleaseOnMap(self,event):
+        """ Slot called when a release event is detected. If it happens at the same location of the press, calls the pickSpectrum method. Otherwise, it means that a line was drawn so it makes a cut of the spectra along the line. """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
             xf=int(event.xdata)
             yf=int(event.ydata)
@@ -306,12 +311,14 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 self.pickSpectrum(event)
     
     def addToPtsClicked(self,x,y,color):
+        """ Method called when a click was detected on the map. The coordinates are saved in the pts_clicked list with a corresponding color """
         self.pts_clicked[0].append(x)
         self.pts_clicked[1].append(y)
-        #color_cycle = self.axes_spec._get_lines.color_cycle
+        #color_cycle = self.ax_spec._get_lines.color_cycle
         self.pts_clicked[2].append(color)
         
     def drawPtsClicked(self):
+        """ Method that draws all the points saved in pts_clicked. Usually called when the map is drawn or redrawn """
         pts_x=np.array(self.pts_clicked[0])
         pts_y=np.array(self.pts_clicked[1])
         pts_c=np.array(self.pts_clicked[2])
@@ -319,6 +326,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_mapWidget.draw()
         
     def clearPtsClicked(self):
+        """ Method that clears all saved points and then redraws the map to reflect the change """
         self.pts_clicked=[[],[],[]]
         self.drawXYMap(self.m_voltageBox.value())
             
@@ -355,9 +363,12 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         cbar.ax.tick_params(axis='y', direction='in')
         # Image color scale is adjusted to the data:
         XYmap.set_clim(mapMin,mapMax)
-        #Plot a dashed line at X=voltage
-        #self.axes_spec.plot([voltage,voltage],[mapMin,mapMax],'k--')
+        #Plot a dashed line at X=voltage if asked
+        if(self.m_vLineBox.isChecked()):
+            self.drawVoltageLine(voltage)
+        #Draws the points saved in pts_clicked
         self.drawPtsClicked()
+        #Not really useful as the draw is called in drawPtsClicked but it is more logical to keep it.
         self.m_mapWidget.draw()
         
         
@@ -378,3 +389,21 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                     if(val<valMin): valMin=val
                     elif(val>valMax): valMax=val
         return mapData,valMin,valMax
+        
+### Methods related to the voltage guide line in the spectra window
+        
+    def drawVoltageLine(self,voltage):
+        self.clearVoltageLine()
+        if(self.dataLoaded):
+            #Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
+            if(self.m_scaleVoltage.isChecked): currentV=self.m_params["vStart"]+voltage*self.m_params["dV"]
+            else: currentV=voltage
+            #Plot the dashed line
+            self.voltageLine=self.ax_spec.axvline(currentV,color='k',linestyle='--')
+            self.m_specWidget.draw()
+        
+    def clearVoltageLine(self):
+        if(self.voltageLine):
+            self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
+            self.m_specWidget.draw()
+        self.voltageLine=0
