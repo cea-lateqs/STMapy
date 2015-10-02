@@ -60,12 +60,17 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
+        self.m_avgVButton.clicked.connect(self.averageSpectrumWithValues)
+        #Averaging with respect to values
+        self.m_aboveBox.valueChanged.connect(self.updateAboveValue)
+        self.m_belowBox.valueChanged.connect(self.updateBelowValue)
         
 ### Reading and loading CITS methods
         
     def loadCITS(self):
         """ Slot that launches the reading of the CITS by asking the path of the file """
         filename=QFileDialog.getOpenFileName(self,"Choose a CITS Ascii file","H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII","Ascii file (*.asc);;Text file (*.txt)")
+        if(filename==[]): return
         self.mapName=osp.basename(filename).split()[0]
         print(self.mapName)
         self.dataLoaded=self.readCITS(filename)
@@ -154,6 +159,15 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 dataToPlot=self.tot_data/(self.nAvgSpectra)
                 self.drawSpectrum(dataToPlot,str(self.nAvgSpectra)+" spectra averaged")
                 
+    def updateAboveValue(self,value):
+        self.m_aboveBar.setValue(value)
+        if(self.dataLoaded): self.m_aboveLine.setText(str(self.mapMax-value*(self.mapMax-self.mapMin)/100))
+        
+    def updateBelowValue(self,value):
+        self.m_belowBar.setValue(value)
+        if(self.dataLoaded): self.m_belowLine.setText(str(self.mapMin+value*(self.mapMax-self.mapMin)/100))
+            
+                
     def updateToPointedX(self,event):
         """ Slot called when clicking on the spectrum window. Updates the map according to the position of the cursor when clicked """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded and self.toolbar_spec._active is None):
@@ -178,6 +192,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def updateWidgets(self):
         """ Slot called after the reading of the CITS. Sets the values of the voltage box and draws the map """
         self.updateVoltageBox(self.m_params["vStart"],self.m_params["vEnd"],self.m_params["zPt"])
+        self.updateAboveValue(self.m_aboveBar.value())
+        self.updateAboveValue(self.m_belowBar.value())
         self.drawXYMap(self.m_voltageBox.value())
         
 ### Methods related to spectra    
@@ -194,6 +210,43 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                     for v in range(0,zPt/2):
                         avg_data[v]+=(self.m_data[bwd][y][x][v]/N)
             self.drawSpectrum(avg_data,"Avg")
+            
+    def averageSpectrumWithValues(self):
+        """ Averages the spectra according their values at a certain voltage """
+        if(self.dataLoaded):
+            voltage=self.m_voltageBox.value()
+            bwd=self.m_bwdButton.isChecked()
+            viewSelected=self.m_viewSelectedBox.isChecked()
+            zPt=self.m_params["zPt"]
+            avg_data_aboveV=np.zeros(shape=(zPt/2))
+            avg_data_belowV=np.zeros(shape=(zPt/2))
+            #midpoint=(self.mapMax+self.mapMin)/2
+            midpoint2=(self.mapMax-self.mapMin)
+            limit_aboveV=self.mapMax-self.m_aboveBar.value()*midpoint2/100
+            limit_belowV=self.mapMin+self.m_belowBar.value()*midpoint2/100
+
+            N_aboveV=0
+            N_belowV=0
+            xPx=self.m_params["xPx"]
+            yPx=self.m_params["yPx"]
+            for y in range(0,yPx):
+                for x in range(0,xPx):
+                    currentValue=self.m_data[bwd][y][x][voltage]
+                    if(currentValue>limit_aboveV):
+                        avg_data_aboveV+=self.m_data[bwd][y][x]
+                        N_aboveV+=1
+                        if(viewSelected): self.addToPtsClicked(x,y,'red')
+                    elif(currentValue<limit_belowV):
+                        avg_data_belowV+=self.m_data[bwd][y][x]
+                        N_belowV+=1
+                        if(viewSelected): self.addToPtsClicked(x,y,'blue')
+            if(N_aboveV!=0): 
+                avg_data_aboveV/=N_aboveV
+                self.drawSpectrum(avg_data_aboveV,"Average above "+str(limit_aboveV)+" ("+str(N_aboveV)+" spectra averaged)")
+            if(N_belowV!=0): 
+                avg_data_belowV/=N_belowV
+                self.drawSpectrum(avg_data_belowV,"Average below "+str(limit_belowV)+" ("+str(N_belowV)+" spectra averaged)")
+            self.drawPtsClicked()
             
     def clearSpectrum(self):
         """ Clears the spectrum window """
@@ -248,7 +301,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             else:
                 dataToPlot=self.m_data[bwd][PixelY][PixelX]
                 self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
-            self.addToPtsClicked(PixelX+0.5,PixelY+0.5,color)
+            self.addToPtsClicked(PixelX,PixelY,color)
             self.drawPtsClicked()
             
 ### Methods related to the clicks on the map
@@ -302,7 +355,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 for v in voltages:
                     for z in z_plot:
                         dataToPlot[v][z]=self.m_data[bwd][int(y_plot[z])][int(x_plot[z])][v]
-                        self.addToPtsClicked(int(x_plot[z])+0.5,int(y_plot[z])+0.5,color='yellow')
+                        self.addToPtsClicked(int(x_plot[z]),int(y_plot[z]),color='yellow')
                 # Plot the built map is a new figure
                 pylab.figure()
                 pylab.pcolormesh(dataToPlot,cmap='coolwarm')
@@ -312,8 +365,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     
     def addToPtsClicked(self,x,y,color):
         """ Method called when a click was detected on the map. The coordinates are saved in the pts_clicked list with a corresponding color """
-        self.pts_clicked[0].append(x)
-        self.pts_clicked[1].append(y)
+        # Shifting the coordinates by (0.5,0.5) so that the dot is plotted at the center of the square
+        self.pts_clicked[0].append(x+0.5)
+        self.pts_clicked[1].append(y+0.5)
         #color_cycle = self.ax_spec._get_lines.color_cycle
         self.pts_clicked[2].append(color)
         
@@ -349,9 +403,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         yPx=self.m_params["yPx"]
         zPt=self.m_params["zPt"]
         #Get the data of the map and draw it
-        mapData,mapMin,mapMax=self.getMapData(voltage)
+        mapData,self.mapMin,self.mapMax=self.getMapData(voltage)
         XYmap=self.ax_map.pcolormesh(mapData,cmap='coolwarm')
-        #XYmap=ax_map.imshow(mapData,origin="lower")
         #Set axis limits and title
         self.ax_map.axis([0,xPx,yPx,0])
         self.ax_map.set_title("CITS Map\n"
@@ -362,7 +415,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         cbar.ax.yaxis.set_ticks_position('both')
         cbar.ax.tick_params(axis='y', direction='in')
         # Image color scale is adjusted to the data:
-        XYmap.set_clim(mapMin,mapMax)
+        XYmap.set_clim(self.mapMin,self.mapMax)
         #Plot a dashed line at X=voltage if asked
         if(self.m_vLineBox.isChecked()):
             self.drawVoltageLine(voltage)
@@ -407,3 +460,4 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
             self.m_specWidget.draw()
         self.voltageLine=0
+        

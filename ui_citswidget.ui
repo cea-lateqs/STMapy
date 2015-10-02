@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>941</width>
-    <height>588</height>
+    <height>831</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,20 +15,7 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="4" column="4">
-     <layout class="QVBoxLayout" name="spec_layout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SetDefaultConstraint</enum>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="MatplotlibWidget" name="m_specWidget"/>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="3">
+    <item row="0" column="2">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="m_openButton">
@@ -53,7 +40,45 @@
       </item>
      </layout>
     </item>
-    <item row="1" column="3">
+    <item row="9" column="3">
+     <layout class="QVBoxLayout" name="spec_layout">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="MatplotlibWidget" name="m_specWidget"/>
+      </item>
+     </layout>
+    </item>
+    <item row="6" column="3">
+     <widget class="QCheckBox" name="m_vLineBox">
+      <property name="text">
+       <string>Voltage guideline</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="m_avgBox">
+        <property name="text">
+         <string>Average spectra by selection</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="m_derivBox">
+        <property name="text">
+         <string>Plot derivative</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="2">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
@@ -74,21 +99,21 @@
       </item>
      </layout>
     </item>
-    <item row="1" column="4">
+    <item row="1" column="3">
      <widget class="QPushButton" name="m_clearSpec">
       <property name="text">
        <string>Clear spectra</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="4">
+    <item row="0" column="3">
      <widget class="QPushButton" name="m_avgSpec">
       <property name="text">
        <string>Average on map</string>
       </property>
      </widget>
     </item>
-    <item row="4" column="3">
+    <item row="9" column="2">
      <layout class="QVBoxLayout" name="map_layout">
       <property name="leftMargin">
        <number>0</number>
@@ -108,7 +133,7 @@
       </item>
      </layout>
     </item>
-    <item row="2" column="4">
+    <item row="4" column="3">
      <widget class="QCheckBox" name="m_scaleVoltage">
       <property name="text">
        <string>Scale in Volts</string>
@@ -118,26 +143,134 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="3">
-     <widget class="QCheckBox" name="m_avgBox">
+    <item row="6" column="2">
+     <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Average spectra by selection</string>
+       <string>Average with respect to values</string>
       </property>
      </widget>
     </item>
-    <item row="3" column="3">
-     <widget class="QCheckBox" name="m_derivBox">
-      <property name="text">
-       <string>Plot derivative</string>
+    <item row="4" column="2">
+     <widget class="Line" name="line">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </item>
-    <item row="3" column="4">
-     <widget class="QCheckBox" name="m_vLineBox">
-      <property name="text">
-       <string>Voltage guideline</string>
-      </property>
-     </widget>
+    <item row="7" column="2">
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="0">
+       <widget class="QSpinBox" name="m_belowBox">
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="maximum">
+         <number>50</number>
+        </property>
+        <property name="value">
+         <number>50</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>% of colormap</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QSpinBox" name="m_aboveBox">
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="maximum">
+         <number>50</number>
+        </property>
+        <property name="value">
+         <number>50</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Minimum value for the below averaging</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QProgressBar" name="m_aboveBar">
+        <property name="value">
+         <number>50</number>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="invertedAppearance">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QProgressBar" name="m_belowBar">
+        <property name="value">
+         <number>50</number>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Maximum value for the above averaging</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QPushButton" name="m_avgVButton">
+        <property name="text">
+         <string>Start the averaging</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>% of colormap</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QCheckBox" name="m_viewSelectedBox">
+        <property name="text">
+         <string>View selected spectra</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLineEdit" name="m_belowLine">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLineEdit" name="m_aboveLine">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
