@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>941</width>
-    <height>831</height>
+    <height>867</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,20 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
+    <item row="7" column="2">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Average with respect to values</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="3">
+     <widget class="QPushButton" name="m_avgSpec">
+      <property name="text">
+       <string>Average on map</string>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="2">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
@@ -25,22 +39,48 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Voltage</string>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
-       </widget>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
+     </layout>
+    </item>
+    <item row="5" column="2">
+     <widget class="Line" name="line">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="2">
+     <layout class="QVBoxLayout" name="map_layout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
       <item>
-       <widget class="QDoubleSpinBox" name="m_voltageBox">
-        <property name="decimals">
-         <number>0</number>
+       <widget class="MatplotlibWidget" name="m_mapWidget">
+        <property name="minimumSize">
+         <size>
+          <width>440</width>
+          <height>440</height>
+         </size>
         </property>
        </widget>
       </item>
      </layout>
     </item>
-    <item row="9" column="3">
+    <item row="10" column="3">
      <layout class="QVBoxLayout" name="spec_layout">
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
@@ -52,13 +92,6 @@
        <widget class="MatplotlibWidget" name="m_specWidget"/>
       </item>
      </layout>
-    </item>
-    <item row="6" column="3">
-     <widget class="QCheckBox" name="m_vLineBox">
-      <property name="text">
-       <string>Voltage guideline</string>
-      </property>
-     </widget>
     </item>
     <item row="3" column="2">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -84,18 +117,14 @@
        <enum>QLayout::SetDefaultConstraint</enum>
       </property>
       <item>
-       <widget class="QRadioButton" name="m_fwdButton">
+       <widget class="QLabel" name="label_7">
         <property name="text">
-         <string>Forward</string>
+         <string>Displayed channel</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="m_bwdButton">
-        <property name="text">
-         <string>Backward</string>
-        </property>
-       </widget>
+       <widget class="QComboBox" name="m_channelBox"/>
       </item>
      </layout>
     </item>
@@ -106,58 +135,7 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="3">
-     <widget class="QPushButton" name="m_avgSpec">
-      <property name="text">
-       <string>Average on map</string>
-      </property>
-     </widget>
-    </item>
-    <item row="9" column="2">
-     <layout class="QVBoxLayout" name="map_layout">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="MatplotlibWidget" name="m_mapWidget">
-        <property name="minimumSize">
-         <size>
-          <width>440</width>
-          <height>440</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="4" column="3">
-     <widget class="QCheckBox" name="m_scaleVoltage">
-      <property name="text">
-       <string>Scale in Volts</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="2">
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>Average with respect to values</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="2">
-     <widget class="Line" name="line">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="2">
+    <item row="8" column="2">
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="0">
        <widget class="QSpinBox" name="m_belowBox">
@@ -165,7 +143,7 @@
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
         <property name="maximum">
-         <number>50</number>
+         <number>100</number>
         </property>
         <property name="value">
          <number>50</number>
@@ -185,7 +163,7 @@
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
         <property name="maximum">
-         <number>50</number>
+         <number>100</number>
         </property>
         <property name="value">
          <number>50</number>
@@ -271,6 +249,51 @@
        </widget>
       </item>
      </layout>
+    </item>
+    <item row="2" column="2">
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="m_voltageBox">
+        <property name="decimals">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="2" column="3">
+     <widget class="QCheckBox" name="m_scaleVoltage">
+      <property name="text">
+       <string>Scale in Volts</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="2">
+     <widget class="QComboBox" name="m_colorBarBox"/>
+    </item>
+    <item row="3" column="3">
+     <widget class="QCheckBox" name="m_scaleMetric">
+      <property name="text">
+       <string>Scale in metric units</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="3">
+     <widget class="QCheckBox" name="m_vLineBox">
+      <property name="text">
+       <string>Voltage guideline</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
