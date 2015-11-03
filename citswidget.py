@@ -155,10 +155,10 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 zPt=zPt/2
             #Starting voltage of the spectro
             elif("Device_1_Start" in line):
-                vStart=float(line.split()[-2])
+                vStart=round(float(line.split()[-2]),6)
             #Final voltage of the spectro
             elif("Device_1_End" in line):
-                vEnd=float(line.split()[-2])
+                vEnd=round(float(line.split()[-2]),6)
             #Any eventual divider
             elif("divider" in line):
                 divider=int(line.split()[-1])
@@ -188,7 +188,6 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def readCitsBin(self,filepath):
         """ Reads a binary CITS file (Nanonis) and stores all the parameters"""
         #The divider is already taken into account by Nanonis during the experiment so no need to process it again*
-        divider=1
         f=open(filepath,"rb")
         while(True):
             #Read the header of the map until its end ("HEADER_END")
@@ -222,8 +221,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         except struct.error:
             print("Problem while reading the file : number of bytes to read different than what was expected")
             return False
-        vStart=reading[0]
-        vEnd=reading[1]
+        vStart=round(reading[0],6)
+        vEnd=round(reading[1],6)
         #Reading experiment parameters (nbExpParams*4 bytes)
         f.read(nbExpParams*4)
         # Matlab convention : columns first then rows hence [y][x]
@@ -252,7 +251,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         f.close()
         self.channelList=self.channelList[0:3]
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart/divider,"vEnd":vEnd/divider,"dV":abs(vEnd-vStart)/(divider*zPt)}
+        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":(vEnd-vStart)/(zPt)}
         #Test
         #self.extractDerivative(0)
         return True
@@ -561,7 +560,6 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                         y0 +=sy
                 x_plot=np.array(x_plot_p)
                 y_plot=np.array(y_plot_p)
-                print(x_plot,y_plot)
         d=np.sqrt((xf-xi)**2+(yf-yi)**2)
         # Plot a black dashed line along the line traced
         #self.ax_map.arrow(xi,yi,xf,yf,head_length=d/10,head_width=d/10,fc='k', ec='k')

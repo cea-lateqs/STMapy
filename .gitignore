@@ -5,3 +5,5 @@
 *.tmp
 #ignore Spyder file
 .spyder*
+#Ignore bat file
+updateUi.bat
