@@ -612,7 +612,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def launchBigCut(self):
         if(self.dataLoaded):
-            if(True):
+            if(False):
                 self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
             #Temporary stuff
             else:
@@ -810,7 +810,15 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #Add the channel to the data
         self.addChannel(FFTData,"FFT of "+self.channelList[numChanToFFT])
         
+    def computeAngle(Dmoire,k=True):
+        return 2*np.arcsin(0.246/(2*Dmoire))*180/np.pi
         
-        
-        
+    def extractSlope(self,cutOffValue,numChanToFit):
+        yPx=self.m_params["yPx"]
+        xPx=self.m_params["xPx"]
+        zPt=self.m_params["zPt"]
+        slopeData=np.zeros(shape=(yPx,xPx,zPt))
+        for y in range(0,yPx):
+            for x in range(0,xPx):
+                #WIP
         
