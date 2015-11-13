@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>990</width>
-    <height>889</height>
+    <height>892</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,78 @@
   </property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="2">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="m_openButton">
+        <property name="text">
+         <string>Open CITS</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="m_averageCitsButton">
+        <property name="text">
+         <string>Average CITS</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="m_wholeLengthCutButton">
+        <property name="text">
+         <string>Whole length cut</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="8" column="2">
+     <widget class="Line" name="line">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="3">
+     <widget class="QPushButton" name="m_avgSpec">
+      <property name="text">
+       <string>Average on map</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="2">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Average with respect to values</string>
+      </property>
+     </widget>
+    </item>
     <item row="6" column="2">
      <layout class="QHBoxLayout" name="horizontalLayout_6">
       <item>
@@ -77,78 +149,6 @@
        <widget class="QComboBox" name="m_channelBox"/>
       </item>
      </layout>
-    </item>
-    <item row="10" column="2">
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>Average with respect to values</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="3">
-     <widget class="QPushButton" name="m_avgSpec">
-      <property name="text">
-       <string>Average on map</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="2">
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QPushButton" name="m_openButton">
-        <property name="text">
-         <string>Open CITS</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="m_averageCitsButton">
-        <property name="text">
-         <string>Average CITS</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="m_wholeLengthCutButton">
-        <property name="text">
-         <string>Whole length cut</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="8" column="2">
-     <widget class="Line" name="line">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
     </item>
     <item row="13" column="2">
      <layout class="QVBoxLayout" name="map_layout">
@@ -399,20 +399,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <spacer name="verticalSpacer_2">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -445,6 +432,26 @@
         </property>
        </widget>
       </item>
+      <item row="5" column="0">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="6" column="1">
+       <widget class="QPushButton" name="m_magicButton">
+        <property name="text">
+         <string>Magic button</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item row="10" column="3">
@@ -453,6 +460,30 @@
        <string>Colorbar settings</string>
       </property>
      </widget>
+    </item>
+    <item row="6" column="3">
+     <layout class="QHBoxLayout" name="horizontalLayout_5">
+      <item>
+       <widget class="QLabel" name="label_13">
+        <property name="text">
+         <string>Shift spectra by</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDoubleSpinBox" name="m_shiftBox">
+        <property name="minimum">
+         <double>-1000.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>1000.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.010000000000000</double>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>

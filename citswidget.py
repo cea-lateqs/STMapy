@@ -11,7 +11,10 @@ from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationTo
 import numpy as np
 import pylab
 import os.path as osp
-import scipy.signal as sp
+from os import listdir
+import scipy as sp
+import scipy.optimize
+import scipy.signal
 import matplotlib.patches as patches
 import matplotlib.pyplot
 import struct
@@ -51,6 +54,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.dataLoaded=False
         self.connect()
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
+        self.nSpectraDrawn=0
+        self.spectrumColor=['b', 'g', 'r', 'c', 'm', 'y', 'k']
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -66,6 +71,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #self.m_scaleMetric.toggled.connect(self.updateMap)
         self.m_averageCitsButton.clicked.connect(self.averageCITS)
         self.m_wholeLengthCutButton.clicked.connect(self.launchBigCut)
+        self.m_magicButton.clicked.connect(self.magicFunction)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
@@ -81,7 +87,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def loadCITS(self):
         """ Slot that launches the reading of the CITS by asking the path of the file """
-        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","C:\\PhD\\Experiments\\STM\\Lc12\\50mK","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         extension=filename.split('.')[-1]        
         if(extension=="asc" or extension=="txt"):
             self.clearMap()
@@ -99,7 +105,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def averageCITS(self):
         """ Slot that averages the CITS chosen in the dialog box (they have to be of the same dimensions) """
-        Cits_names=QFileDialog.getOpenFileNames(self,"Choose the CITS files to average","C:\\PhD\\Experiments\\STM\\Lc12\\50mK","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+        Cits_names=QFileDialog.getOpenFileNames(self,"Choose the CITS files to average","E:\\PhD\\Experiments\\STM\\Lc12\\CITS","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         N_Cits=len(Cits_names)
         first=True
         for cits in Cits_names:
@@ -189,6 +195,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         """ Reads a binary CITS file (Nanonis) and stores all the parameters"""
         #The divider is already taken into account by Nanonis during the experiment so no need to process it again*
         f=open(filepath,"rb")
+        zSpectro=False
+        half=False
         while(True):
             #Read the header of the map until its end ("HEADER_END")
             line=f.readline()
@@ -201,6 +209,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             elif("Grid settings" in line):
                 xL=float(line.split(";")[-3])*(10**9)
                 yL=float(line.split(";")[-2])*(10**9)
+            elif("Sweep Signal" in line):
+                if(line.split('"')[1]=='Z (m)'):
+                    zSpectro=True
             #Number of points per channel
             elif("Points" in line):
                 zPt=int(line.split('=')[-1])
@@ -221,16 +232,28 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         except struct.error:
             print("Problem while reading the file : number of bytes to read different than what was expected")
             return False
-        vStart=round(reading[0],6)
-        vEnd=round(reading[1],6)
+        #If it is a Z-Spectroscopy, put the Z boundaries in nm
+        if(zSpectro):
+            vStart=round(reading[0]*10**9,6)
+            vEnd=round(reading[1]*10**9,6)
+        else:
+            vStart=round(reading[0],6)
+            vEnd=round(reading[1],6)
         #Reading experiment parameters (nbExpParams*4 bytes)
         f.read(nbExpParams*4)
         # Matlab convention : columns first then rows hence [y][x]
         try:
-            self.m_data=np.zeros(shape=(3,yPx,xPx,zPt))
+            self.m_data=np.zeros(shape=(nChannels,yPx,xPx,zPt))
         except MemoryError:
-            print("The data is too big ! Or the memory too small...")
-            return False
+            print("The data is too big ! Or the memory too small...\nI will take half of the channels...")
+            half=True
+        #If the first alloc didn't work, try to halve it
+        if(half):
+            try:
+                self.m_data=np.zeros(shape=(nChannels/2,yPx,xPx,zPt))
+            except MemoryError:
+                print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...")
+                return False
         #Format string for unpacking zPt big-endians floats ('>f')
         fmtString='>'+'f'*zPt
         #zPt floats to read of 4 bytes each
@@ -240,19 +263,28 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 for chan in range(0,nChannels):
                 # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
                     b=f.read(bytesToRead)
-                    if(chan<3): #I take only the 3 first channels
-                        try:
+                    try:
+                        if(not half or chan<nChannels/2):
                             self.m_data[chan][y][x]=struct.unpack(fmtString,b)
-                        except struct.error:
-                            print("Problem while reading the file : number of bytes to read different than what was expected")
-                            return False
+                    except struct.error:
+                        print("Problem while reading the file : number of bytes to read different than what was expected")
+                        return False
                 #After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
                 f.read(8+nbExpParams*4)
         f.close()
-        self.channelList=self.channelList[0:3]
+        if(half):        
+            self.channelList=self.channelList[0:nChannels/2]
         #Store the parameters in a dictonnary to use them later
         self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":(vEnd-vStart)/(zPt)}
+        #Test to have currents in nA
+        i=0
+        for i in range(0,len(self.channelList)):
+            chan=self.channelList[i]
+            if("(A)" in chan):
+                self.m_data[i]=self.m_data[i]*10**9
+                self.channelList[i]=chan.replace("(A)","(nA)")
         #Test
+        if(zSpectro): self.extractSlope(10**(-10),0)
         #self.extractDerivative(0)
         return True
         
@@ -358,7 +390,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             for y in range(yi,yf):
                 for x in range(xi,xf):
                         avg_data+=(self.m_data[chan][y][x]/N)
-            if(self.m_viewSelectedBox.isChecked()): self.ax_map.add_patch(patches.Rectangle((xi, yi),xf-xi,yf-yi,))
+            if(self.m_viewSelectedBox.isChecked()): self.ax_map.add_patch(patches.Rectangle((xi, yi),xf-xi,yf-yi,color=self.getSpectrumColor(self.nSpectraDrawn)))
             self.m_mapWidget.draw()
             self.drawSpectrum(avg_data,"Average")
             
@@ -388,11 +420,11 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                     if(currentValue>limit_aboveV):
                         avg_data_aboveV+=self.m_data[chan][y][x]
                         N_aboveV+=1
-                        if(viewSelected): self.addToPtsClicked(x,y,'blue')
+                        if(viewSelected): self.addToPtsClicked(x,y,self.getSpectrumColor(self.nSpectraDrawn))
                     elif(currentValue<limit_belowV):
                         avg_data_belowV+=self.m_data[chan][y][x]
                         N_belowV+=1
-                        if(viewSelected): self.addToPtsClicked(x,y,'green')
+                        if(viewSelected): self.addToPtsClicked(x,y,self.getSpectrumColor(self.nSpectraDrawn+1))
             if(N_aboveV!=0): 
                 avg_data_aboveV/=N_aboveV
                 self.drawSpectrum(avg_data_aboveV,"Average above "+str(limit_aboveV)+" ("+str(N_aboveV)+" spectra averaged)")
@@ -404,6 +436,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def clearSpectrum(self):
         """ Clears the spectrum window """
         self.ax_spec.clear()
+        self.nSpectraDrawn=0
         self.voltageLine=0
         self.clearPtsClicked()
         self.m_specWidget.draw()
@@ -412,21 +445,29 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         """ Method called each time a spectrum needs to be plotted. Takes care of the derivative and different scales stuff and updates the window """
         finalLabel=label+" - "+str(self.m_channelBox.currentText())
         dV=self.m_params["dV"]
+        shift=self.nSpectraDrawn*self.m_shiftBox.value()
         if(self.dataLoaded and dataToPlot.size!=0):
-            deriv=sp.savgol_filter(dataToPlot, 5, 2, deriv=1, delta=dV)*(-10**9)
+            deriv=sp.signal.savgol_filter(dataToPlot, 5, 2, deriv=1, delta=dV)
             if(self.m_scaleVoltage.isChecked()):
                 vStart=self.m_params["vStart"]
                 vEnd=self.m_params["vEnd"]
-                self.ax_spec.plot(np.arange(vStart,vEnd,dV),dataToPlot,label=finalLabel)
+                self.ax_spec.plot(np.arange(vStart,vEnd,dV),shift+dataToPlot,label=finalLabel)
+                self.nSpectraDrawn=self.nSpectraDrawn+1
                 if(self.m_derivBox.isChecked()):
                     self.ax_spec.plot(np.arange(vStart,vEnd,dV),deriv,label="Derivative of "+finalLabel)
+                    self.nSpectraDrawn=self.nSpectraDrawn+1
             else:
-                self.ax_spec.plot(dataToPlot,label=finalLabel)
+                self.ax_spec.plot(shift+dataToPlot,label=finalLabel)
+                self.nSpectraDrawn=self.nSpectraDrawn+1
                 if(self.m_derivBox.isChecked()):
                     self.ax_spec.plot(deriv,label="Derivative of "+finalLabel)
-        
+                    self.nSpectraDrawn=self.nSpectraDrawn+1
         self.ax_spec.legend(loc=0)
         self.m_specWidget.draw()
+        
+    def getSpectrumColor(self,n):
+        i=n%len(self.spectrumColor)
+        return self.spectrumColor[i]
         
     def launchAvgSpectrum(self):
         """ Slot called to average the spectra of the whole map """
@@ -438,22 +479,36 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def pickSpectrum(self,event):
         """ Method called when a press-and-release event is done at the same location of the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
-            color='black'
+            color=self.getSpectrumColor(self.nSpectraDrawn)
             PixelX=int(event.xdata)
             PixelY=int(event.ydata)
             chan=self.m_channelBox.currentIndex()
-            self.m_mapWidget.draw()
-            #Add data to the total data to average if in average mod
-            if(self.m_avgBox.isChecked()):
-                self.tot_data+=self.m_data[chan][PixelY][PixelX]
-                self.nAvgSpectra+=1
-                color='white'
-            #Plot the data with the desired scale (Volts or index) if in normal mode
+            if("Slope" in self.channelList[chan]):
+                zPt=self.m_params["zPt"]
+                dataLogCurrent=np.zeros(shape=(zPt))
+                zPts=np.arange(0,zPt)
+                for z in zPts:
+                    i=self.m_data[0][PixelY][PixelX][z]
+                    if(i<10**(-10)):
+                        dataLogCurrent[z]=0
+                    else:
+                        dataLogCurrent[z]=np.log(i)
+                dataLine=self.m_data[chan][PixelY][PixelX][0]*zPts+self.m_data[chan+1][PixelY][PixelX][0]
+                self.drawSpectrum(dataLogCurrent,"Log of current at ["+str(PixelX)+","+str(PixelY)+"]")
+                #self.drawSpectrum(dataLine,"Linear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
             else:
-                dataToPlot=self.m_data[chan][PixelY][PixelX]
-                self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
-            self.addToPtsClicked(PixelX,PixelY,color)
-            self.drawPtsClicked()
+                self.m_mapWidget.draw()
+                #Add data to the total data to average if in average mod
+                if(self.m_avgBox.isChecked()):
+                    self.tot_data+=self.m_data[chan][PixelY][PixelX]
+                    self.nAvgSpectra+=1
+                    #color='white'
+                #Plot the data with the desired scale (Volts or index) if in normal mode
+                else:
+                    dataToPlot=self.m_data[chan][PixelY][PixelX]
+                    self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
+                self.addToPtsClicked(PixelX,PixelY,color)
+                self.drawPtsClicked()
             
 ### Methods related to the clicks on the map
             
@@ -475,23 +530,25 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             
     def onReleaseOnMap(self,event):
         """ Slot called when a release event is detected. If it happens at the same location of the press, calls the pickSpectrum method. Otherwise, it means that a line was drawn so it makes a cut of the spectra along the line. """
-        if(event.xdata!=None and event.ydata!=None and self.dataLoaded and self.toolbar_map._active is None):
-            xf=int(event.xdata)
-            yf=int(event.ydata)
-            xi=self.origin_x
-            yi=self.origin_y
-            # Cut along the XY line if a line is traced (X or Y different)
-            if(xf!=xi or yf!=yi):
-                if(event.button==1):
-                    self.cutAlongLine(xi,xf,yi,yf)
-                else:
-                    self.averageSpectrum(xi,xf,yi,yf)
-            else:
-                self.lines.pop(0).remove()
-                self.pickSpectrum(event)
-                self.m_mapWidget.draw()
-            self.m_mapWidget.mpl_disconnect(self.motionConnection)
-    
+        if(self.dataLoaded and self.toolbar_map._active is None):
+            if(event.xdata!=None and event.ydata!=None):
+                xf=int(event.xdata)
+                yf=int(event.ydata)
+                xi=self.origin_x
+                yi=self.origin_y
+                # Cut along the XY line if a line is traced (X or Y different)
+                if(xf!=xi or yf!=yi):
+                    if(event.button==1):
+                        self.cutAlongLine(xi,xf,yi,yf)
+                        self.m_mapWidget.mpl_disconnect(self.motionConnection)
+                    else:
+                        self.averageSpectrum(xi,xf,yi,yf)
+                else:                    
+                    self.pickSpectrum(event)
+                    self.m_mapWidget.draw()
+                
+            
+
     def addToPtsClicked(self,x,y,color):
         """ Method called when a click was detected on the map. The coordinates are saved in the pts_clicked list with a corresponding color """
         # Shifting the coordinates by (0.5,0.5) so that the dot is plotted at the center of the square
@@ -587,7 +644,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         # Plot the built map in a new figure
         fig=pylab.figure()
         ax=fig.add_subplot(1,1,1)
-        ax.set_title(self.mapName.split(".")[0])
+        ax.set_title(self.mapName.split(".")[0]+" - Cut "+str(fig.number))
         ax.set_ylabel("Voltage index")
         fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         self.ax_map.text(xi+0.5,yi+0.5,str(fig.number))
@@ -612,56 +669,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def launchBigCut(self):
         if(self.dataLoaded):
-            if(False):
-                self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
-            #Temporary stuff
-            else:
-                #Launch a linear cut along x with y=0
-                x_plot=np.arange(0,self.m_params["xPx"])
-                #Build the data to plot with v as Y and z (number of pixels gone through) as X
-                zPt=self.m_params['zPt']
-                voltages=np.arange(0,zPt)
-                chan=self.m_channelBox.currentIndex()
-                dataToPlot=np.ndarray(shape=(zPt,x_plot.size))
-                # Variables needed to compute the metric distances
-                dx=self.m_params["xL"]/self.m_params["xPx"]
-                dy=self.m_params["yL"]/self.m_params["yPx"]
-                metricDistances=dx*(x_plot)
-                # Matlab convention : Y (v) first then X (z)
-                valMax=0
-                for v in voltages:
-                    for x in x_plot:
-                        val=self.m_data[chan][0][x][v]
-                        dataToPlot[v][x]=val
-                    if(x==0):
-                        valMax=val
-                    elif(val>valMax):
-                        valMax=val
-                # Plot the built map in a new figure
-                fig=pylab.figure()
-                ax=fig.add_subplot(1,1,1)
-                ax.set_title(self.mapName.split(".")[0])
-                ax.set_ylabel("Voltage index")
-                fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
-                # Change the scales if needed
-                if(self.m_scaleVoltage.isChecked()): 
-                    voltages=self.m_params["vStart"]+voltages*self.m_params["dV"]
-                    ax.set_ylabel("Bias (V)")
-                if(self.m_scaleMetric.isChecked()):
-                    mapData=pylab.pcolormesh(metricDistances,voltages,dataToPlot,cmap=self.m_colorBarBox.currentText())
-                    ax.axis([metricDistances[0],metricDistances[-1],voltages[0],voltages[-1]])
-                    ax.set_xlabel("Distance (nm)")
-                else:
-                    mapData=pylab.pcolormesh(x_plot,voltages,dataToPlot,cmap=self.m_colorBarBox.currentText())
-                    ax.axis([z_plot[0],z_plot[-1],voltages[0],voltages[-1]])
-                    ax.set_xlabel("Pixels")
-                #Colorbar set up
-                cbar = fig.colorbar(mapData, shrink=.9, pad=0.05, aspect=15)
-                cbar.ax.yaxis.set_ticks_position('both')
-                cbar.ax.tick_params(axis='y', direction='in')
-                if(self.m_cbarCustomCheckbox.isChecked()): mapData.set_clim(float(self.m_cbarLowerBox.text()),float(self.m_cbarUpperBox.text()))
-                else: mapData.set_clim(0,valMax)
-                fig.savefig("C:\\PhD\\Experiments\\STM\\Lc12\\50mK\\Depouillement_periodicite\\"+self.mapName+".png")
+            self.ax_map.plot([0.5,self.m_params["xPx"]-0.5],[0.5,self.m_params["yPx"]-0.5],'k--')
+            self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
                 
             
 ### Methods related to the map
@@ -797,7 +806,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         derivData=np.zeros(shape=(yPx,xPx,zPt))
         for y in range(0,yPx):
             for x in range(0,xPx):
-                derivData[y][x]=sp.savgol_filter(self.m_data[numChanToDeriv][y][x], 9, 2, deriv=1, delta=dV)*(-10**(9))
+                derivData[y][x]=sp.signal.savgol_filter(self.m_data[numChanToDeriv][y][x], 9, 2, deriv=1, delta=dV)
         #Add the channel to the data
         self.addChannel(derivData,"Derivative of "+self.channelList[numChanToDeriv])
         
@@ -817,8 +826,102 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         yPx=self.m_params["yPx"]
         xPx=self.m_params["xPx"]
         zPt=self.m_params["zPt"]
+        dZ=self.m_params["dV"]
         slopeData=np.zeros(shape=(yPx,xPx,zPt))
+        coefData=np.zeros(shape=(yPx,xPx,zPt))
+        fit_func = lambda v,a,b: a*v+b
+        xArray=np.arange(0,zPt)*dZ
         for y in range(0,yPx):
             for x in range(0,xPx):
-                #WIP
+                    rawData=self.m_data[numChanToFit][y][x]
+                    mask=rawData>cutOffValue
+                    xArrayFiltered=xArray[mask]
+                    dataFiltered=np.log(rawData[mask])
+                    popt, pcov = sp.optimize.curve_fit(fit_func, xArrayFiltered, dataFiltered)
+                    if(x<4 and y<4 and False):
+                        pylab.figure()
+                        pylab.plot(xArrayFiltered,dataFiltered)
+                        pylab.plot(xArrayFiltered,popt[0]*xArrayFiltered+popt[1])
+                    slopeData[y][x][0]=popt[0]
+                    coefData[y][x][0]=popt[1]
+        #Add the created channel to the data
+        self.addChannel(slopeData,"Slope by linear fit of "+self.channelList[numChanToFit])
+        self.addChannel(coefData,"Coef by linear fit of "+self.channelList[numChanToFit])
+        
+    def magicLinearCut(self):
+        #Launch a linear cut along x with y=0
+        x_plot=np.arange(0,self.m_params["xPx"])
+        #Build the data to plot with v as Y and z (number of pixels gone through) as X
+        zPt=self.m_params['zPt']
+        voltages=np.arange(0,zPt)
+        chan=self.m_channelBox.currentIndex()
+        dataToPlot=np.ndarray(shape=(zPt,x_plot.size))
+        # Variables needed to compute the metric distances
+        dx=self.m_params["xL"]/self.m_params["xPx"]
+        dy=self.m_params["yL"]/self.m_params["yPx"]
+        metricDistances=dx*(x_plot)
+        # Matlab convention : Y (v) first then X (z)
+        valMax=0
+        for v in voltages:
+            for x in x_plot:
+                val=self.m_data[1][0][x][v]
+                dataToPlot[v][x]=val
+                if(x==0):
+                    valMax=val
+                elif(val>valMax):
+                    valMax=val
+        # Plot the built map in a new figure
+        fig=pylab.figure()
+        ax=fig.add_subplot(1,1,1)
+        ax.set_title(self.mapName.split(".")[0])
+        ax.set_ylabel("Voltage index")
+        fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+        # Change the scales if needed
+        if(self.m_scaleVoltage.isChecked()): 
+            voltages=self.m_params["vStart"]+voltages*self.m_params["dV"]
+            ax.set_ylabel("Bias (V)")
+            if(self.m_scaleMetric.isChecked()):
+                mapData=pylab.pcolormesh(metricDistances,voltages,dataToPlot,cmap=self.m_colorBarBox.currentText())
+                ax.axis([metricDistances[0],metricDistances[-1],voltages[0],voltages[-1]])
+                ax.set_xlabel("Distance (nm)")
+            else:
+                mapData=pylab.pcolormesh(x_plot,voltages,dataToPlot,cmap=self.m_colorBarBox.currentText())
+                ax.axis([z_plot[0],z_plot[-1],voltages[0],voltages[-1]])
+                ax.set_xlabel("Pixels")
+            #Colorbar set up
+            cbar = fig.colorbar(mapData, shrink=.9, pad=0.05, aspect=15)
+            cbar.ax.yaxis.set_ticks_position('both')
+            cbar.ax.tick_params(axis='y', direction='in')
+            if(self.m_cbarCustomCheckbox.isChecked()): mapData.set_clim(float(self.m_cbarLowerBox.text()),float(self.m_cbarUpperBox.text()))
+            else: mapData.set_clim(0,valMax)
+            fig.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_9\\"+self.mapName+".png")
+            pylab.close()
+                
+    def magicFunction(self):
+        i=0
+        #pylab.figure()
+        path="E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\2015-10-27\\Line_Spectro_9\\"
+        for fich in listdir(path):
+            print fich
+            self.dataLoaded=self.readCitsBin(path+fich)
+            cur=fich.split('_')[-1].split('.')[0]
+            self.mapName=cur
+            # Coolwarm cmap
+            self.m_colorBarBox.setCurrentIndex(88)
+            self.magicLinearCut()
+            
+            #xPx=self.m_params["xPx"]
+            #yPx=self.m_params["yPx"]
+            #zPt=self.m_params["zPt"]
+            #vS=self.m_params["vStart"]
+            #vE=self.m_params["vEnd"]
+            #dV=self.m_params["dV"]
+            #avg_data=np.zeros(shape=zPt)
+            #N=xPx*yPx
+            #for y in range(0,yPx):
+            #    for x in range(0,xPx):
+            #            avg_data+=(self.m_data[1][y][x]/N)
+            #pylab.plot(np.arange(vS,vE,dV),(avg_data+i*0.3),label=cur)
+            #i=i+1
+        #pylab.legend()
         
