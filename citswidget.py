@@ -87,7 +87,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def loadCITS(self):
         """ Slot that launches the reading of the CITS by asking the path of the file """
-        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","E:\\PhD\\Experiments\\STM\\Lc12\\CITS\\","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         extension=filename.split('.')[-1]        
         if(extension=="asc" or extension=="txt"):
             self.clearMap()
@@ -285,7 +285,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 self.channelList[i]=chan.replace("(A)","(nA)")
         #Test
         if(zSpectro): self.extractSlope(10**(-10),0)
-        #self.extractDerivative(0)
+        #Post-processing
+        #self.extractOutOfPhase(1,2)
         return True
         
 ### Reading and loading topo images methods (not finished yet)
@@ -531,23 +532,26 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def onReleaseOnMap(self,event):
         """ Slot called when a release event is detected. If it happens at the same location of the press, calls the pickSpectrum method. Otherwise, it means that a line was drawn so it makes a cut of the spectra along the line. """
         if(self.dataLoaded and self.toolbar_map._active is None):
-            if(event.xdata!=None and event.ydata!=None):
-                xf=int(event.xdata)
-                yf=int(event.ydata)
-                xi=self.origin_x
-                yi=self.origin_y
+            xf=int(event.xdata)
+            yf=int(event.ydata)
+            xi=self.origin_x
+            yi=self.origin_y
+            if(event.button==1):
+                self.m_mapWidget.mpl_disconnect(self.motionConnection)
+                if(event.xdata==None or event.ydata==None):
+                     self.lines.pop(0).remove()
                 # Cut along the XY line if a line is traced (X or Y different)
-                if(xf!=xi or yf!=yi):
-                    if(event.button==1):
-                        self.cutAlongLine(xi,xf,yi,yf)
-                        self.m_mapWidget.mpl_disconnect(self.motionConnection)
-                    else:
-                        self.averageSpectrum(xi,xf,yi,yf)
-                else:                    
+                elif(xf!=xi or yf!=yi):
+                    self.cutAlongLine(xi,xf,yi,yf)
+                #Pick spectrum otherwise
+                else:
+                    self.lines.pop(0).remove()
                     self.pickSpectrum(event)
-                    self.m_mapWidget.draw()
-                
-            
+            else:
+                if(event.xdata!=None and event.ydata!=None and (xf!=xi or yf!=yi)):
+                    self.averageSpectrum(xi,xf,yi,yf)
+            self.m_mapWidget.draw()
+
 
     def addToPtsClicked(self,x,y,color):
         """ Method called when a click was detected on the map. The coordinates are saved in the pts_clicked list with a corresponding color """
@@ -794,7 +798,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         
     def extractOutOfPhase(self,numChanR,numChanPhi):
         #Phase : 9V = pi
-        outOfPhase=self.m_data[numChanR]*np.cos(self.m_data[numChanPhi]*np.pi/9)
+        outOfPhase=-self.m_data[numChanR]*np.cos(self.m_data[numChanPhi]*np.pi/9)
         #Add the channel to the data
         self.addChannel(outOfPhase,self.channelList[numChanR]+"cos("+self.channelList[numChanPhi]+")")
         
@@ -866,9 +870,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             for x in x_plot:
                 val=self.m_data[1][0][x][v]
                 dataToPlot[v][x]=val
-                if(x==0):
+                if(valMax==0):
                     valMax=val
-                elif(val>valMax):
+                if(val>valMax):
                     valMax=val
         # Plot the built map in a new figure
         fig=pylab.figure()
@@ -894,20 +898,20 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             cbar.ax.tick_params(axis='y', direction='in')
             if(self.m_cbarCustomCheckbox.isChecked()): mapData.set_clim(float(self.m_cbarLowerBox.text()),float(self.m_cbarUpperBox.text()))
             else: mapData.set_clim(0,valMax)
-            fig.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_9\\"+self.mapName+".png")
+            fig.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_19\\"+self.mapName+".png")
             pylab.close()
                 
     def magicFunction(self):
         i=0
         #pylab.figure()
-        path="E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\2015-10-27\\Line_Spectro_9\\"
+        path="E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\2015-11-03\\Line_Spectro_19\\"
         for fich in listdir(path):
             print fich
             self.dataLoaded=self.readCitsBin(path+fich)
             cur=fich.split('_')[-1].split('.')[0]
             self.mapName=cur
             # Coolwarm cmap
-            self.m_colorBarBox.setCurrentIndex(88)
+            self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("coolwarm"))
             self.magicLinearCut()
             
             #xPx=self.m_params["xPx"]
