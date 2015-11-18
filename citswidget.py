@@ -205,8 +205,10 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 splitted_line=line.split('"')[1].split()
                 xPx=int(splitted_line[0])
                 yPx=int(splitted_line[-1])
-            #Metric dimensions in nm (Grid settings also contains other data)
+            #Center coordinates and metric dimensions in nm (Grid settings also contains other data)
             elif("Grid settings" in line):
+                xC=float(line.split(";")[0].split("=")[-1])*(10**9)
+                yC=float(line.split(";")[1])*(10**9)
                 xL=float(line.split(";")[-3])*(10**9)
                 yL=float(line.split(";")[-2])*(10**9)
             elif("Sweep Signal" in line):
@@ -275,7 +277,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         if(half):        
             self.channelList=self.channelList[0:nChannels/2]
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":(vEnd-vStart)/(zPt)}
+        self.m_params={"xPx":xPx,"yPx":yPx,"xC":xC,"yC":yC,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":(vEnd-vStart)/(zPt)}
+        print(self.m_params)
         #Test to have currents in nA
         i=0
         for i in range(0,len(self.channelList)):
@@ -536,6 +539,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             yf=int(event.ydata)
             xi=self.origin_x
             yi=self.origin_y
+            #If left-click : either a line was drawn or a spectrum picked
             if(event.button==1):
                 self.m_mapWidget.mpl_disconnect(self.motionConnection)
                 if(event.xdata==None or event.ydata==None):
@@ -547,9 +551,13 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 else:
                     self.lines.pop(0).remove()
                     self.pickSpectrum(event)
+            #If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
             else:
-                if(event.xdata!=None and event.ydata!=None and (xf!=xi or yf!=yi)):
-                    self.averageSpectrum(xi,xf,yi,yf)
+                if(event.xdata!=None and event.ydata!=None):
+                    if(xf!=xi or yf!=yi):
+                        self.averageSpectrum(xi,xf,yi,yf)
+                    else:
+                        self.averageSpectrum(xi-2,xf+2,yi-2,yf+2)
             self.m_mapWidget.draw()
 
 
@@ -720,8 +728,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             #Set title
             chan=self.m_channelBox.currentText()
             #print(chan)
-            self.ax_map.set_title(chan+"\n"
-            +str(xPx)+"x"+str(yPx)+" pixels - "+str(zPt)+" points\n"
+            self.ax_map.set_title(self.mapName+" - "+chan+"\n"
             +"V="+str(self.m_params["vStart"]+voltage*self.m_params["dV"]))
             #Colorbar stuff
             cbar = fig_map.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
