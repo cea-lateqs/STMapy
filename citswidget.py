@@ -19,11 +19,11 @@ import matplotlib.patches as patches
 import matplotlib.pyplot
 import struct
 
-class CitsWidget(QDockWidget, Ui_CitsWidget):
+class CitsWidget(QMainWindow, Ui_CitsWidget):
 ### Building methods
     def __init__(self,parent):
         """ Builds the widget with parent widget in arg """
-        QDockWidget.__init__(self,parent)
+        QMainWindow.__init__(self,parent)
         #Set up the user interface from Designer.
         self.setupUi(self)
         self.setAutoFillBackground(True)
@@ -56,6 +56,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn=0
         self.spectrumColor=['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        #Set up layouts
+        self.m_avgWidget.hide()
+        self.m_cbarWidget.hide()
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -77,9 +80,11 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
         self.m_avgVButton.clicked.connect(self.averageSpectrumWithValues)
         #Averaging with respect to values
+        self.m_avgCheckBox.toggled.connect(self.m_avgWidget.setVisible)
         self.m_aboveBox.valueChanged.connect(self.updateAboveValue)
         self.m_belowBox.valueChanged.connect(self.updateBelowValue)
         #Cbar custom limits
+        self.m_cbarCheckBox.toggled.connect(self.m_cbarWidget.setVisible)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarUpperBox.setEnabled)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarLowerBox.setEnabled)
         
@@ -89,12 +94,14 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         """ Slot that launches the reading of the CITS by asking the path of the file """
         filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","E:\\PhD\\Experiments\\STM\\Lc12\\CITS\\","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         extension=filename.split('.')[-1]        
-        if(extension=="asc" or extension=="txt"):
+        if(extension=="asc"):
             self.clearMap()
             self.dataLoaded=self.readCitsAscii(filename)
         elif(extension=="3ds"):
             self.clearMap()
             self.dataLoaded=self.readCitsBin(filename)
+        elif(extension=="txt"):
+            self.readTopo(filename)
         else:
             print("Extension not recognized")
             return
@@ -273,6 +280,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                         return False
                 #After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
                 f.read(8+nbExpParams*4)
+                
         f.close()
         if(half):        
             self.channelList=self.channelList[0:nChannels/2]
@@ -287,7 +295,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 self.m_data[i]=self.m_data[i]*10**9
                 self.channelList[i]=chan.replace("(A)","(nA)")
         #Test
-        if(zSpectro): self.extractSlope(10**(-10),0)
+        if(zSpectro): self.extractSlope(0.01,0)
         #Post-processing
         #self.extractOutOfPhase(1,2)
         return True
@@ -297,7 +305,9 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
     def readTopo(self,filepath):
         """ Reads a topography file """
         f=open(filepath)
-        topo_data=[[]]
+        topo_data=[]
+        w=0
+        h=0
         for line in f:
             #Treat the headers differently
             if(line[0]=='#'):
@@ -308,13 +318,30 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             else:
                 topo_data.append(line.strip().split())
         f.close()
-        fig_map=self.m_mapWidget.figure
-        fig_map.clear()
-        ax_map = fig_map.add_subplot(1,1,1,aspect='equal')
-        fig_map.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
-        XYmap=ax_map.pcolormesh(np.ndarray(topo_data))
-        self.m_mapWidget.draw()
-        return True
+        #Set up figure
+        xPx=len(topo_data[0])
+        yPx=len(topo_data)
+        fig=pylab.figure()
+        self.ax_topo=fig.add_subplot(1,1,1,aspect=float(yPx)/xPx)
+        fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+        data=(np.asfarray(topo_data))*10**9
+        if(w!=0 and h!=0):
+            dx=w/xPx
+            dy=h/yPx
+            self.ax_topo.axis([0,w,0,h])
+            self.ax_topo.invert_yaxis()
+            # PLot data (y first (matlab convention)
+            XYmap=self.ax_topo.pcolormesh(np.arange(0,w,dx),np.arange(0,h,dy),data,cmap=self.m_colorBarBox.currentText())
+        else:
+            self.ax_topo.axis([0,xPx,0,yPx])
+            #self.ax_topo.invert_yaxis()
+            XYmap=self.ax_topo.pcolormesh(data,cmap=self.m_colorBarBox.currentText())
+        #Colorbar stuff
+        cbar = fig.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
+        cbar.ax.yaxis.set_ticks_position('both')
+        cbar.ax.tick_params(axis='y', direction='in')
+        #self.addChannel(data,"Z (nm)")
+        return False
         
 ### Updating methods. Usually called by signals
    
@@ -493,13 +520,13 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 zPts=np.arange(0,zPt)
                 for z in zPts:
                     i=self.m_data[0][PixelY][PixelX][z]
-                    if(i<10**(-10)):
+                    if(i<0.01):
                         dataLogCurrent[z]=0
                     else:
                         dataLogCurrent[z]=np.log(i)
-                dataLine=self.m_data[chan][PixelY][PixelX][0]*zPts+self.m_data[chan+1][PixelY][PixelX][0]
+                dataLine=self.m_data[chan][PixelY][PixelX][0]*self.m_params["dV"]*zPts+self.m_data[chan+1][PixelY][PixelX][0]
                 self.drawSpectrum(dataLogCurrent,"Log of current at ["+str(PixelX)+","+str(PixelY)+"]")
-                #self.drawSpectrum(dataLine,"Linear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
+                self.drawSpectrum(dataLine,"Liear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
             else:
                 self.m_mapWidget.draw()
                 #Add data to the total data to average if in average mod
@@ -511,8 +538,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                 else:
                     dataToPlot=self.m_data[chan][PixelY][PixelX]
                     self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
-                self.addToPtsClicked(PixelX,PixelY,color)
-                self.drawPtsClicked()
+            self.addToPtsClicked(PixelX,PixelY,color)
+            self.drawPtsClicked()
             
 ### Methods related to the clicks on the map
             
@@ -557,7 +584,8 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
                     if(xf!=xi or yf!=yi):
                         self.averageSpectrum(xi,xf,yi,yf)
                     else:
-                        self.averageSpectrum(xi-2,xf+2,yi-2,yf+2)
+                        n=self.m_rcAvgBox.value()
+                        self.averageSpectrum(max(0,xi-n),min(self.m_params["xPx"],xf+n),max(0,yi-n),min(self.m_params["yPx"],yf+n))
             self.m_mapWidget.draw()
 
 
@@ -702,7 +730,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
         if(self.dataLoaded):
             xPx=self.m_params["xPx"]
             yPx=self.m_params["yPx"]
-            zPt=self.m_params["zPt"]
+            #zPt=self.m_params["zPt"]
             if(xPx==yPx):
                 self.ax_map = fig_map.add_subplot(1,1,1,aspect='equal')
             else:
@@ -918,7 +946,7 @@ class CitsWidget(QDockWidget, Ui_CitsWidget):
             cur=fich.split('_')[-1].split('.')[0]
             self.mapName=cur
             # Coolwarm cmap
-            self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("coolwarm"))
+            self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("afmhot"))
             self.magicLinearCut()
             
             #xPx=self.m_params["xPx"]
