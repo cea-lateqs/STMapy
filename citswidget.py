@@ -50,8 +50,9 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
         self.m_colorBarBox.setCurrentIndex(2)
-        #Boolean that is True if a map is laoded
+        #Boolean that is True if a map is loaded
         self.dataLoaded=False
+        self.wdir="E:\\PhD\\Experiments\\STM\\Lc12\\CITS\\"
         self.connect()
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn=0
@@ -92,7 +93,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
     def loadCITS(self):
         """ Slot that launches the reading of the CITS by asking the path of the file """
-        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file","E:\\PhD\\Experiments\\STM\\Lc12\\CITS\\","3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+        filename=QFileDialog.getOpenFileName(self,"Choose a CITS file",self.wdir,"3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         extension=filename.split('.')[-1]        
         if(extension=="asc"):
             self.clearMap()
@@ -106,7 +107,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             print("Extension not recognized")
             return
         if(self.dataLoaded):
-            self.mapName=osp.basename(filename).split()[0]
+            self.wdir=osp.dirname(filename)
+            self.mapName=osp.basename(filename)
             print(self.mapName)
             self.updateWidgets()
         
@@ -249,9 +251,10 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             vStart=round(reading[0],6)
             vEnd=round(reading[1],6)
         #Reading experiment parameters (nbExpParams*4 bytes)
-        f.read(nbExpParams*4)
+        #f.read(nbExpParams*4)
         # Matlab convention : columns first then rows hence [y][x]
         try:
+            self.topo=np.zeros(shape=(yPx,xPx))
             self.m_data=np.zeros(shape=(nChannels,yPx,xPx,zPt))
         except MemoryError:
             print("The data is too big ! Or the memory too small...\nI will take half of the channels...")
@@ -259,6 +262,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #If the first alloc didn't work, try to halve it
         if(half):
             try:
+                self.topo=np.zeros(shape=(yPx,xPx))
                 self.m_data=np.zeros(shape=(nChannels/2,yPx,xPx,zPt))
             except MemoryError:
                 print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...")
@@ -269,6 +273,12 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         bytesToRead=4*zPt
         for y in range(0,yPx):
             for x in range(0,xPx):
+                b=f.read(nbExpParams*4)
+                try:
+                    self.topo[y][x]=struct.unpack('>'+'f'*nbExpParams,b)[2]
+                except struct.error:
+                    print("Problem while reading the topo : number of bytes to read different than what was expected")
+                    return False
                 for chan in range(0,nChannels):
                 # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
                     b=f.read(bytesToRead)
@@ -279,8 +289,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                         print("Problem while reading the file : number of bytes to read different than what was expected")
                         return False
                 #After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
-                f.read(8+nbExpParams*4)
-                
+                f.read(8)                
+                #f.read(8+nbExpParams*4)   
         f.close()
         if(half):        
             self.channelList=self.channelList[0:nChannels/2]
@@ -292,12 +302,15 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         for i in range(0,len(self.channelList)):
             chan=self.channelList[i]
             if("(A)" in chan):
-                self.m_data[i]=self.m_data[i]*10**9
+                self.m_data[i]=np.abs(self.m_data[i])*10**9
                 self.channelList[i]=chan.replace("(A)","(nA)")
         #Test
-        if(zSpectro): self.extractSlope(0.01,0)
+        if(zSpectro):
+            self.extractSlope(0.01,0)
+            #self.extractSlope(0.01,1)
         #Post-processing
         #self.extractOutOfPhase(1,2)
+        self.drawTopo()
         return True
         
 ### Reading and loading topo images methods (not finished yet)
@@ -343,8 +356,36 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #self.addChannel(data,"Z (nm)")
         return False
         
+    def drawTopo(self):
+        """ Draws the topography read while opening the CITS """
+        w=self.m_params["xL"]
+        h=self.m_params["yL"]
+        #Set up figure
+        xPx=self.m_params["xPx"]
+        yPx=self.m_params["yPx"]
+        fig=pylab.figure()
+        if(yPx!=1):
+            self.ax_topo=fig.add_subplot(1,1,1,aspect=float(yPx)/xPx)
+        else:
+            self.ax_topo=fig.add_subplot(1,1,1,aspect="equal")
+        fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+        data=self.topo*10**9 #Put in nm
+        if(self.m_scaleMetric.isChecked() and yPx!=1):
+            self.ax_topo.axis([0,w,0,h])
+            #self.ax_topo.invert_yaxis()
+            # PLot data (y first (matlab convention)
+            XYmap=self.ax_topo.pcolormesh(np.linspace(0,w,xPx),np.linspace(0,h,yPx),data,cmap=self.m_colorBarBox.currentText())
+        else:
+            self.ax_topo.axis([0,xPx,0,yPx])
+            #self.ax_topo.invert_yaxis()
+            XYmap=self.ax_topo.pcolormesh(data,cmap=self.m_colorBarBox.currentText())
+        #Colorbar stuff
+        cbar = fig.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
+        cbar.ax.yaxis.set_ticks_position('both')
+        cbar.ax.tick_params(axis='y', direction='in')
+        
+        
 ### Updating methods. Usually called by signals
-   
     def updateAvgVariables(self):
         """ Slot called by the toggling of the average box. Toggling on the box clears everything to start a new averaging. Toggling off averages and plots the data stored by picking spectra """
         if(self.dataLoaded):
@@ -421,7 +462,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             for y in range(yi,yf):
                 for x in range(xi,xf):
                         avg_data+=(self.m_data[chan][y][x]/N)
-            if(self.m_viewSelectedBox.isChecked()): self.ax_map.add_patch(patches.Rectangle((xi, yi),xf-xi,yf-yi,color=self.getSpectrumColor(self.nSpectraDrawn)))
             self.m_mapWidget.draw()
             self.drawSpectrum(avg_data,"Average")
             
@@ -551,11 +591,21 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             if(event.button==1):
                 self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawLine)
                 self.lines=self.ax_map.plot([self.origin_x,event.xdata],[self.origin_y,event.ydata],'k--')
+            else:
+                self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawRectangle)
+                self.rectangle=self.ax_map.add_patch(patches.Rectangle((self.origin_x, self.origin_y),0,0,color=self.getSpectrumColor(self.nSpectraDrawn)))
+                
             
     def drawLine(self,event):
         if(event.xdata!=None and event.ydata!=None):
             self.lines[0].set_xdata([self.origin_x+0.5,int(event.xdata)+0.5])
             self.lines[0].set_ydata([self.origin_y+0.5,int(event.ydata)+0.5])
+            self.m_mapWidget.draw()
+            
+    def drawRectangle(self,event):
+        if(event.xdata!=None and event.ydata!=None):
+            self.rectangle.set_width(int(event.xdata)-self.origin_x)
+            self.rectangle.set_height(int(event.ydata)-self.origin_y)
             self.m_mapWidget.draw()
             
             
@@ -580,11 +630,16 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                     self.pickSpectrum(event)
             #If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
             else:
+                self.m_mapWidget.mpl_disconnect(self.motionConnection)
                 if(event.xdata!=None and event.ydata!=None):
                     if(xf!=xi or yf!=yi):
                         self.averageSpectrum(xi,xf,yi,yf)
                     else:
                         n=self.m_rcAvgBox.value()
+                        self.rectangle.set_x(max(0,xi-n))
+                        self.rectangle.set_y(max(0,yi-n))
+                        self.rectangle.set_width(min(self.m_params["xPx"],xf+n)-max(0,xi-n))
+                        self.rectangle.set_height(min(self.m_params["yPx"],yf+n)-max(0,yi-n))
                         self.averageSpectrum(max(0,xi-n),min(self.m_params["xPx"],xf+n),max(0,yi-n),min(self.m_params["yPx"],yf+n))
             self.m_mapWidget.draw()
 
@@ -862,6 +917,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         return 2*np.arcsin(0.246/(2*Dmoire))*180/np.pi
         
     def extractSlope(self,cutOffValue,numChanToFit):
+        """ Do a linear fit of the data in the asked channel and add the slope and the coef found as channels (usually called for zSpectros) """
         yPx=self.m_params["yPx"]
         xPx=self.m_params["xPx"]
         zPt=self.m_params["zPt"]
@@ -877,12 +933,9 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                     xArrayFiltered=xArray[mask]
                     dataFiltered=np.log(rawData[mask])
                     popt, pcov = sp.optimize.curve_fit(fit_func, xArrayFiltered, dataFiltered)
-                    if(x<4 and y<4 and False):
-                        pylab.figure()
-                        pylab.plot(xArrayFiltered,dataFiltered)
-                        pylab.plot(xArrayFiltered,popt[0]*xArrayFiltered+popt[1])
-                    slopeData[y][x][0]=popt[0]
-                    coefData[y][x][0]=popt[1]
+                    for z in range(0,zPt):
+                        slopeData[y][x][z]=popt[0]
+                        coefData[y][x][z]=popt[1]
         #Add the created channel to the data
         self.addChannel(slopeData,"Slope by linear fit of "+self.channelList[numChanToFit])
         self.addChannel(coefData,"Coef by linear fit of "+self.channelList[numChanToFit])
@@ -933,20 +986,21 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             cbar.ax.tick_params(axis='y', direction='in')
             if(self.m_cbarCustomCheckbox.isChecked()): mapData.set_clim(float(self.m_cbarLowerBox.text()),float(self.m_cbarUpperBox.text()))
             else: mapData.set_clim(0,valMax)
-            fig.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_19\\"+self.mapName+".png")
+            fig.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_20\\"+self.mapName+".png")
             pylab.close()
                 
     def magicFunction(self):
+        """ Function dedicated to the execution of bits of code on the fly by pression the 'magic button' """
         i=0
         #pylab.figure()
-        path="E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\2015-11-03\\Line_Spectro_19\\"
+        path="E:\\PhD\\Experiments\\STM\\Lc12\\50mK\\2015-11-12\\Line_Spectro_20\\"
         for fich in listdir(path):
             print fich
             self.dataLoaded=self.readCitsBin(path+fich)
             cur=fich.split('_')[-1].split('.')[0]
             self.mapName=cur
             # Coolwarm cmap
-            self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("afmhot"))
+            self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("coolwarm"))
             self.magicLinearCut()
             
             #xPx=self.m_params["xPx"]
