@@ -5,7 +5,7 @@ Created on Thu Aug 13 12:31:44 2015
 @author: LH242250
 """
 
-# Main program for laucing STM_Data_Analysis
+# Main program for launching STM_Data_Analysis
 import pyqtv2
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
