@@ -52,14 +52,22 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_colorBarBox.setCurrentIndex(2)
         #Boolean that is True if a map is loaded
         self.dataLoaded=False
-        self.wdir="E:\\PhD\\Experiments\\STM\\Lc12\\CITS\\"
+        self.mapType=""
+        self.wdir="E:\\PhD\\Experiments\\STM\\"
         self.connect()
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn=0
         self.spectrumColor=['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        self.lastSpectrum=[[],]
         #Set up layouts
         self.m_avgWidget.hide()
         self.m_cbarWidget.hide()
+        self.m_fitUpperLabel.hide()
+        self.m_fitLowerLabel.hide()
+        self.m_fitUpperBox.hide()
+        self.m_fitLowerBox.hide()
+        #­Calls the loading method at launch
+        self.loadCITS()
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -77,9 +85,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_wholeLengthCutButton.clicked.connect(self.launchBigCut)
         self.m_magicButton.clicked.connect(self.magicFunction)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
-        self.m_fitSpec.clicked.connect(self.fitSpectrum)
-        self.m_fitCustomCheckbox.stateChanged.connect(self.m_fitUpperBox.setEnabled)
-        self.m_fitCustomCheckbox.stateChanged.connect(self.m_fitLowerBox.setEnabled)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
         self.m_avgVButton.clicked.connect(self.averageSpectrumWithValues)
@@ -91,6 +96,12 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_cbarCheckBox.toggled.connect(self.m_cbarWidget.setVisible)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarUpperBox.setEnabled)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarLowerBox.setEnabled)
+        #Fit spectrum widget
+        self.m_fitSpec.clicked.connect(self.fitSpectrum)
+        self.m_fitCustomCheckbox.toggled.connect(self.m_fitUpperBox.setVisible)
+        self.m_fitCustomCheckbox.toggled.connect(self.m_fitLowerBox.setVisible)
+        self.m_fitCustomCheckbox.toggled.connect(self.m_fitUpperLabel.setVisible)
+        self.m_fitCustomCheckbox.toggled.connect(self.m_fitLowerLabel.setVisible)
         
         
 ### Reading and loading CITS methods
@@ -101,9 +112,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         extension=filename.split('.')[-1]        
         if(extension=="asc"):
             self.clearMap()
+            self.mapType="Omicron"
             self.dataLoaded=self.readCitsAscii(filename)
         elif(extension=="3ds"):
             self.clearMap()
+            self.mapType="Nanonis"
             self.dataLoaded=self.readCitsBin(filename)
         elif(extension=="txt"):
             self.readTopo(filename)
@@ -113,7 +126,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         if(self.dataLoaded):
             self.wdir=osp.dirname(filename)
             self.mapName=osp.basename(filename)
-            print(self.mapName)
+            print(self.mapName+" read as a "+self.mapType+" map")
             self.updateWidgets()
         
     def averageCITS(self):
@@ -299,7 +312,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         if(half):        
             self.channelList=self.channelList[0:nChannels/2]
         #Store the parameters in a dictonnary to use them later
-        self.m_params={"xPx":xPx,"yPx":yPx,"xC":xC,"yC":yC,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":(vEnd-vStart)/(zPt)}
+        dV=(vEnd-vStart)/(zPt)
+        self.m_params={"xPx":xPx,"yPx":yPx,"xC":xC,"yC":yC,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart,"vEnd":vEnd,"dV":dV}
         print(self.m_params)
         #Test to have currents in nA
         i=0
@@ -308,15 +322,15 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             if("(A)" in chan):
                 self.m_data[i]=np.abs(self.m_data[i])*10**9
                 self.channelList[i]=chan.replace("(A)","(nA)")
+        #Topo : convert in nm and draw it
+        self.topo=self.topo*10**9
+        self.drawTopo()
         #Test
         if(zSpectro):
             self.extractSlope(0.01,0)
             #self.extractSlope(0.01,1)
         #Post-processing
-        #self.extractOutOfPhase(1,2)
-        #Topo : convert in nm and draw it
-        self.topo=self.topo*10**9
-        self.drawTopo()
+        #self.extractOutOfPhase(1,2)        
         #pylab.close()
         return True
         
@@ -396,6 +410,15 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
                 popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
                 topo_leveled[y]=fitY-(popt[0]*fitX+popt[1])
+            self.topo_leveled=topo_leveled
+            
+            #Test            
+            #fitX=np.arange(0,xPx)
+            #fitY=np.arange(0,yPx)
+            #fitF= lambda x,y,a,b,c: a*x+b*y+c
+            #f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY,self.topo, k=1)
+            #data = np.c_[fitX,fitY,self.topo]
+            
         
         colormap="afmhot"#self.m_colorBarBox.currentText()
         if(self.m_scaleMetric.isChecked()):
@@ -538,7 +561,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 for x in range(xi,xf):
                         avg_data+=(self.m_data[chan][y][x]/N)
             self.m_mapWidget.draw()
-            self.drawSpectrum(avg_data,"Average")
+            self.drawSpectrum(avg_data,"Average",(xf-xi)/2,(yf-yi)/2)
             
     def averageSpectrumWithValues(self):
         """ Averages the spectra according their values at a certain voltage """
@@ -587,33 +610,39 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.clearPtsClicked()
         self.m_specWidget.draw()
             
-    def drawSpectrum(self,dataToPlot,label):
+    def drawSpectrum(self,dataToPlot,label,x=-1,y=-1):
         """ Method called each time a spectrum needs to be plotted. Takes care of the derivative and different scales stuff and updates the window """
         finalLabel=label+" - "+str(self.m_channelBox.currentText())
-        shift=self.nSpectraDrawn*self.m_shiftBox.value()
+        shiftX=self.m_shiftXBox.text()
+        if(shiftX=="topo" or shiftX=="Topo"):
+            shiftX=self.topo[y][x]
+        else:
+            shiftX=float(shiftX)
+        shiftY=self.nSpectraDrawn*self.m_shiftYBox.value()
         if(self.dataLoaded and dataToPlot.size!=0):
             dV=self.m_params["dV"]
             deriv=sp.signal.savgol_filter(dataToPlot, 5, 2, deriv=1, delta=dV)
-            self.lastSpectrum=dataToPlot
+            self.lastSpectrum=[dataToPlot,finalLabel]
             if(self.m_scaleVoltage.isChecked()):
                 vStart=self.m_params["vStart"]
                 vEnd=self.m_params["vEnd"]
-                self.ax_spec.plot(np.arange(vStart,vEnd,dV),shift+dataToPlot,label=finalLabel)
+                V=np.arange(vStart,vEnd,dV)+shiftX
+                self.ax_spec.plot(V,shiftY+dataToPlot,label=finalLabel)
                 self.nSpectraDrawn=self.nSpectraDrawn+1
                 if(self.m_derivBox.isChecked()):
-                    self.ax_spec.plot(np.arange(vStart,vEnd,dV),deriv,label="Derivative of "+finalLabel)
+                    self.ax_spec.plot(V,shiftY+deriv,label="Derivative of "+finalLabel)
                     self.nSpectraDrawn=self.nSpectraDrawn+1
             else:
-                self.ax_spec.plot(shift+dataToPlot,label=finalLabel)
+                self.ax_spec.plot(shiftY+dataToPlot,label=finalLabel)
                 self.nSpectraDrawn=self.nSpectraDrawn+1
                 if(self.m_derivBox.isChecked()):
-                    self.ax_spec.plot(deriv,label="Derivative of "+finalLabel)
+                    self.ax_spec.plot(shiftY+deriv,label="Derivative of "+finalLabel)
                     self.nSpectraDrawn=self.nSpectraDrawn+1
         self.ax_spec.legend(loc=0)
         self.m_specWidget.draw()
         
     def fitSpectrum(self):
-        if(self.dataLoaded and self.lastSpectrum.size!=0):
+        if(self.dataLoaded and self.lastSpectrum[0].size!=0):
             fit_func = lambda v,a,b: a*v+b
             dV=self.m_params["dV"]
             if(self.m_fitCustomCheckbox.isChecked()):
@@ -626,18 +655,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 #Take the portion to fit
                 mask1=xArray>vStart
                 mask2=xArray<vEnd
-                temp=self.lastSpectrum[mask1]
+                temp=self.lastSpectrum[0][mask1]
                 dataToFit=temp[mask2]
             else:
                 vStart=self.m_params["vStart"]
                 vEnd=self.m_params["vEnd"]
-                dataToFit=self.lastSpectrum
+                dataToFit=self.lastSpectrum[0]
             X=np.arange(vStart,vEnd,dV)
             popt, pcov = sp.optimize.curve_fit(fit_func, X, dataToFit)
             slope=popt[0]
             coef=popt[1]
             print("Linear fit gives a slope of "+str(slope)+" and a coef of "+str(coef))
-            self.ax_spec.plot(X,slope*X+coef,label="Linear fit of last plot")
+            self.ax_spec.plot(X,slope*X+coef,label="Linear fit of "+self.lastSpectrum[1],color=self.getSpectrumColor(self.nSpectraDrawn-1),linestyle="--")
             self.ax_spec.legend(loc=0)
             self.m_specWidget.draw()
         
@@ -671,8 +700,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                         dataLogCurrent[z]=dataLine[z]
                     else:
                         dataLogCurrent[z]=np.log(i)
-                self.drawSpectrum(dataLogCurrent,"Log of current at ["+str(PixelX)+","+str(PixelY)+"]")
-                self.drawSpectrum(dataLine,"Linear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
+                self.drawSpectrum(dataLogCurrent,"Log of current at ["+str(PixelX)+","+str(PixelY)+"]",PixelX,PixelY)
+                #self.drawSpectrum(dataLine,"Linear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
             else:
                 self.m_mapWidget.draw()
                 #Add data to the total data to average if in average mod
@@ -683,7 +712,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 #Plot the data with the desired scale (Volts or index) if in normal mode
                 else:
                     dataToPlot=self.m_data[chan][PixelY][PixelX]
-                    self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]")
+                    self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]",PixelX,PixelY)
             self.addToPtsClicked(PixelX,PixelY,color)
             self.drawPtsClicked()
             
@@ -764,8 +793,9 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         pts_x=np.array(self.pts_clicked[0])
         pts_y=np.array(self.pts_clicked[1])
         pts_c=np.array(self.pts_clicked[2])
-        self.fig_topo.axes[0].scatter(pts_x*self.m_params["xL"]/self.m_params["xPx"],pts_y*self.m_params["yL"]/self.m_params["yPx"],color=pts_c)
-        self.fig_topo.canvas.draw()
+        if(self.mapType=="Nanonis"):
+            self.fig_topo.axes[0].scatter(pts_x*self.m_params["xL"]/self.m_params["xPx"],pts_y*self.m_params["yL"]/self.m_params["yPx"],color=pts_c)
+            self.fig_topo.canvas.draw()
         self.ax_map.scatter(pts_x,pts_y,color=pts_c)
         self.m_mapWidget.draw()
         
@@ -858,7 +888,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 xc=int(x_plot[zf-z-1])
                 yc=int(y_plot[zf-z-1])
                 spectrum=self.m_data[chan][yc][xc]
-                offset = (zf-z)*self.m_shiftBox.value()
+                offset = (zf-z)*self.m_shiftYBox.value()
                 ax.plot(voltages,spectrum+offset, 'k', lw=2, zorder=(z+1)*2)
                 ax.fill_between(voltages, spectrum+offset, offset, facecolor='w', lw=0, zorder=(z+1)*2-1)
             ax.set_xlim([voltages[0],voltages[-1]])
@@ -903,6 +933,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_mapWidget.figure.clear()
         self.clearPtsClicked()
         self.m_data=np.ndarray([])
+        self.mapType=""
         self.dataLoaded=False
         
     def drawXYMap(self,voltage):
@@ -935,7 +966,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             #Else, use pixels
             else:
                 XYmap=self.ax_map.pcolormesh(mapData,cmap=self.m_colorBarBox.currentText())
-                self.ax_map.axis([0,xPx,0,yPx])
+                #If the map is an Omicron one, I have to invert the y-axis
+                if(self.mapType=="Omicron"):
+                    self.ax_map.axis([0,xPx,yPx,0])
+                else:
+                    self.ax_map.axis([0,xPx,0,yPx])
             #Set title
             chan=self.m_channelBox.currentText()
             #print(chan)
@@ -1062,13 +1097,13 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                     xArrayFiltered=xArray[mask]
                     dataFiltered=np.log(rawData[mask])
                     popt, pcov = sp.optimize.curve_fit(fit_func, xArrayFiltered, dataFiltered)
-                    zg[y][x]=1/20.5*np.log(rawData)+np.arange(0,zPt*dZ,dZ)
+                    zg[y][x]=1/20.5*np.log(rawData)+np.arange(0,zPt*dZ,dZ)+self.topo_leveled[y][x]
                     for z in range(0,zPt):
                         slopeData[y][x][z]=popt[0]
                         coefData[y][x][z]=popt[1]
         #Add the created channel to the data
         self.addChannel(slopeData,"Slope by linear fit of "+self.channelList[numChanToFit])
-        #self.addChannel(coefData,"Coef by linear fit of "+self.channelList[numChanToFit])
+        self.addChannel(coefData,"Coef by linear fit of "+self.channelList[numChanToFit])
         self.addChannel(zg,"Zg")
         
     def magicLinearCut(self,i):
