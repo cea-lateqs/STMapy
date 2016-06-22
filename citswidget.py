@@ -49,7 +49,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.voltageLine=0
         #Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
-        self.m_colorBarBox.setCurrentIndex(2)
+        self.m_colorBarBox.setCurrentIndex(3)
         #Boolean that is True if a map is loaded
         self.dataLoaded=False
         self.mapType=""
@@ -165,6 +165,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
         f=open(filepath)
         divider=1
+        unit=1
         while(True):
             #Read the parameters of the map until "Start of Data"
             line=f.readline()
@@ -193,7 +194,10 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 vEnd=round(float(line.split()[-2]),6)
             #Any eventual divider
             elif("divider" in line):
-                divider=int(line.split()[-1])
+                divider=float(line.split()[-1])
+            #Convert nV in V
+            elif("value-unit = nV" in line):
+                unit=10**(-9)
             elif("Start of Data" in line):
                 break
         # Matlab convention : columns first then rows hence [y][x]
