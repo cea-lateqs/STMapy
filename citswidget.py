@@ -67,7 +67,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_fitUpperBox.hide()
         self.m_fitLowerBox.hide()
         #­Calls the loading method at launch
-        self.loadCITS()
+        #self.loadCITS()
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -83,7 +83,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #self.m_scaleMetric.toggled.connect(self.updateMap)
         self.m_averageCitsButton.clicked.connect(self.averageCITS)
         self.m_wholeLengthCutButton.clicked.connect(self.launchBigCut)
-        self.m_magicButton.clicked.connect(self.magicFunction)
+        #self.m_magicButton.clicked.connect(self.magicFunction)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
@@ -292,26 +292,36 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         fmtString='>'+'f'*zPt
         #zPt floats to read of 4 bytes each
         bytesToRead=4*zPt
-        for y in range(0,yPx):
-            for x in range(0,xPx):
+        x=0
+        y=0
+        while(y<yPx):
+            x=0
+            while(x<xPx):
+                chan=0
                 b=f.read(nbExpParams*4)
                 try:
                     self.topo[y][x]=struct.unpack('>'+'f'*nbExpParams,b)[2]
                 except struct.error:
-                    print("Problem while reading the topo : number of bytes to read different than what was expected")
-                    return False
-                for chan in range(0,nChannels):
+                    print("Problem while reading the topo : number of bytes to read different than what was expected at "+str(x)+" "+str(y))
+                
+                while(chan<nChannels):
                 # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
                     b=f.read(bytesToRead)
                     try:
                         if(not half or chan<nChannels/2):
                             self.m_data[chan][y][x]=struct.unpack(fmtString,b)
                     except struct.error:
-                        print("Problem while reading the file : number of bytes to read different than what was expected")
-                        return False
+                        print("Problem while reading the file : number of bytes to read different than what was expected at"+str(x)+" "+str(y)+" "+str(chan))
+                        #Set chan,x,y to exit the loop
+                        chan=nChannels
+                        x=xPx
+                        y=yPx
+                    chan=chan+1
                 #After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
                 f.read(8)                
-                #f.read(8+nbExpParams*4)   
+                #f.read(8+nbExpParams*4)  
+                x=x+1
+            y=y+1
         f.close()
         if(half):        
             self.channelList=self.channelList[0:nChannels/2]
@@ -459,7 +469,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         # yPx is 1 (line spectro)
         
         #Set up figure
-        if(self.m_vLineBox.isChecked()):
+        if(lineFit):
             fig=pylab.figure()
             self.ax_topo=fig.add_subplot(1,1,1)
             self.fig_topo=fig
@@ -872,6 +882,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         dataToPlot=np.ndarray(shape=(zPt,z_plot.size))
         xi=x_plot[0]
         yi=y_plot[0]
+        zi=z_plot[0]
         zf=z_plot[-1]
         # Variables needed to compute the metric distances
         dx=self.m_params["xL"]/self.m_params["xPx"]
@@ -889,12 +900,16 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             if(self.m_scaleVoltage.isChecked()): 
                 voltages=self.m_params["vStart"]+voltages*self.m_params["dV"]
             for z in z_plot:
-                xc=int(x_plot[zf-z-1])
-                yc=int(y_plot[zf-z-1])
+                xc=int(x_plot[z])
+                yc=int(y_plot[z])
                 spectrum=self.m_data[chan][yc][xc]
                 offset = (zf-z)*self.m_shiftYBox.value()
-                ax.plot(voltages,spectrum+offset, 'k', lw=2, zorder=(z+1)*2)
+                ax.plot(voltages,spectrum+offset, 'k', zorder=(z+1)*2)
+                #Uncomment this to enable white filling under the curves
                 ax.fill_between(voltages, spectrum+offset, offset, facecolor='w', lw=0, zorder=(z+1)*2-1)
+                #if(z==zi): last_sp=np.amin(spectrum)
+                #ax.fill_between(voltages, last_sp, spectrum+offset, facecolor='w', zorder=2*z)
+                #last_sp=spectrum+offset
             ax.set_xlim([voltages[0],voltages[-1]])
         else:
             for v in voltages:

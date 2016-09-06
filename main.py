@@ -11,6 +11,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import sys
 import citswidget
+import pylab
 
 def main(args):
     app=QApplication(args)
@@ -19,4 +20,5 @@ def main(args):
     app.exec_()
     
 if __name__ == "__main__":
+    pylab.style.use('def')
     main(sys.argv)
