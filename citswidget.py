@@ -303,7 +303,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                     self.topo[y][x]=struct.unpack('>'+'f'*nbExpParams,b)[2]
                 except struct.error:
                     print("Problem while reading the topo : number of bytes to read different than what was expected at "+str(x)+" "+str(y))
-                
                 while(chan<nChannels):
                 # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
                     b=f.read(bytesToRead)
