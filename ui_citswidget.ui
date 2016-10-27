@@ -252,16 +252,6 @@
       </layout>
      </widget>
     </item>
-    <item row="3" column="1">
-     <widget class="QCheckBox" name="m_scaleMetric">
-      <property name="text">
-       <string>Scale in metric units</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
     <item row="5" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_6">
       <item>
@@ -270,7 +260,7 @@
          <string>Waterfall</string>
         </property>
         <property name="checked">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -279,19 +269,12 @@
         <property name="text">
          <string>2D plot</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="2" column="1">
-     <widget class="QCheckBox" name="m_scaleVoltage">
-      <property name="text">
-       <string>Scale in Volts</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
     </item>
     <item row="4" column="0">
      <widget class="QLabel" name="label_8">
@@ -323,9 +306,9 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="m_averageCitsButton">
+       <widget class="QPushButton" name="m_topoButton">
         <property name="text">
-         <string>Average CITS</string>
+         <string>Draw topo</string>
         </property>
        </widget>
       </item>
@@ -409,6 +392,25 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QSpinBox" name="m_derivNBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>501</number>
+        </property>
+        <property name="singleStep">
+         <number>2</number>
+        </property>
+        <property name="value">
+         <number>11</number>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item row="5" column="1">
@@ -449,7 +451,7 @@
          <double>1000.000000000000000</double>
         </property>
         <property name="singleStep">
-         <double>0.010000000000000</double>
+         <double>0.000001000000000</double>
         </property>
        </widget>
       </item>
@@ -490,13 +492,6 @@
       </property>
      </widget>
     </item>
-    <item row="4" column="1">
-     <widget class="QCheckBox" name="m_vLineBox">
-      <property name="text">
-       <string>Index guideline</string>
-      </property>
-     </widget>
-    </item>
     <item row="8" column="1">
      <layout class="QHBoxLayout" name="horizontalLayout_7">
       <item>
@@ -529,6 +524,30 @@
       </item>
      </layout>
     </item>
+    <item row="2" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout_8">
+      <item>
+       <widget class="QCheckBox" name="m_scaleVoltage">
+        <property name="text">
+         <string>Scale in Volts</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="m_scaleMetric">
+        <property name="text">
+         <string>Scale in metric units</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
     <item row="14" column="0">
      <layout class="QVBoxLayout" name="map_layout">
       <property name="leftMargin">
@@ -549,6 +568,13 @@
       </item>
      </layout>
     </item>
+    <item row="9" column="1">
+     <widget class="Line" name="line_3">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
     <item row="14" column="1">
      <layout class="QVBoxLayout" name="spec_layout">
       <property name="sizeConstraint">
@@ -562,16 +588,55 @@
       </item>
      </layout>
     </item>
-    <item row="9" column="1">
-     <widget class="Line" name="line_3">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
+    <item row="3" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout_10">
+      <item>
+       <widget class="QCheckBox" name="m_vLineBox">
+        <property name="text">
+         <string>Index guideline</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="m_legendBox">
+        <property name="text">
+         <string>Deactivate legend</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="10" column="0">
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>Number of spectras for CITS average</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="m_CitsAvgBox">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>10000000</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="m_averageCitsButton">
+        <property name="text">
+         <string>Average CITS</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
+  <widget class="QMenuBar" name="m_menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -581,7 +646,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="m_statusBar"/>
  </widget>
  <customwidgets>
   <customwidget>

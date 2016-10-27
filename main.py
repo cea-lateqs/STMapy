@@ -6,12 +6,11 @@ Created on Thu Aug 13 12:31:44 2015
 """
 
 # Main program for launching STM_Data_Analysis
-import pyqtv2
+import Common.pyqtv2
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import sys
 import citswidget
-import pylab
 
 def main(args):
     app=QApplication(args)
@@ -20,5 +19,4 @@ def main(args):
     app.exec_()
     
 if __name__ == "__main__":
-    pylab.style.use('def')
     main(sys.argv)
