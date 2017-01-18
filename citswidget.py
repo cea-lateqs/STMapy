@@ -52,9 +52,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_colorBarBox.setCurrentIndex(3)
         #Boolean that is True if a map is loaded
         self.dataLoaded=False
+        #Other parameters used after map loading
         self.mapType=""
-        self.wdir="E:\\PhD\\Experiments\\STM\\Lc12"
+        self.wdir="E:\\PhD\\Experiments\\STM"
         self.fig_topo=0
+        #Connect all widgets
         self.connect()
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn=0
@@ -109,11 +111,12 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
 ### Reading and loading CITS methods
     def askCITS(self):
+        """ Slot that only takes care of opening a file dialog for the user to select one or several CITS - Returns the CITS paths """
         Cits_names=QFileDialog.getOpenFileNames(self,"Choose a CITS file to read or several to average",self.wdir,"3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")        
         self.loadCITS(Cits_names)        
         
     def loadCITS(self,Cits_names):
-        """ Slot that launches the reading of the CITS by asking the path of the file. Selecting several will prompt their averaging but they have to be of the same dimensions"""
+        """ Slot that launches the reading of the CITS given in arguments. Having several CITS will prompt their averaging but they have to be of the same dimensions"""
         N_Cits=len(Cits_names)
         if(N_Cits==0): return
         first=True
@@ -349,10 +352,10 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #pylab.close()
         return True
         
-### Reading and loading topo images methods (not finished yet)
+### Reading and loading topo images methods
         
     def readTopo(self,filepath):
-        """ Reads a topography file """
+        """ Reads a topography file (in test) """
         f=open(filepath)
         topo_data=[]
         w=0
@@ -394,14 +397,14 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         return False
         
     def drawTopo(self):
-        """ Draws the topography read while opening the CITS """
+        """ Draws the topography read while opening the CITS if its type was Nanonis. Does nothing otherwise"""
         #If yPx==1, it is a Line Spectro so I need to call the specific method to draw the topo
         if(self.mapType=='Nanonis'):
             yPx=self.m_params["yPx"]
             if(yPx==1):             
                 self.drawLineTopo()
                 return
-            lineFit=False
+            lineFit=True
             #Get other parameters
             w=self.m_params["xL"]
             h=self.m_params["yL"]
@@ -427,6 +430,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.fig_topo=pylab.figure()
             self.ax_topo=self.fig_topo.add_subplot(1,1,1,aspect=float(yPx)/xPx)
             self.fig_topo.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+            #Connect the close handling
+            self.fig_topo.mpl_connect('close_event',handleClosingTopo)
             #Put the appropriate title
             if(lineFit): self.fig_topo.suptitle("Leveled topo (line fit)") 
             else: self.fig_topo.suptitle("Raw topo data")
@@ -456,20 +461,24 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         # yPx is 1 (line spectro)
         
         #Set up figure
-        if(lineFit):
-            fig=pylab.figure()
-            self.ax_topo=fig.add_subplot(1,1,1)
-            self.fig_topo=fig
+        fig=pylab.figure()
+        self.ax_topo=fig.add_subplot(1,1,1)
+        self.fig_topo=fig
+        #Connect the close handling
+        self.fig_topo.mpl_connect('close_event',handleClosingTopo)
         
-        #Linear fit of the topo
-        fitX=np.arange(0,xPx)
-        fitF = lambda z,a,b: a*z+b
-        #Line spectro so there is only data for y=0
-        y=0
-        fitY=self.topo[y]
-        f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
-        popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
-        topo_leveled=fitY-(popt[0]*fitX+popt[1])
+        if(lineFit):
+            #Linear fit of the topo
+            fitX=np.arange(0,xPx)
+            fitF = lambda z,a,b: a*z+b
+            #Line spectro so there is only data for y=0
+            y=0
+            fitY=self.topo[y]
+            f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
+            popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
+            topo_leveled=fitY-(popt[0]*fitX+popt[1])
+        else:
+            topo_leveled=self.topo[y]
         
         if(self.m_scaleMetric.isChecked()):        
             self.ax_topo.plot(np.linspace(0,w,xPx),topo_leveled,label="With line leveling")
@@ -483,6 +492,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.ax_topo.plot(self.topo[y],label="Without line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
         pylab.legend(loc=0)
+        
+    def handleClosingTopo(self):
+        """ Called when the topo figure is closed - Put back self.fig_topo to 0 that means that no topo figure exists """
+        self.fig_topo=0
+        return
         
 ### Updating methods. Usually called by signals
     def updateAvgVariables(self):
@@ -499,14 +513,17 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 self.drawSpectrum(dataToPlot,str(self.nAvgSpectra)+" spectra averaged")
                 
     def updateAboveValue(self,value):
+        """ Slot called when the above slider is changed. Changes the value of the textbox to reflect the change """
         self.m_aboveBar.setValue(value)
         if(self.dataLoaded): self.m_aboveLine.setText(str(self.mapMax-value*(self.mapMax-self.mapMin)/100))
         
     def updateBelowValue(self,value):
+        """ Slot called when the below slider is changed. Changes the value of the textbox to reflect the change """
         self.m_belowBar.setValue(value)
         if(self.dataLoaded): self.m_belowLine.setText(str(self.mapMin+value*(self.mapMax-self.mapMin)/100))
         
     def updateMap(self):
+        """ Updates the map by redrawing it. Updates also the above and below sliders """
         self.drawXYMap(self.m_voltageBox.value())
         self.updateAboveValue(self.m_aboveBar.value())
         self.updateBelowValue(self.m_belowBar.value())         
@@ -645,6 +662,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_specWidget.draw()
         
     def fitSpectrum(self):
+        """ Linear fitting of the last spectrum plotted that is stored in lastSpectrum """
         if(self.dataLoaded and self.lastSpectrum[0].size!=0):
             fit_func = lambda v,a,b: a*v+b
             dV=self.m_params["dV"]
@@ -674,6 +692,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.m_specWidget.draw()
         
     def getSpectrumColor(self,n):
+        """ Returns the color corresponding to a spectrum of given index according to spectrumColor """
         i=n%len(self.spectrumColor)
         return self.spectrumColor[i]
         
@@ -735,14 +754,14 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 
             
     def drawLine(self,event):
-        ''' Slot called to draw dynamically the line when keeping the mouse button pressed. Not used otherwise '''
+        """ Slot called to draw dynamically the line when keeping the mouse button pressed. Not used otherwise """
         if(event.xdata!=None and event.ydata!=None):
             self.lines[0].set_xdata([self.origin_x+0.5,int(event.xdata)+0.5])
             self.lines[0].set_ydata([self.origin_y+0.5,int(event.ydata)+0.5])
             self.m_mapWidget.draw()
             
     def drawRectangle(self,event):
-        ''' Slot called to draw dynamically the rectangle when keeping the mouse button pressed. Not used otherwise '''
+        """ Slot called to draw dynamically the rectangle when keeping the mouse button pressed. Not used otherwise """
         if(event.xdata!=None and event.ydata!=None):
             self.rectangle.set_width(int(event.xdata)-self.origin_x)
             self.rectangle.set_height(int(event.ydata)-self.origin_y)
@@ -783,16 +802,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                         self.rectangle.set_width(min(self.m_params["xPx"],xf+n)-max(0,xi-n))
                         self.rectangle.set_height(min(self.m_params["yPx"],yf+n)-max(0,yi-n))
                         self.averageSpectrum(max(0,xi-n),min(self.m_params["xPx"],xf+n),max(0,yi-n),min(self.m_params["yPx"],yf+n))
-                    #Convert rectangle dimensions to metric if needed to plot the rectangle on the topo graph
-                    if(self.m_scaleMetric.isChecked()):
-                        ratiox=self.m_params['xL']/self.m_params['xPx']
-                        ratioy=self.m_params['yL']/self.m_params['yPx']
-                        self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x()*ratiox, self.rectangle.get_y()*ratioy),
-self.rectangle.get_width()*ratiox,self.rectangle.get_height()*ratioy,color=self.rectangle.get_facecolor()))
-                    else:
-                        self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x(), self.rectangle.get_y()),
-self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_facecolor()))
-            self.fig_topo.canvas.draw()
+                    #Check if the topo figure exists to plot the rectangle on it
+                    if(self.fig_topo!=0):
+                        #Convert rectangle dimensions to metric if needed to plot the rectangle on the topo graph
+                        if(self.m_scaleMetric.isChecked()):
+                            ratiox=self.m_params['xL']/self.m_params['xPx']
+                            ratioy=self.m_params['yL']/self.m_params['yPx']
+                            self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x()*ratiox, self.rectangle.get_y()*ratioy),
+    self.rectangle.get_width()*ratiox,self.rectangle.get_height()*ratioy,color=self.rectangle.get_facecolor()))
+                        else:
+                            self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x(), self.rectangle.get_y()),
+    self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_facecolor()))
+                        self.fig_topo.canvas.draw()
             self.m_mapWidget.draw()
 
 
@@ -828,6 +849,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             self.drawTopo()
         
     def cutAlongLine(self,xi,xf,yi,yf):
+        """ Method that finds the positions of the pixels forming the line from (xi,yi) to (xf,yf). The plotting of the spectra is done in cutPlot called at the end """
         #If the line is vertical, the equation is x=xi with y varying from yi to yf
         self.m_statusBar.showMessage('Cut from '+'('+str(xi)+','+str(yi)+')'+' to '+'('+str(xf)+','+str(yf)+') in '+str(self.m_channelBox.currentText()))
         if(xf==xi):
@@ -880,6 +902,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             
             
     def cutPlot(self,x_plot,y_plot):
+        """ Method called by cutAlongLine. Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) """
         #Build the data to plot with v as Y and z (number of pixels gone through) as X
         zPt=self.m_params['zPt']
         voltages=np.arange(0,zPt)
@@ -951,6 +974,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             return metricDistances,voltages,dataToPlot
         
     def launchBigCut(self):
+        """ Launches a cut in the big diagonal """
         if(self.dataLoaded):
             self.ax_map.plot([0.5,self.m_params["xPx"]-0.5],[0.5,self.m_params["yPx"]-0.5],'k--')
             X,Y,Z=self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
@@ -1044,6 +1068,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
 ### Methods related to the voltage guide line in the spectra window
         
     def drawVoltageLine(self,voltage):
+        """ Draws the vertical line at the given voltage """
         self.clearVoltageLine()
         if(self.dataLoaded):
             #Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
@@ -1054,6 +1079,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             self.m_specWidget.draw()
         
     def clearVoltageLine(self):
+        """ Removes the vertical voltage line """
         if(self.voltageLine):
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
             self.m_specWidget.draw()
@@ -1061,6 +1087,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
         
 ### Post-processing methods
     def addChannel(self,newChannelData,channelName):
+        """ Adds a channel to the whole data array """
         #Gets parameters for reshaping
         nChannels=len(self.channelList)
         xPx=self.m_params["xPx"]
@@ -1116,12 +1143,14 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             self.updateWidgets()
         
     def extractOutOfPhase(self,numChanR,numChanPhi):
+        """ Extracts the out of phase component and adds it to the data """
         #Phase : 9V = pi
         outOfPhase=-self.m_data[numChanR]*np.cos(self.m_data[numChanPhi]*np.pi/9)
         #Add the channel to the data
         self.addChannel(outOfPhase,self.channelList[numChanR]+"cos("+self.channelList[numChanPhi]+")")
         
     def extractDerivative(self,numChanToDeriv):
+        """ Extracts the derivative of a channel and adds it to the data """
         dV=self.m_params["dV"]
         yPx=self.m_params["yPx"]
         xPx=self.m_params["xPx"]
@@ -1134,6 +1163,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
         self.addChannel(derivData,"Derivative of "+self.channelList[numChanToDeriv])
         
     def extractFFT(self,numChanToFFT,axisOfFFT):
+        """ Extracts the FFT of a channel and adds it to the data """
         yPx=self.m_params["yPx"]
         xPx=self.m_params["xPx"]
         zPt=self.m_params["zPt"]
@@ -1143,6 +1173,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
         self.addChannel(FFTData,"FFT of "+self.channelList[numChanToFFT])
         
     def computeAngle(Dmoire,k=True):
+        """ Computes the twist angle of a given graphene moiré of period Dmoire """
         return 2*np.arcsin(0.246/(2*Dmoire))*180/np.pi
         
     def extractSlope(self,cutOffValue,numChanToFit):
@@ -1238,6 +1269,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
 ### Complentary functions
      
 def plotMapDistrib(data1d,valMax):
+    """ ??? """
     dx=valMax/100
     distrib=np.zeros(shape=101)
     for val in data1d:
@@ -1261,6 +1293,7 @@ def diffSingularite(voltage):
     return
     
 def angleFromSingulariteDiff(dE,adv=False):
+    """ Returns the angle from the difference of energy of van Hove singularities """
     if(adv):
         sol1=2*np.arcsin(8*10**(-3)*(dE/0.108+2+np.sqrt((2+dE/0.108)**2+36)))
         sol2=2*np.arcsin(8*10**(-3)*(dE/0.108+2-np.sqrt((2+dE/0.108)**2+36)))
