@@ -72,7 +72,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
     
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
-        self.m_openButton.clicked.connect(self.loadCITS)
+        self.m_openButton.clicked.connect(self.askCITS)
         self.m_topoButton.clicked.connect(self.drawTopo)
         self.m_channelBox.currentIndexChanged.connect(self.updateMap)
         self.m_colorBarBox.currentIndexChanged.connect(self.updateMap)
@@ -108,10 +108,12 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
         
 ### Reading and loading CITS methods
+    def askCITS(self):
+        Cits_names=QFileDialog.getOpenFileNames(self,"Choose a CITS file to read or several to average",self.wdir,"3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")        
+        self.loadCITS(Cits_names)        
         
-    def loadCITS(self):
+    def loadCITS(self,Cits_names):
         """ Slot that launches the reading of the CITS by asking the path of the file. Selecting several will prompt their averaging but they have to be of the same dimensions"""
-        Cits_names=QFileDialog.getOpenFileNames(self,"Choose a CITS file to read or several to average",self.wdir,"3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         N_Cits=len(Cits_names)
         if(N_Cits==0): return
         first=True
@@ -874,7 +876,7 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
                         y0 +=sy
                 x_plot=np.array(x_plot_p)
                 y_plot=np.array(y_plot_p)
-        self.cutPlot(x_plot,y_plot)
+        return self.cutPlot(x_plot,y_plot)
             
             
     def cutPlot(self,x_plot,y_plot):
@@ -920,14 +922,14 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
                 for z in z_plot:
                     xc=int(x_plot[z])
                     yc=int(y_plot[z])
-                    dataToPlot[v][z]=self.m_data[chan][yc][xc][v]
+                    dataToPlot[v][z]=self.m_data[chan][yc][xc][v]#/self.m_data[chan][yc][xc][0]
                     if(viewSelected): self.addToPtsClicked(xc,yc,color='yellow')
             ax.set_ylabel("Voltage index")
             fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
             # Pcolormesh takes vertices as arguments so need to add the last vertex to have the last quad plotted
-            voltages=np.append(voltages,voltages[-1]+1)
-            metricDistances=np.append(metricDistances,metricDistances[-1]+(metricDistances[1]-metricDistances[0]))
-            z_plot=np.append(z_plot,z_plot[-1]+1)
+#            voltages=np.append(voltages,voltages[-1]+1)
+#            metricDistances=np.append(metricDistances,metricDistances[-1]+(metricDistances[1]-metricDistances[0]))
+#            z_plot=np.append(z_plot,z_plot[-1]+1)
             # Change the scales if needed
             if(self.m_scaleVoltage.isChecked()): 
                 voltages=self.m_params["vStart"]+voltages*self.m_params["dV"]
@@ -946,13 +948,14 @@ self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_
             cbar.ax.tick_params(axis='y', direction='in')
             if(self.m_cbarCustomCheckbox.isChecked()): mapData.set_clim(float(self.m_cbarLowerBox.text()),float(self.m_cbarUpperBox.text()))
             else: mapData.set_clim(0)
-        self.fig_topo=fig
+            return metricDistances,voltages,dataToPlot
         
     def launchBigCut(self):
         if(self.dataLoaded):
             self.ax_map.plot([0.5,self.m_params["xPx"]-0.5],[0.5,self.m_params["yPx"]-0.5],'k--')
-            self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
+            X,Y,Z=self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
             self.m_mapWidget.draw()
+            return X,Y,Z
                 
             
 ### Methods related to the map
