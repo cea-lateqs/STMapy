@@ -56,12 +56,13 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.mapType=""
         self.wdir="E:\\PhD\\Experiments\\STM"
         self.fig_topo=0
+        self.topo=[]
         #Connect all widgets
         self.connect()
         #self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn=0
         self.spectrumColor=['b', 'g', 'r', 'c', 'm', 'y', 'k']
-        self.lastSpectrum=[[],]
+        self.lastSpectrum=0
         #Set up layouts
         self.m_avgWidget.hide()
         self.m_cbarWidget.hide()
@@ -147,7 +148,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 print('Problem while reading '+cits)
                 self.m_statusBar.showMessage('Problem while reading '+cits)
                 return
-            if(N_Cits==1): #If only one Cits was selected, there is no need to run the averaging code so return after update of the widgets
+            if(N_Cits==1): #If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
+                self.drawTopo()
                 self.updateWidgets()
                 return
             else: # Else begin the averging
@@ -222,6 +224,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart/divider,"vEnd":vEnd/divider,"dV":abs(vEnd-vStart)/(divider*zPt)}
         if(divider!=1):
             print "A divider of "+str(divider)+" was found and applied"
+            
+        #Check if a topo file exists and read it if yes
+        topopath=osp.join(osp.dirname(filepath),'Topo.txt')
+        if(osp.exists(topopath)):
+            self.readTopo(topopath)
         return True
         
     def readCitsBin(self,filepath):
@@ -340,13 +347,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             if("(A)" in chan):
                 self.m_data[i]=np.abs(self.m_data[i])*10**9
                 self.channelList[i]=chan.replace("(A)","(nA)")
-        #Topo : convert in nm and draw it by forceDraw
+        #Convert topoin nm
         self.topo=self.topo*10**9
-        self.drawTopo()
         #Test
         if(False and zSpectro):
             self.extractSlope(0.01,0)
-            #self.extractSlope(0.01,1)
         #Post-processing
         #self.extractOutOfPhase(1,2)        
         #pylab.close()
@@ -370,60 +375,69 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             else:
                 topo_data.append(line.strip().split())
         f.close()
-        #Set up figure
-        xPx=len(topo_data[0])
-        yPx=len(topo_data)
-        fig=pylab.figure()
-        self.ax_topo=fig.add_subplot(1,1,1,aspect=float(yPx)/xPx)
-        fig.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
-        data=(np.asfarray(topo_data))*10**9
-        if(w!=0 and h!=0):
-            dx=w/xPx
-            dy=h/yPx
-            self.ax_topo.axis([0,w,0,h])
-            self.ax_topo.invert_yaxis()
-            # Plot data (y first (matlab convention)
-            # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
-            XYmap=self.ax_topo.pcolormesh(np.arange(0,w+dx,dx),np.arange(0,h+dy,dy),data,cmap=self.m_colorBarBox.currentText())
-        else:
-            self.ax_topo.axis([0,xPx,0,yPx])
-            #self.ax_topo.invert_yaxis()
-            XYmap=self.ax_topo.pcolormesh(data,cmap=self.m_colorBarBox.currentText())
-        #Colorbar stuff
-        cbar = fig.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
-        cbar.ax.yaxis.set_ticks_position('both')
-        cbar.ax.tick_params(axis='y', direction='in')
-        #self.addChannel(data,"Z (nm)")
-        return False
+        self.topo=(np.asfarray(topo_data))*10**(-9)
+        return True
+#        #Set up figure
+#        xPx=len(topo_data[0])
+#        yPx=len(topo_data)
+#        self.fig_topo=pylab.figure()
+#        #Connect the close handling
+#        self.fig_topo.canvas.mpl_connect('close_event',self.handleClosingTopo)
+#        self.ax_topo=self.fig_topo.add_subplot(1,1,1,aspect=float(yPx)/xPx)
+#        self.fig_topo.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
+#        topo_rescaled=(np.asfarray(topo_data))*10**(-9)
+#        if(w!=0 and h!=0):
+#            dx=w/xPx
+#            dy=h/yPx
+#            self.ax_topo.axis([0,w,0,h])
+#            self.ax_topo.invert_yaxis()
+#            # Plot data (y first (matlab convention)
+#            # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
+#            XYmap=self.ax_topo.pcolormesh(np.arange(0,w+dx,dx),np.arange(0,h+dy,dy),topo_rescaled,cmap=self.m_colorBarBox.currentText())
+#        else:
+#            self.ax_topo.axis([0,xPx,0,yPx])
+#            #self.ax_topo.invert_yaxis()
+#            XYmap=self.ax_topo.pcolormesh(topo_rescaled,cmap=self.m_colorBarBox.currentText())
+#        #Colorbar stuff
+#        cbar = self.fig_topo.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
+#        cbar.ax.yaxis.set_ticks_position('both')
+#        cbar.ax.tick_params(axis='y', direction='in')
+#        #self.addChannel(data,"Z (nm)")
+        
+    def levelTopo(self):
+        yPx=self.m_params["yPx"]
+        xPx=self.m_params["xPx"]
+        #Numpy array to save the leveled topo
+        topo_leveled=np.zeros(shape=(yPx,xPx))
+        fitX=np.arange(0,xPx)
+        fitF = lambda z,a,b: a*z+b
+        for y in range(0,yPx):            
+            fitY=self.topo[y]
+            f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
+            popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
+            topo_leveled[y]=fitY-(popt[0]*fitX+popt[1])
+        #Return the leveled topo
+        return topo_leveled
+        
         
     def drawTopo(self):
-        """ Draws the topography read while opening the CITS if its type was Nanonis. Does nothing otherwise"""
-        #If yPx==1, it is a Line Spectro so I need to call the specific method to draw the topo
-        if(self.mapType=='Nanonis'):
+        """ Draws the topography read while opening the CITS."""
+        if(len(self.topo)!=0):
             yPx=self.m_params["yPx"]
-            if(yPx==1):             
+            #If yPx==1, it is a Line Spectro so I need to call the specific method to draw the topo
+            if(yPx==1):
                 self.drawLineTopo()
                 return
-            lineFit=True
+            
+            lineFit=False
+            #Line fitting if necessary
+            if(lineFit):
+                self.topo=self.levelTopo()
             #Get other parameters
             w=self.m_params["xL"]
             h=self.m_params["yL"]
-            xPx=self.m_params["xPx"]
-           
-            #Line fitting if necessary
-            if(lineFit):
-                #Numpy array to save the leveled topo
-                topo_leveled=np.zeros(shape=(yPx,xPx))
-                fitX=np.arange(0,xPx)
-                fitF = lambda z,a,b: a*z+b
-                #Change figure title 
-                for y in range(0,yPx):            
-                    fitY=self.topo[y]
-                    f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
-                    popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
-                    topo_leveled[y]=fitY-(popt[0]*fitX+popt[1])
-                #Replace the topo by the leveled topo
-                self.topo=topo_leveled
+            xPx=len(self.topo[0])
+            yPx=len(self.topo)
             
             #Set up the figure for the plot
             #if(self.fig_topo==0 or not pylab.fignum_exists(self.fig_topo.number)): 
@@ -431,7 +445,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.ax_topo=self.fig_topo.add_subplot(1,1,1,aspect=float(yPx)/xPx)
             self.fig_topo.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
             #Connect the close handling
-            self.fig_topo.mpl_connect('close_event',handleClosingTopo)
+            self.fig_topo.canvas.mpl_connect('close_event',self.handleClosingTopo)
             #Put the appropriate title
             if(lineFit): self.fig_topo.suptitle("Leveled topo (line fit)") 
             else: self.fig_topo.suptitle("Raw topo data")
@@ -439,11 +453,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             colormap="afmhot"#self.m_colorBarBox.currentText()
             
             if(self.m_scaleMetric.isChecked()):
-                self.ax_topo.axis([0,w,0,h])
+                #If the map is an Omicron one, I have to invert the y-axis
+                if(self.mapType=="Omicron"):
+                    self.ax_topo.axis([0,w,h,0])
+                else:
+                    self.ax_topo.axis([0,w,0,h])
                 # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
                 XYmap=self.ax_topo.pcolormesh(np.linspace(0,w,xPx+1),np.linspace(0,h,yPx+1),self.topo,cmap=colormap)
             else:
-                self.ax_topo.axis([0,xPx,0,yPx])
+                if(self.mapType=="Omicron"):
+                    self.ax_topo.axis([0,xPx,yPx,0])
+                else:
+                    self.ax_topo.axis([0,xPx,0,yPx])
                 XYmap=self.ax_topo.pcolormesh(self.topo,cmap=colormap)
                 
             #Colorbar stuff
@@ -453,7 +474,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
     def drawLineTopo(self):
         """ Draws the topography read while opening a Line Spectro """
-        lineFit=True
         #Get parameters
         w=self.m_params["xL"]
         # h is 0 (line spectro) 
@@ -465,36 +485,23 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.ax_topo=fig.add_subplot(1,1,1)
         self.fig_topo=fig
         #Connect the close handling
-        self.fig_topo.mpl_connect('close_event',handleClosingTopo)
-        
-        if(lineFit):
-            #Linear fit of the topo
-            fitX=np.arange(0,xPx)
-            fitF = lambda z,a,b: a*z+b
-            #Line spectro so there is only data for y=0
-            y=0
-            fitY=self.topo[y]
-            f = sp.interpolate.InterpolatedUnivariateSpline(fitX,fitY, k=1)
-            popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
-            topo_leveled=fitY-(popt[0]*fitX+popt[1])
-        else:
-            topo_leveled=self.topo[y]
+        self.fig_topo.canvas.mpl_connect('close_event',self.handleClosingTopo)
         
         if(self.m_scaleMetric.isChecked()):        
-            self.ax_topo.plot(np.linspace(0,w,xPx),topo_leveled,label="With line leveling")
-            #self.ax_topo.plot(np.linspace(0,w,xPx),self.topo[y]-popt[1],label="Without line leveling")
+            self.ax_topo.plot(np.linspace(0,w,xPx),self.topo[0],label="Without line leveling")
+            self.ax_topo.plot(np.linspace(0,w,xPx),self.levelTopo(),label="With line leveling")
             self.ax_topo.set_xlim(0,w)
             self.ax_topo.set_xlabel("Distance (nm)")
             self.ax_topo.set_ylabel("Z (nm)")
         else:
             self.ax_topo.set_xlim(0,xPx)
-            self.ax_topo.plot(topo_leveled,label="With line leveling")
-            self.ax_topo.plot(self.topo[y],label="Without line leveling")
+            self.ax_topo.plot(self.topo[0],label="Without line leveling")
+            self.ax_topo.plot(self.levelTopo(),label="With line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
         pylab.legend(loc=0)
         
     def handleClosingTopo(self):
-        """ Called when the topo figure is closed - Put back self.fig_topo to 0 that means that no topo figure exists """
+        """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
         self.fig_topo=0
         return
         
@@ -631,6 +638,35 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.clearPtsClicked()
         #self.drawTopo()
         self.m_specWidget.draw()
+        
+#    def drawSpectrum2(self,dataToPlot,label,x=-1,y=-1):
+#        finalLabel=label+" - "+str(self.m_channelBox.currentText())
+#        shiftX=str(self.m_shiftXBox.text()).lower()
+#        if(shiftX=="topo"):
+#            shiftX=self.topo[y][x]
+#        else:
+#            shiftX=float(shiftX)
+#        shiftY=self.nSpectraDrawn*self.m_shiftYBox.value()
+#        if(self.dataLoaded and dataToPlot.size!=0):
+#            dV=self.m_params["dV"]
+#            deriv=np.fabs(sp.signal.savgol_filter(dataToPlot, self.m_derivNBox.value(), 3, deriv=1, delta=dV))
+#            if(self.m_scaleVoltage.isChecked()):
+#                vStart=self.m_params["vStart"]
+#                vEnd=self.m_params["vEnd"]
+#                V=np.arange(vStart,vEnd,dV)+shiftX
+#                if(self.lastSpectrum==0):
+#                    self.lastSpectrum,=self.ax_spec.plot(V,shiftY+dataToPlot,label=finalLabel,c=self.getSpectrumColor(self.nSpectraDrawn))
+#                else:
+#                    self.lastSpectrum.set_data(V,shiftY+dataToPlot)
+#                    self.lastSpectrum.set_label(finalLabel)
+#            else:
+#                if(self.lastSpectrum==0):
+#                    self.lastSpectrum,=self.ax_spec.plot(shiftY+dataToPlot,label=finalLabel,c=self.getSpectrumColor(self.nSpectraDrawn))
+#                else:
+#                    self.lastSpectrum.set_data(shiftY+dataToPlot)
+#                    self.lastSpectrum.set_label(finalLabel)
+#        if(not self.m_legendBox.isChecked()): self.ax_spec.legend(loc=0)
+#        self.m_specWidget.draw()
             
     def drawSpectrum(self,dataToPlot,label,x=-1,y=-1):
         """ Method called each time a spectrum needs to be plotted. Takes care of the derivative and different scales stuff and updates the window """
@@ -747,17 +783,17 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.origin_y=int(event.ydata)
             if(event.button==1):
                 self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawLine)
-                self.lines=self.ax_map.plot([self.origin_x,event.xdata],[self.origin_y,event.ydata],'k--')
+                self.lines,=self.ax_map.plot([self.origin_x,event.xdata],[self.origin_y,event.ydata],'k--')
             else:
                 self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawRectangle)
-                self.rectangle=self.ax_map.add_patch(patches.Rectangle((self.origin_x, self.origin_y),0,0,color=self.getSpectrumColor(self.nSpectraDrawn)))
+                self.rectangle=self.ax_map.add_patch(patches.Rectangle((self.origin_x, self.origin_y),0,0,color=self.getSpectrumColor(self.nSpectraDrawn),alpha=0.5))
                 
             
     def drawLine(self,event):
         """ Slot called to draw dynamically the line when keeping the mouse button pressed. Not used otherwise """
         if(event.xdata!=None and event.ydata!=None):
-            self.lines[0].set_xdata([self.origin_x+0.5,int(event.xdata)+0.5])
-            self.lines[0].set_ydata([self.origin_y+0.5,int(event.ydata)+0.5])
+            self.lines.set_xdata([self.origin_x+0.5,int(event.xdata)+0.5])
+            self.lines.set_ydata([self.origin_y+0.5,int(event.ydata)+0.5])
             self.m_mapWidget.draw()
             
     def drawRectangle(self,event):
@@ -776,18 +812,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 yf=int(event.ydata)
             xi=self.origin_x
             yi=self.origin_y
+            self.m_mapWidget.mpl_disconnect(self.motionConnection)
             #If left-click : either a line was drawn or a spectrum picked
-            if(event.button==1):
-                self.m_mapWidget.mpl_disconnect(self.motionConnection)
+            if(event.button==1):  
                 if(event.xdata==None or event.ydata==None):
-                     self.lines.pop(0).remove()
+                     self.lines.remove()
                 # Cut along the XY line if a line is traced (X or Y different)
                 elif(xf!=xi or yf!=yi):
-                    #self.fig_topo.axes[0].add_line(self.lines[0])
+                    #ap.axes[0].add_line(self.lines[0])
                     self.cutAlongLine(xi,xf,yi,yf)
                 #Pick spectrum otherwise
                 else:
-                    self.lines.pop(0).remove()
+                    self.lines.remove()
                     self.pickSpectrum(event)
             #If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
             else:
@@ -1048,7 +1084,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
         
     def getMapData(self,v):
-        """ Returns an array constructed from the data loaded that can be used to display a map at fixed voltage """
+        """ Returns an array built from the data loaded that can be used to display a map at fixed voltage """
         xPx=self.m_params["xPx"]
         yPx=self.m_params["yPx"]
         mapData=np.ndarray(shape=(yPx,xPx))
