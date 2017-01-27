@@ -43,9 +43,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.ax_spec.hold(True)
         self.fig_spec.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         #Variables linked to clicks on map
-        self.pts_clicked=[[],[],[]]
-        self.origin_x=0
-        self.origin_y=0
+        self.shapes_clicked=[]
         self.voltageLine=0
         #Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
@@ -437,11 +435,12 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             w=self.m_params["xL"]
             h=self.m_params["yL"]
             xPx=len(self.topo[0])
-            yPx=len(self.topo)
+            yPx=len(self.topo)           
             
             #Set up the figure for the plot
-            #if(self.fig_topo==0 or not pylab.fignum_exists(self.fig_topo.number)): 
-            self.fig_topo=pylab.figure()
+            print('Coucou',self.fig_topo)
+            if(self.fig_topo==0): self.fig_topo=pylab.figure()
+            else: self.fig_topo.clear()
             self.ax_topo=self.fig_topo.add_subplot(1,1,1,aspect=float(yPx)/xPx)
             self.fig_topo.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
             #Connect the close handling
@@ -466,11 +465,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 else:
                     self.ax_topo.axis([0,xPx,0,yPx])
                 XYmap=self.ax_topo.pcolormesh(self.topo,cmap=colormap)
-                
             #Colorbar stuff
             cbar = self.fig_topo.colorbar(XYmap, shrink=.9, pad=0.05, aspect=15)
             cbar.ax.yaxis.set_ticks_position('both')
             cbar.ax.tick_params(axis='y', direction='in')
+            self.fig_topo.canvas.draw()
         
     def drawLineTopo(self):
         """ Draws the topography read while opening a Line Spectro """
@@ -500,8 +499,9 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             self.ax_topo.set_ylabel("Z (nm)")
         pylab.legend(loc=0)
         
-    def handleClosingTopo(self):
+    def handleClosingTopo(self,event):
         """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
+        print('Topo closing')
         self.fig_topo=0
         return
         
@@ -635,7 +635,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.ax_spec.clear()
         self.nSpectraDrawn=0
         self.voltageLine=0
-        self.clearPtsClicked()
+        self.clearShapesClicked()
         #self.drawTopo()
         self.m_specWidget.draw()
         
@@ -742,7 +742,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
     def pickSpectrum(self,event):
         """ Method called when a press-and-release event is done at the same location of the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded):
-            color=self.getSpectrumColor(self.nSpectraDrawn)
             PixelX=int(event.xdata)
             PixelY=int(event.ydata)
             chan=self.m_channelBox.currentIndex()
@@ -771,118 +770,69 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 else:
                     dataToPlot=self.m_data[chan][PixelY][PixelX]
                     self.drawSpectrum(dataToPlot,"["+str(PixelX)+","+str(PixelY)+"]",PixelX,PixelY)
-            self.addToPtsClicked(PixelX,PixelY,color)
-            self.drawPtsClicked()
             
 ### Methods related to the clicks on the map
             
     def onPressOnMap(self,event):
-        """ Slot called when a press event is detected. Keeps the pressed location in integer variables """
+        """ Slot called when a press event is detected. Creates a Shape object that will be dynamically updated when the mouse moves """
         if(event.xdata!=None and event.ydata!=None and self.dataLoaded and self.toolbar_map._active is None):
-            self.origin_x=int(event.xdata)
-            self.origin_y=int(event.ydata)
-            if(event.button==1):
-                self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawLine)
-                self.lines,=self.ax_map.plot([self.origin_x,event.xdata],[self.origin_y,event.ydata],'k--')
+            if(self.m_scaleMetric.isChecked()):
+                ratioX=self.m_params['xL']/self.m_params['xPx']
+                ratioY=self.m_params['yL']/self.m_params['yPx']
             else:
-                self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.drawRectangle)
-                self.rectangle=self.ax_map.add_patch(patches.Rectangle((self.origin_x, self.origin_y),0,0,color=self.getSpectrumColor(self.nSpectraDrawn),alpha=0.5))
-                
-            
-    def drawLine(self,event):
-        """ Slot called to draw dynamically the line when keeping the mouse button pressed. Not used otherwise """
-        if(event.xdata!=None and event.ydata!=None):
-            self.lines.set_xdata([self.origin_x+0.5,int(event.xdata)+0.5])
-            self.lines.set_ydata([self.origin_y+0.5,int(event.ydata)+0.5])
-            self.m_mapWidget.draw()
-            
-    def drawRectangle(self,event):
-        """ Slot called to draw dynamically the rectangle when keeping the mouse button pressed. Not used otherwise """
-        if(event.xdata!=None and event.ydata!=None):
-            self.rectangle.set_width(int(event.xdata)-self.origin_x)
-            self.rectangle.set_height(int(event.ydata)-self.origin_y)
-            self.m_mapWidget.draw()
-            
+                ratioX=1
+                ratioY=1
+            self.currentShape=Shape(event,self.m_mapWidget.figure,self.fig_topo,self.getSpectrumColor(self.nSpectraDrawn),ratioX,ratioY)
+            self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.currentShape.update)
             
     def onReleaseOnMap(self,event):
-        """ Slot called when a release event is detected. If it happens at the same location of the press, calls the pickSpectrum method. Otherwise, it means that a line was drawn so it makes a cut of the spectra along the line. """
+        """ Slot called when a release event is detected. Disconnects the updating of the currentShape and launch the appropriate method depending on which button was pressed and where it was released """
         if(self.dataLoaded and self.toolbar_map._active is None):
             if(event.xdata!=None and event.ydata!=None):
-                xf=int(event.xdata)
-                yf=int(event.ydata)
-            xi=self.origin_x
-            yi=self.origin_y
-            self.m_mapWidget.mpl_disconnect(self.motionConnection)
-            #If left-click : either a line was drawn or a spectrum picked
-            if(event.button==1):  
-                if(event.xdata==None or event.ydata==None):
-                     self.lines.remove()
-                # Cut along the XY line if a line is traced (X or Y different)
-                elif(xf!=xi or yf!=yi):
-                    #ap.axes[0].add_line(self.lines[0])
-                    self.cutAlongLine(xi,xf,yi,yf)
-                #Pick spectrum otherwise
-                else:
-                    self.lines.remove()
-                    self.pickSpectrum(event)
-            #If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
-            else:
+                #Disconnects the updating of the current Shape and gets its coordinates
                 self.m_mapWidget.mpl_disconnect(self.motionConnection)
-                if(event.xdata!=None and event.ydata!=None):
-                    if(xf!=xi or yf!=yi):
-                        self.averageSpectrum(xi,xf,yi,yf)
+                xi=self.currentShape.xi
+                yi=self.currentShape.yi
+                xf=self.currentShape.xf
+                yf=self.currentShape.yf
+                #If left-click : either a line was drawn or a spectrum picked
+                if(event.button==1):
+                    if(event.xdata==None or event.ydata==None):
+                         self.currentShape.remove()
+                    # Cut along the XY line if a line is traced (X or Y different)
+                    elif(xf!=xi or yf!=yi):
+                        self.cutAlongLine(xi,xf,yi,yf)
+                    #Pick spectrum otherwise and change the line shape to a point
                     else:
-                        n=self.m_rcAvgBox.value()
-                        self.rectangle.set_x(max(0,xi-n))
-                        self.rectangle.set_y(max(0,yi-n))
-                        self.rectangle.set_width(min(self.m_params["xPx"],xf+n)-max(0,xi-n))
-                        self.rectangle.set_height(min(self.m_params["yPx"],yf+n)-max(0,yi-n))
-                        self.averageSpectrum(max(0,xi-n),min(self.m_params["xPx"],xf+n),max(0,yi-n),min(self.m_params["yPx"],yf+n))
-                    #Check if the topo figure exists to plot the rectangle on it
-                    if(self.fig_topo!=0):
-                        #Convert rectangle dimensions to metric if needed to plot the rectangle on the topo graph
-                        if(self.m_scaleMetric.isChecked()):
-                            ratiox=self.m_params['xL']/self.m_params['xPx']
-                            ratioy=self.m_params['yL']/self.m_params['yPx']
-                            self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x()*ratiox, self.rectangle.get_y()*ratioy),
-    self.rectangle.get_width()*ratiox,self.rectangle.get_height()*ratioy,color=self.rectangle.get_facecolor()))
+                        self.currentShape.changeToPt()
+                        self.pickSpectrum(event)
+                #If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
+                else:
+                    if(event.xdata!=None and event.ydata!=None):
+                        if(xf!=xi or yf!=yi):
+                            self.averageSpectrum(xi,xf,yi,yf)
+                        #If X=Y, we need to force the updating of the Shape so it is drawn around the X,Y point and not starting at X,Y    
                         else:
-                            self.ax_topo.add_patch(patches.Rectangle((self.rectangle.get_x(), self.rectangle.get_y()),
-    self.rectangle.get_width(),self.rectangle.get_height(),color=self.rectangle.get_facecolor()))
-                        self.fig_topo.canvas.draw()
-            self.m_mapWidget.draw()
+                            n=self.m_rcAvgBox.value()
+                            self.currentShape.forceUpdate(max(0,xi-n),max(0,yi-n),min(self.m_params["xPx"],xf+n),min(self.m_params["yPx"],yf+n))
+                            self.averageSpectrum(max(0,xi-n),min(self.m_params["xPx"],xf+n),max(0,yi-n),min(self.m_params["yPx"],yf+n))
+                #Add the current Shape to the list of clicked Shapes
+                self.addToShapesClicked(self.currentShape)
 
+    def addToShapesClicked(self,shape):
+        """ Method called when a release was detected on the map. The Shape is saved in the shapes_clicked list """
+        self.shapes_clicked.append(shape)
 
-    def addToPtsClicked(self,x,y,color):
-        """ Method called when a click was detected on the map. The coordinates are saved in the pts_clicked list with a corresponding color """
-        # Shifting the coordinates by (0.5,0.5) so that the dot is plotted at the center of the square
-        self.pts_clicked[0].append(x+0.5)
-        self.pts_clicked[1].append(y+0.5)
-        #color_cycle = self.ax_spec._get_lines.color_cycle
-        self.pts_clicked[2].append(color)
+    def drawShapesClicked(self,fig_map,fig_topo,recreate):
+        """ Method that draws all the Shapes saved in shapes_clicked or recreates them if the XYmap was cleared"""
+        for shape in self.shapes_clicked:
+            if(recreate): shape.recreate(fig_map,fig_topo)
+            else:   shape.draw()
         
-    def drawPtsClicked(self):
-        """ Method that draws all the points saved in pts_clicked. Usually called when the map is drawn or redrawn """
-        pts_x=np.array(self.pts_clicked[0])
-        pts_y=np.array(self.pts_clicked[1])
-        pts_c=np.array(self.pts_clicked[2])
-        if(self.fig_topo!=0):
-            if(self.m_scaleMetric.isChecked()):
-                self.fig_topo.axes[0].scatter(pts_x*self.m_params["xL"]/self.m_params["xPx"],pts_y*self.m_params["yL"]/self.m_params["yPx"],color=pts_c)
-            else:
-                self.fig_topo.axes[0].scatter(pts_x,pts_y,color=pts_c)
-            self.fig_topo.canvas.draw()
-        self.ax_map.scatter(pts_x,pts_y,color=pts_c)
-        self.m_mapWidget.draw()
-        
-    def clearPtsClicked(self):
-        """ Method that clears all saved points and then redraws the map to reflect the change """
-        self.pts_clicked=[[],[],[]]
+    def clearShapesClicked(self):
+        """ Method that clears all saved Shapes and then redraws the map to reflect the change. No need to call Shape.remove as the XYmap will be cleared """
+        self.shapes_clicked=[]
         self.drawXYMap(self.m_voltageBox.value())
-        #Encore en test
-        if(False):
-            pylab.close(self.fig_topo)
-            self.drawTopo()
         
     def cutAlongLine(self,xi,xf,yi,yf):
         """ Method that finds the positions of the pixels forming the line from (xi,yi) to (xf,yf). The plotting of the spectra is done in cutPlot called at the end """
@@ -958,6 +908,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         # Matlab convention : Y (v) first then X (z)
         # Plot the built map in a new figure
         fig=pylab.figure()
+        #fig.canvas.mplconnect()
         ax=fig.add_subplot(1,1,1)
         ax.set_title(self.mapName.split(".")[0]+" - Cut "+str(fig.number))
         self.ax_map.text(xi+0.5,yi+0.5,str(fig.number))
@@ -1012,7 +963,20 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
     def launchBigCut(self):
         """ Launches a cut in the big diagonal """
         if(self.dataLoaded):
-            self.ax_map.plot([0.5,self.m_params["xPx"]-0.5],[0.5,self.m_params["yPx"]-0.5],'k--')
+            if(self.m_scaleMetric.isChecked()):
+                ratioX=self.m_params['xL']/self.m_params['xPx']
+                ratioY=self.m_params['yL']/self.m_params['yPx']
+            else:
+                ratioX=1
+                ratioY=1
+            #Simulates a left-click press at (0,0) and a release at xPx-1,yPx-1
+            simEvent=matplotlib.backend_bases.MouseEvent('button_press_event',self.m_mapWidget.figure.canvas,0,0,button=1)
+            simEvent.xdata=0
+            simEvent.ydata=0
+            self.currentShape=Shape(simEvent,self.m_mapWidget.figure,self.fig_topo,self.getSpectrumColor(self.nSpectraDrawn),ratioX,ratioY)
+            simEvent.xdata=self.m_params['xPx']-1
+            simEvent.ydata=self.m_params['yPx']-1
+            self.currentShape.update(simEvent)
             X,Y,Z=self.cutAlongLine(0,self.m_params["xPx"]-1,0,self.m_params["yPx"]-1)
             self.m_mapWidget.draw()
             return X,Y,Z
@@ -1023,7 +987,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
     def clearMap(self):
         """ Unloads the map and clears the map window """
         self.m_mapWidget.figure.clear()
-        self.clearPtsClicked()
+        self.clearShapesClicked()
         self.m_data=np.ndarray([])
         #self.m_params.clear()
         self.mapType=""
@@ -1077,9 +1041,8 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             #Plot a dashed line at X=voltage if asked
             if(self.m_vLineBox.isChecked()):
                 self.drawVoltageLine(voltage)
-            #Draws the points saved in pts_clicked
-            self.drawPtsClicked()
-            #Not really useful as the draw is called in drawPtsClicked but it is more logical to keep it.
+            #Recreate the shapes points saved in shapes_clicked
+            self.drawShapesClicked(fig_map,self.fig_topo,True)
             self.m_mapWidget.draw()
         
         
@@ -1303,6 +1266,85 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #self.fig_spec.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_1B\\Spectres_pt200.svg")
      
 ### Complentary functions
+    #Shape class that is used to draw the shapes when clicking on the map
+class Shape:
+    def __init__(self,event,fig_map,fig_topo,color,ratioX,ratioY):
+        self.xi=int(event.xdata)
+        self.yi=int(event.ydata)
+        self.xf=int(event.xdata)
+        self.yf=int(event.ydata)
+        self.d=int(event.button)
+        self.color=color
+        self.map1=fig_map
+        self.map2=fig_topo
+        self.ratioX=ratioX
+        self.ratioY=ratioY
+        self.create()
+        
+    def changeToPt(self):
+        self.d=0
+        self.create()
+        
+    def update(self,event):
+        if(event.xdata!=None and event.ydata!=None):
+            self.xf=int(event.xdata)
+            self.yf=int(event.ydata)
+            self.draw()
+            
+    def forceUpdate(self,x,y,xp,yp):
+        self.xi=x
+        self.yi=y
+        self.xf=xp
+        self.yf=yp
+        self.draw()        
+        
+    def create(self):
+        if(self.d==1):
+            self.shape1,=self.map1.axes[0].plot([self.xi+0.5,self.xf+0.5],[self.yi+0.5,self.yf+0.5],'k--')
+            if(self.map2!=0): self.shape2,=self.map2.axes[0].plot([(self.xi+0.5)*self.ratioX,(self.xf+0.5)*self.ratioX],[(self.yi+0.5)*self.ratioY,(self.yf+0.5)*self.ratioY],'k--')
+        elif(self.d==3):
+            self.shape1=self.map1.axes[0].add_patch(patches.Rectangle((self.xi,self.yi),self.xf-self.xi,self.yf-self.yi,color=self.color,alpha=0.5))
+            if(self.map2!=0): self.shape2=self.map2.axes[0].add_patch(patches.Rectangle((self.xi*self.ratioX,self.yi*self.ratioY),(self.xf-self.xi)*self.ratioX,(self.yf-self.yi)*self.ratioY,color=self.color,alpha=0.5))
+        elif(self.d==0):
+            self.shape1,=self.map1.axes[0].plot([self.xi+0.5,self.xf+0.5],[self.yi+0.5,self.yf+0.5],c=self.color,ls='None',marker='o')
+            if(self.map2!=0): self.shape2,=self.map2.axes[0].plot([(self.xi+0.5)*self.ratioX,(self.xf+0.5)*self.ratioX],[(self.yi+0.5)*self.ratioY,(self.yf+0.5)*self.ratioY],c=self.color,ls='None',marker='o')
+        self.drawMaps()
+        
+    def recreate(self,fig_map,fig_topo):
+        self.updateMaps(fig_map,fig_topo)
+        self.create()
+                
+    def draw(self):
+        if(self.d==1 or self.d==0):
+            self.shape1.set_data([self.xi+0.5,self.xf+0.5],[self.yi+0.5,self.yf+0.5])
+            if(self.map2!=0): self.shape2.set_data([(self.xi+0.5)*self.ratioX,(self.xf+0.5)*self.ratioX],[(self.yi+0.5)*self.ratioY,(self.yf+0.5)*self.ratioY])
+        elif(self.d==3):
+            self.shape1.set_xy([self.xi,self.yi])
+            self.shape1.set_width(self.xf-self.xi)
+            self.shape1.set_height(self.yf-self.yi)
+            if(self.map2!=0): 
+                self.shape2.set_xy([self.xi*self.ratioX,self.yi*self.ratioY])
+                self.shape2.set_width(self.xf*self.ratioX-self.xi*self.ratioX)
+                self.shape2.set_height(self.yf*self.ratioY-self.yi*self.ratioY)
+        self.drawMaps()
+            
+    def drawMaps(self):
+        if(self.map1!=0): self.map1.canvas.draw()
+        if(self.map2!=0): self.map2.canvas.draw()
+        
+    def updateMaps(self,fig_map,fig_topo):
+        self.map1=fig_map
+        self.map2=fig_topo
+        self.shape1.set_axes(self.map1.axes[0])
+        if(self.map2!=0): self.shape2.set_axes(self.map2.axes[0])
+            
+    def remove(self):
+        self.shape1.remove()
+        del self.shape1
+        if(self.map2!=0): 
+            self.shape2.remove()
+            del self.shape2
+        self.drawMaps()
      
 def plotMapDistrib(data1d,valMax):
     """ ??? """
