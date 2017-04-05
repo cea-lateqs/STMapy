@@ -345,8 +345,10 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             if("(A)" in chan):
                 self.m_data[i]=np.abs(self.m_data[i])*10**9
                 self.channelList[i]=chan.replace("(A)","(nA)")
-        #Convert topoin nm
+        #Convert topo in nm
         self.topo=self.topo*10**9
+        #Level topo
+        self.topo=self.levelTopo()
         #Test
         if(False and zSpectro):
             self.extractSlope(0.01,0)
@@ -435,10 +437,9 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             w=self.m_params["xL"]
             h=self.m_params["yL"]
             xPx=len(self.topo[0])
-            yPx=len(self.topo)           
+            yPx=len(self.topo)
             
             #Set up the figure for the plot
-            print('Coucou',self.fig_topo)
             if(self.fig_topo==0): self.fig_topo=pylab.figure()
             else: self.fig_topo.clear()
             self.ax_topo=self.fig_topo.add_subplot(1,1,1,aspect=float(yPx)/xPx)
@@ -488,7 +489,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         
         if(self.m_scaleMetric.isChecked()):        
             self.ax_topo.plot(np.linspace(0,w,xPx),self.topo[0],label="Without line leveling")
-            self.ax_topo.plot(np.linspace(0,w,xPx),self.levelTopo(),label="With line leveling")
+            self.ax_topo.plot(np.linspace(0,w,xPx),self.levelTopo()[0],label="With line leveling")
             self.ax_topo.set_xlim(0,w)
             self.ax_topo.set_xlabel("Distance (nm)")
             self.ax_topo.set_ylabel("Z (nm)")
@@ -589,6 +590,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             xavg=xi+(xf-xi)/2
             yavg=yi+(yf-yi)/2
             self.drawSpectrum(avg_data,"Average around "+"("+str(xavg)+","+str(yavg)+")",xavg,yavg)
+            return avg_data
             
     def averageSpectrumWithValues(self):
         """ Averages the spectra according their values at a certain voltage """
@@ -611,24 +613,33 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             N_belowV=0
             xPx=self.m_params["xPx"]
             yPx=self.m_params["yPx"]
+            xPts=[]
+            yPts=[]
+            cPts=[]
             for y in range(0,yPx):
                 for x in range(0,xPx):
                     currentValue=self.m_data[chan][y][x][voltage]
                     if(currentValue>limit_aboveV):
                         avg_data_aboveV+=self.m_data[chan][y][x]
                         N_aboveV+=1
-                        if(viewSelected): self.addToPtsClicked(x,y,self.getSpectrumColor(self.nSpectraDrawn))
+                        if(viewSelected): 
+                            xPts.append(x)
+                            yPts.append(y)
+                            cPts.append(self.getSpectrumColor(self.nSpectraDrawn))
                     elif(currentValue<limit_belowV):
                         avg_data_belowV+=self.m_data[chan][y][x]
                         N_belowV+=1
-                        if(viewSelected): self.addToPtsClicked(x,y,self.getSpectrumColor(self.nSpectraDrawn+1))
+                        if(viewSelected):
+                            xPts.append(x)
+                            yPts.append(y)
+                            cPts.append(self.getSpectrumColor(self.nSpectraDrawn+1))
             if(N_aboveV!=0): 
                 avg_data_aboveV/=N_aboveV
                 self.drawSpectrum(avg_data_aboveV,"Average above "+str(limit_aboveV)+" ("+str(N_aboveV)+" spectra averaged)")
             if(N_belowV!=0): 
                 avg_data_belowV/=N_belowV
                 self.drawSpectrum(avg_data_belowV,"Average below "+str(limit_belowV)+" ("+str(N_belowV)+" spectra averaged)")
-            self.drawPtsClicked()
+            if(viewSelected): self.ax_map.plot(xPts,yPts,c=cPts,marker='o',ls='None')
             
     def clearSpectrum(self):
         """ Clears the spectrum window """
