@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Mon Oct 17 12:57:52 2016
+# Created: Wed Jun 21 09:50:11 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -332,6 +332,9 @@ class Ui_CitsWidget(object):
         self.m_averageCitsButton = QtGui.QPushButton(self.centralwidget)
         self.m_averageCitsButton.setObjectName(_fromUtf8("m_averageCitsButton"))
         self.gridLayout_5.addWidget(self.m_averageCitsButton, 1, 1, 1, 1)
+        self.m_normalizeSpectraButton = QtGui.QPushButton(self.centralwidget)
+        self.m_normalizeSpectraButton.setObjectName(_fromUtf8("m_normalizeSpectraButton"))
+        self.gridLayout_5.addWidget(self.m_normalizeSpectraButton, 2, 1, 1, 1)
         self.gridLayout_2.addLayout(self.gridLayout_5, 10, 0, 1, 1)
         CitsWidget.setCentralWidget(self.centralwidget)
         self.m_menuBar = QtGui.QMenuBar(CitsWidget)
@@ -390,5 +393,6 @@ class Ui_CitsWidget(object):
         self.m_legendBox.setText(_translate("CitsWidget", "Deactivate legend", None))
         self.label_14.setText(_translate("CitsWidget", "Number of spectras for CITS average", None))
         self.m_averageCitsButton.setText(_translate("CitsWidget", "Average CITS", None))
+        self.m_normalizeSpectraButton.setText(_translate("CitsWidget", "Normalize displayed channel", None))
 
 from matplotlibwidget import MatplotlibWidget

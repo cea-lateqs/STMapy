@@ -632,6 +632,13 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="m_normalizeSpectraButton">
+        <property name="text">
+         <string>Normalize displayed channel</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
