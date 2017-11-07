@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_citswidget.ui'
 #
-# Created: Mon Oct 17 12:57:52 2016
+# Created: Tue Jul 25 12:36:32 2017
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -36,9 +36,9 @@ class Ui_CitsWidget(object):
         self.gridLayout = QtGui.QGridLayout(self.m_cbarWidget)
         self.gridLayout.setMargin(0)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        self.m_magicButton = QtGui.QPushButton(self.m_cbarWidget)
-        self.m_magicButton.setObjectName(_fromUtf8("m_magicButton"))
-        self.gridLayout.addWidget(self.m_magicButton, 4, 1, 1, 1)
+        self.m_normButton = QtGui.QPushButton(self.m_cbarWidget)
+        self.m_normButton.setObjectName(_fromUtf8("m_normButton"))
+        self.gridLayout.addWidget(self.m_normButton, 4, 1, 1, 1)
         self.m_colorBarBox = QtGui.QComboBox(self.m_cbarWidget)
         self.m_colorBarBox.setObjectName(_fromUtf8("m_colorBarBox"))
         self.gridLayout.addWidget(self.m_colorBarBox, 0, 1, 1, 1)
@@ -210,6 +210,9 @@ class Ui_CitsWidget(object):
         self.m_derivBox = QtGui.QCheckBox(self.centralwidget)
         self.m_derivBox.setObjectName(_fromUtf8("m_derivBox"))
         self.horizontalLayout_3.addWidget(self.m_derivBox)
+        self.m_logBox = QtGui.QCheckBox(self.centralwidget)
+        self.m_logBox.setObjectName(_fromUtf8("m_logBox"))
+        self.horizontalLayout_3.addWidget(self.m_logBox)
         self.m_derivNBox = QtGui.QSpinBox(self.centralwidget)
         self.m_derivNBox.setEnabled(False)
         self.m_derivNBox.setMinimum(1)
@@ -347,7 +350,7 @@ class Ui_CitsWidget(object):
 
     def retranslateUi(self, CitsWidget):
         CitsWidget.setWindowTitle(_translate("CitsWidget", "STM Data Analysis", None))
-        self.m_magicButton.setText(_translate("CitsWidget", "Magic button", None))
+        self.m_normButton.setText(_translate("CitsWidget", "Normalize current channel", None))
         self.label_10.setText(_translate("CitsWidget", "Colorbar to use", None))
         self.m_cbarLowerBox.setPlaceholderText(_translate("CitsWidget", "0", None))
         self.m_cbarCustomCheckbox.setText(_translate("CitsWidget", "Use custom limits", None))
@@ -376,6 +379,7 @@ class Ui_CitsWidget(object):
         self.label.setText(_translate("CitsWidget", "V/Z Index", None))
         self.m_avgBox.setText(_translate("CitsWidget", "Average spectra by selection", None))
         self.m_derivBox.setText(_translate("CitsWidget", "Plot derivative", None))
+        self.m_logBox.setText(_translate("CitsWidget", "Plot log instead", None))
         self.label_9.setText(_translate("CitsWidget", "ShiftX", None))
         self.m_shiftXBox.setText(_translate("CitsWidget", "0.0", None))
         self.label_13.setText(_translate("CitsWidget", "Shift Y", None))

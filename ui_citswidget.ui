@@ -19,9 +19,9 @@
      <widget class="QWidget" name="m_cbarWidget" native="true">
       <layout class="QGridLayout" name="gridLayout">
        <item row="4" column="1">
-        <widget class="QPushButton" name="m_magicButton">
+        <widget class="QPushButton" name="m_normButton">
          <property name="text">
-          <string>Magic button</string>
+          <string>Normalize current channel</string>
          </property>
         </widget>
        </item>
@@ -389,6 +389,13 @@
        <widget class="QCheckBox" name="m_derivBox">
         <property name="text">
          <string>Plot derivative</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="m_logBox">
+        <property name="text">
+         <string>Plot log instead</string>
         </property>
        </widget>
       </item>

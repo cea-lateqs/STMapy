@@ -18,6 +18,8 @@ import scipy.signal
 import matplotlib.patches as patches
 import matplotlib.pyplot
 import struct
+import Common.colormaps
+import Common.functions as fc
 
 class CitsWidget(QMainWindow, Ui_CitsWidget):
 ### Building methods
@@ -47,7 +49,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.voltageLine=0
         #Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
-        self.m_colorBarBox.setCurrentIndex(3)
+        self.m_colorBarBox.setCurrentIndex(145)
         #Boolean that is True if a map is loaded
         self.dataLoaded=False
         #Other parameters used after map loading
@@ -87,7 +89,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #self.m_scaleMetric.toggled.connect(self.updateMap)
         self.m_averageCitsButton.clicked.connect(self.avgSpectrasX)
         self.m_wholeLengthCutButton.clicked.connect(self.launchBigCut)
-        self.m_magicButton.clicked.connect(self.magicFunction)
+        self.m_normButton.clicked.connect(self.normalizeCurrentChannel)
         self.m_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.m_avgBox.toggled.connect(self.updateAvgVariables)
         self.m_vLineBox.toggled.connect(self.clearVoltageLine)
@@ -205,7 +207,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 break
         # Matlab convention : columns first then rows hence [y][x]
         # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
-        self.channelList=("Data [Fwd]","Data [Bwd]")
+        self.channelList=["Data [Fwd]","Data [Bwd]"]
         self.m_data=np.zeros(shape=(2,yPx,xPx,zPt))
         for y in range(0,yPx):
             for x in range(0,xPx):
@@ -214,9 +216,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 data_list=f.readline().strip().split()
                 #Forward data
                 self.m_data[0][y][x]=data_list[0:zPt]
+                self.m_data[0][y][x]=self.m_data[0][y][x]*unit
                 #No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
                 #Backward data
                 self.m_data[1][y][x]=(data_list[zPt:2*zPt])
+                self.m_data[1][y][x]=self.m_data[1][y][x]*unit
         f.close()
         #Store the parameters in a dictonnary to use them later
         self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart/divider,"vEnd":vEnd/divider,"dV":abs(vEnd-vStart)/(divider*zPt)}
@@ -350,7 +354,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #Level topo
         self.topo=self.levelTopo()
         #Test
-        if(False and zSpectro):
+        if(zSpectro):
             self.extractSlope(0.01,0)
         #Post-processing
         #self.extractOutOfPhase(1,2)        
@@ -375,7 +379,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
             else:
                 topo_data.append(line.strip().split())
         f.close()
-        self.topo=(np.asfarray(topo_data))*10**(-9)
+        self.topo=(np.asfarray(topo_data))
         return True
 #        #Set up figure
 #        xPx=len(topo_data[0])
@@ -691,6 +695,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         if(self.dataLoaded and dataToPlot.size!=0):
             dV=self.m_params["dV"]
             deriv=np.fabs(sp.signal.savgol_filter(dataToPlot, self.m_derivNBox.value(), 3, deriv=1, delta=dV))
+            if(self.m_logBox.isChecked()): dataToPlot=np.log(dataToPlot)
             self.lastSpectrum=[dataToPlot,finalLabel]
             if(self.m_scaleVoltage.isChecked()):
                 vStart=self.m_params["vStart"]
@@ -850,7 +855,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #If the line is vertical, the equation is x=xi with y varying from yi to yf
         self.m_statusBar.showMessage('Cut from '+'('+str(xi)+','+str(yi)+')'+' to '+'('+str(xf)+','+str(yf)+') in '+str(self.m_channelBox.currentText()))
         if(xf==xi):
-            if(yi>yf): y_plot=np.arange(yf,yi+1)
+            if(yi>yf): y_plot=np.flipud(np.arange(yf,yi+1))
             else: y_plot=np.arange(yi,yf+1)
             x_plot=np.full(shape=y_plot.size,fill_value=xi)
         else:
@@ -862,11 +867,11 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
                 c=yi-k*xi                
                 #Check if there is more y or more x to have to most precise arrangment
                 if(abs(xf-xi)>abs(yf-yi)):
-                    if(xi>xf): x_plot=np.arange(xf,xi+1)
+                    if(xi>xf): x_plot=np.flipud(np.arange(xf,xi+1))
                     else: x_plot=np.arange(xi,xf+1)
                     y_plot=k*x_plot+c
                 else:
-                    if(yi>yf): y_plot=np.arange(yf,yi+1)
+                    if(yi>yf): y_plot=np.flipud(np.arange(yf,yi+1))
                     else: y_plot=np.arange(yi,yf+1)
                     x_plot=(y_plot-c)/k
             # Bresenham algorithm
@@ -1212,69 +1217,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.addChannel(slopeData,"Slope by linear fit of "+self.channelList[numChanToFit])
         self.addChannel(coefData,"Coef by linear fit of "+self.channelList[numChanToFit])
         self.addChannel(zg,"Zg")
-                
-    def magicFunction(self):
-        """ Function dedicated to the execution of bits of code on the fly by pression the 'magic button' """
         
-        path="E:\\PhD\\Experiments\\STM\\Lc12\\LS\\Line_Spectro_1\\"
-
-        for fich in listdir(path):
-            self.dataLoaded=self.readCitsBin(path+fich)
-            self.updateWidgets()
-            pylab.close()
-            cur=fich.split('-')[-1].split('.')[0]
-            self.mapName=cur
-            self.m_CitsAvgBox.setValue(10)
-            #self.m_shiftYBox.setValue(1)
-            self.avgSpectrasX()
-            
-            self.m_channelBox.setCurrentIndex(1)
-            self.launchBigCut()
-            ab=25
-            aa=42
-            ba=36
-            self.drawSpectrum(self.m_data[1][0][ab],'AB')
-            self.addToPtsClicked(ab,0,'b')
-            self.drawSpectrum(self.m_data[1][0][aa],'AA')
-            self.addToPtsClicked(aa,0,'g')
-            self.drawSpectrum(self.m_data[1][0][ba],'BA')
-            self.addToPtsClicked(ba,0,'r')
-            self.drawPtsClicked()
-            fcur=float(cur[:-1].replace(',','.'))
-            if(fcur<0.2): 
-                self.drawVoltageLine(int((-1*fcur-self.m_params['vStart'])/self.m_params['dV']))
-                self.fig_topo.axes[0].plot([0,self.m_params['xL']],[-1*fcur,-1*fcur],c='k',ls='--')
-            self.fig_spec.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_1\\Test\\Spectres_"+cur+".png")
-            self.fig_topo.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_1\\Test\\Map_"+cur+".png")
-            self.clearSpectrum()
-            
-            #
-            #self.ax_topo.set_title(self.mapName.split(".")[0].split("-")[-1])
-            #self.ax_topo.set_ylim(-.1,0.4)
-            #self.fig_topo.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_4B\\"+self.mapName+"_Z"+".png")
-            #pylab.close()
-            #self.drawSpectrum(self.m_data[0][0][200]/self.m_data[0][0][200][0],str(cur))
-            
-            # Coolwarm cmap
-            #self.m_colorBarBox.setCurrentIndex(self.m_colorBarBox.findText("coolwarm"))
-            
-            #self.magicLinearCut(i)
-            #pylab.close()
-            
-            #xPx=self.m_params["xPx"]
-            #yPx=self.m_params["yPx"]
-            #zPt=self.m_params["zPt"]
-            #vS=self.m_params["vStart"]
-            #vE=self.m_params["vEnd"]
-            #dV=self.m_params["dV"]
-            #avg_data=np.zeros(shape=zPt)
-            #N=xPx*yPx
-            #for y in range(0,yPx):
-            #    for x in range(0,xPx):
-            #            avg_data+=(self.m_data[1][y][x]/N)
-            #pylab.plot(np.arange(vS,vE,dV),(avg_data+i*0.3),label=cur)
-            #i=i+1
-        #self.fig_spec.savefig("E:\\PhD\\Experiments\\STM\\Lc12\\Depouillements\\Depouillement_LS_1B\\Spectres_pt200.svg")
+    def normalizeCurrentChannel(self):
+        yPx=self.m_params["yPx"]
+        xPx=self.m_params["xPx"]
+        zPt=self.m_params["zPt"]
+        chan=self.m_channelBox.currentIndex()
+        normData=np.zeros(shape=(yPx,xPx,zPt))
+        for y in range(0,yPx):
+            for x in range(0,xPx):
+                normData[y][x]=fc.normalizeLDOS(self.m_data[chan][y][x],10)
+        self.addChannel(normData,"Normalized "+self.channelList[chan])
+        
      
 ### Complentary functions
     #Shape class that is used to draw the shapes when clicking on the map
