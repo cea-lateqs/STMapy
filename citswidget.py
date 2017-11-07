@@ -26,6 +26,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
     def __init__(self,parent):
         """ Builds the widget with parent widget in arg """
         QMainWindow.__init__(self,parent)
+        matplotlib.pyplot.style.use('def')
         #Set up the user interface from Designer.
         self.setupUi(self)
         self.setAutoFillBackground(True)
@@ -98,6 +99,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_avgCheckBox.toggled.connect(self.m_avgWidget.setVisible)
         self.m_aboveBox.valueChanged.connect(self.updateAboveValue)
         self.m_belowBox.valueChanged.connect(self.updateBelowValue)
+        self.m_normalizeSpectraButton.clicked.connect(self.normalizeSpectrum)
         #Cbar custom limits
         self.m_cbarCheckBox.toggled.connect(self.m_cbarWidget.setVisible)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarUpperBox.setEnabled)
@@ -572,6 +574,18 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_CitsAvgBox.setMaximum(self.m_params["xPx"])
         
 ### Methods related to spectra    
+    def normalizeSpectrum(self):
+        """ Normalizes the spectra of displayed index """
+        chan=self.m_channelBox.currentIndex()
+        for x in xrange(self.m_params['xPx']):
+            for y in xrange(self.m_params['yPx']):
+                self.m_data[chan][x][y]=self.normalizeDOS(self.m_data[chan][x][y],self.m_params['zPt'])
+        
+    def normalizeDOS(self,dos,dos_length):
+        mean_l=np.mean(dos[0:dos_length/4])
+        mean_r=np.mean(dos[3*dos_length/4:dos_length])
+        mean=(mean_l+mean_r)/2
+        return dos/mean
 
     def averageSpectrum(self,xi,xf,yi,yf):
         """ Averages the spectra contained in the rectangle drawn by the points (xi,yi);(xf,yi);(xf,yf) and (xi,yf) """
