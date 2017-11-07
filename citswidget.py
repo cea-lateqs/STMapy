@@ -99,7 +99,6 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.m_avgCheckBox.toggled.connect(self.m_avgWidget.setVisible)
         self.m_aboveBox.valueChanged.connect(self.updateAboveValue)
         self.m_belowBox.valueChanged.connect(self.updateBelowValue)
-        self.m_normalizeSpectraButton.clicked.connect(self.normalizeSpectrum)
         #Cbar custom limits
         self.m_cbarCheckBox.toggled.connect(self.m_cbarWidget.setVisible)
         self.m_cbarCustomCheckbox.stateChanged.connect(self.m_cbarUpperBox.setEnabled)
@@ -1233,15 +1232,16 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         self.addChannel(zg,"Zg")
         
     def normalizeCurrentChannel(self):
-        yPx=self.m_params["yPx"]
-        xPx=self.m_params["xPx"]
-        zPt=self.m_params["zPt"]
-        chan=self.m_channelBox.currentIndex()
-        normData=np.zeros(shape=(yPx,xPx,zPt))
-        for y in range(0,yPx):
-            for x in range(0,xPx):
-                normData[y][x]=fc.normalizeLDOS(self.m_data[chan][y][x],10)
-        self.addChannel(normData,"Normalized "+self.channelList[chan])
+        if(self.dataLoaded):
+            yPx=self.m_params["yPx"]
+            xPx=self.m_params["xPx"]
+            zPt=self.m_params["zPt"]
+            chan=self.m_channelBox.currentIndex()
+            normData=np.zeros(shape=(yPx,xPx,zPt))
+            for y in range(0,yPx):
+                for x in range(0,xPx):
+                    normData[y][x]=fc.normalizeLDOS(self.m_data[chan][y][x],10)
+            self.addChannel(normData,"Normalized "+self.channelList[chan])
         
      
 ### Complentary functions
