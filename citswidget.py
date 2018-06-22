@@ -21,6 +21,7 @@ import struct
 import Common.colormaps
 import Common.functions as fc
 
+
 class CitsWidget(QMainWindow, Ui_CitsWidget):
 ### Building methods
     def __init__(self,parent):
@@ -123,7 +124,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         if(N_Cits==0): return
         first=True
         for cits in Cits_names:
-            print cits
+            print(cits)
             extension=cits.split('.')[-1]
             if(extension=="asc"):
                 self.clearMap()
@@ -226,7 +227,7 @@ class CitsWidget(QMainWindow, Ui_CitsWidget):
         #Store the parameters in a dictonnary to use them later
         self.m_params={"xPx":xPx,"yPx":yPx,"xL":xL,"yL":yL,"zPt":zPt,"vStart":vStart/divider,"vEnd":vEnd/divider,"dV":abs(vEnd-vStart)/(divider*zPt)}
         if(divider!=1):
-            print "A divider of "+str(divider)+" was found and applied"
+            print("A divider of "+str(divider)+" was found and applied")
             
         #Check if a topo file exists and read it if yes
         topopath=osp.join(osp.dirname(filepath),'Topo.txt')

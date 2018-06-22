@@ -12,11 +12,13 @@ from PyQt4.QtCore import *
 import sys
 import citswidget
 
+
 def main(args):
-    app=QApplication(args)
-    mw=citswidget.CitsWidget(None)
+    app = QApplication(args)
+    mw = citswidget.CitsWidget(None)
     mw.show()
     app.exec_()
-    
+
+
 if __name__ == "__main__":
     main(sys.argv)
