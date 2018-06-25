@@ -4,8 +4,9 @@ Created on Mon Aug 03 12:04:19 2015
 
 @author: LH242250
 """
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
@@ -20,14 +21,15 @@ import matplotlib.pyplot
 import struct
 import Common.colormaps
 import Common.functions as fc
+import PyQt5.QtWidgets as QtWidgets
 
 
-class CitsWidget(QMainWindow, Ui_CitsWidget):
+class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 ### Building methods
     def __init__(self,parent):
         """ Builds the widget with parent widget in arg """
-        QMainWindow.__init__(self,parent)
-        matplotlib.pyplot.style.use('def')
+        QtWidgets.QMainWindow.__init__(self,parent)
+        #matplotlib.pyplot.style.use('def')
         #Set up the user interface from Designer.
         self.setupUi(self)
         self.setAutoFillBackground(True)

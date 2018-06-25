@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1210</width>
-    <height>1058</height>
+    <height>1115</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -564,7 +564,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="MatplotlibWidget" name="m_mapWidget">
+       <widget class="MatplotlibWidget" name="m_mapWidget" native="true">
         <property name="minimumSize">
          <size>
           <width>440</width>
@@ -591,7 +591,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="MatplotlibWidget" name="m_specWidget"/>
+       <widget class="MatplotlibWidget" name="m_specWidget" native="true"/>
       </item>
      </layout>
     </item>
@@ -649,7 +649,7 @@
      <x>0</x>
      <y>0</y>
      <width>1210</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

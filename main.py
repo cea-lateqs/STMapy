@@ -6,15 +6,14 @@ Created on Thu Aug 13 12:31:44 2015
 """
 
 # Main program for launching STM_Data_Analysis
-import Common.pyqtv2
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+# import Common.pyqtv2
+import PyQt5.QtWidgets as QtWidgets
 import sys
 import citswidget
 
 
 def main(args):
-    app = QApplication(args)
+    app = QtWidgets.QApplication(args)
     mw = citswidget.CitsWidget(None)
     mw.show()
     app.exec_()
