@@ -46,7 +46,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.spec_layout.insertWidget(0,self.toolbar_spec)
         self.fig_spec=self.m_specWidget.figure
         self.ax_spec=self.fig_spec.add_subplot(1,1,1)
-        self.ax_spec.hold(True)
         self.fig_spec.subplots_adjust(left=0.125,right=0.95,bottom=0.15,top=0.92)
         #Variables linked to clicks on map
         self.shapes_clicked=[]
