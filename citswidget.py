@@ -121,27 +121,29 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         """ Slot that launches the reading of the CITS given in arguments. Having several CITS will prompt their averaging but they have to be of the same dimensions"""
         N_Cits = len(Cits_names)
         print(Cits_names)
-        if (N_Cits == 0): return
+        if N_Cits == 0:
+            return
         first = True
         for cits in Cits_names:
+            cits = cits[0]
             print(cits)
             extension = cits.split('.')[-1]
-            if (extension == "asc"):
+            if extension == "asc":
                 self.clearMap()
                 self.mapType = "Omicron"
                 self.dataLoaded = self.readCitsAscii(cits)
-            elif (extension == "3ds"):
+            elif extension == "3ds":
                 self.clearMap()
                 self.mapType = "Nanonis"
                 self.dataLoaded = self.readCitsBin(cits)
-            elif (extension == "txt"):
+            elif extension == "txt":
                 self.readTopo(cits)
             else:
                 print("Extension not recognized")
                 self.m_statusBar.showMessage("Extension not recognized")
                 return
             # After reading, check if the data was read correctly and update the working directory and the map name
-            if (self.dataLoaded):
+            if self.dataLoaded:
                 self.wdir = osp.dirname(cits)
                 self.mapName = osp.basename(cits)
                 print(self.mapName + " read as a " + self.mapType + " map")
@@ -150,12 +152,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 print('Problem while reading ' + cits)
                 self.m_statusBar.showMessage('Problem while reading ' + cits)
                 return
-            if (
-                    N_Cits == 1):  # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
+            # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
+            if N_Cits == 1:
                 self.drawTopo()
                 self.updateWidgets()
                 return
-            else:  # Else begin the averging
+            else:  # Else begin the averaging
                 if (first):  # If this was the first Cits to average, create the mean_data array to store the avergage
                     mean_data = self.m_data / N_Cits
                     first = False
@@ -174,7 +176,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         f = open(filepath)
         divider = 1
         unit = 1
-        while (True):
+        header_end_not_found = True
+        for line in f:
             # Read the parameters of the map until "Start of Data"
             line = f.readline()
             # Pixel dimensions in X
@@ -207,7 +210,13 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             elif ("value-unit = nV" in line):
                 unit = 10 ** (-9)
             elif ("Start of Data" in line):
+                header_end_not_found = False
                 break
+
+        if header_end_not_found:
+            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            f.close()
+            return False
         # Matlab convention : columns first then rows hence [y][x]
         # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
         self.channelList = ["Data [Fwd]", "Data [Bwd]"]
@@ -228,7 +237,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Store the parameters in a dictonnary to use them later
         self.m_params = {"xPx": xPx, "yPx": yPx, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart / divider,
                          "vEnd": vEnd / divider, "dV": abs(vEnd - vStart) / (divider * zPt)}
-        if (divider != 1):
+        if divider != 1:
             print("A divider of " + str(divider) + " was found and applied")
 
         # Check if a topo file exists and read it if yes
@@ -277,6 +286,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
         if header_end_not_found:
             print("Problem while reading the file : could not find ':HEADER END:' in file")
+            f.close()
             return False
 
         # Reading vStart and vEnd (floats of 4 bytes each)
@@ -284,6 +294,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             reading = struct.unpack('>' + 'f' * 2, f.read(8))
         except struct.error:
             print("Problem while reading the file : number of bytes to read different than what was expected")
+            f.close()
             return False
         # If it is a Z-Spectroscopy, put the Z boundaries in nm
         if zSpectro:
@@ -308,18 +319,18 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
             except MemoryError:
                 print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
-                QMessageBox.critical(self, 'Oops !',
+                f.close()
+                QtWidgets.QMessageBox.critical(self, 'Oops !',
                                      "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
                 return False
         # Format string for unpacking zPt big-endians floats ('>f')
         fmtString = '>' + 'f' * zPt
         # zPt floats to read of 4 bytes each
         bytesToRead = 4 * zPt
-        x = 0
         y = 0
-        while (y < yPx):
+        while y < yPx:
             x = 0
-            while (x < xPx):
+            while x < xPx:
                 chan = 0
                 b = f.read(nbExpParams * 4)
                 try:
@@ -441,10 +452,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def drawTopo(self):
         """ Draws the topography read while opening the CITS."""
-        if (len(self.topo) != 0):
+        if len(self.topo) != 0:
             yPx = self.m_params["yPx"]
             # If yPx==1, it is a Line Spectro so I need to call the specific method to draw the topo
-            if (yPx == 1):
+            if yPx == 1:
                 self.drawLineTopo()
                 return
 
@@ -459,7 +470,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             yPx = len(self.topo)
 
             # Set up the figure for the plot
-            if (self.fig_topo == 0):
+            if self.fig_topo == 0:
                 self.fig_topo = pylab.figure()
             else:
                 self.fig_topo.clear()
