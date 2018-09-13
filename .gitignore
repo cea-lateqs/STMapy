@@ -1,9 +1,11 @@
-#Ignore python-compiled files
+# Ignore python-compiled files
 *.pyc
-#Ignore Windows temp files
+# Ignore Windows temp files
 *.db
 *.tmp
-#ignore Spyder file
+# Ignore Spyder file
 .spyder*
-#Ignore bat file
+# Ignore PyCharm folder
+.idea/*
+# Ignore bat file
 updateUi.bat
