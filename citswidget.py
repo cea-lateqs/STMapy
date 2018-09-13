@@ -12,6 +12,7 @@ import pylab
 import os.path as osp
 from os import listdir
 import scipy as sp
+import scipy.interpolate
 import scipy.optimize
 import scipy.signal
 import matplotlib.patches as patches
@@ -19,6 +20,7 @@ import matplotlib.pyplot
 import struct
 import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
+from shape import Shape
 
 
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
@@ -59,7 +61,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.topo = []
         # Connect all widgets
         self.connect()
-        # self.readTopo("H:\\Experiments\\STM\\Lc0 (Si-260)\\4K\\Spectro ASCII\\TestZ.txt")
         self.nSpectraDrawn = 0
         self.spectrumColor = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         self.lastSpectrum = 0
@@ -71,11 +72,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_fitUpperBox.hide()
         self.m_fitLowerBox.hide()
         # ­Calls the loading method at launch
-        self.askCITS()
+        self.askCits()
 
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
-        self.m_openButton.clicked.connect(self.askCITS)
+        self.m_openButton.clicked.connect(self.askCits)
         self.m_topoButton.clicked.connect(self.drawTopo)
         self.m_channelBox.currentIndexChanged.connect(self.updateMap)
         self.m_colorBarBox.currentIndexChanged.connect(self.updateMap)
@@ -110,21 +111,23 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_fitCustomCheckbox.toggled.connect(self.m_fitLowerLabel.setVisible)
 
     ### Reading and loading CITS methods
-    def askCITS(self):
+    def askCits(self):
         """ Slot that only takes care of opening a file dialog for the user to select one or several CITS - Returns the CITS paths """
-        Cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(self, "Choose a CITS file to read or several to average", self.wdir,
-                                                  "3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+        cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(self,
+                                                                    "Choose a CITS file to read or several to average",
+                                                                    self.wdir,
+                                                                    "3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         # getOpenFilesNames retunrs a tuple with the Cits_names as first element and extension as second. We just need the names.
-        self.loadCITS(Cits_names_and_ext[0])
+        self.loadCits(cits_names_and_ext[0])
 
-    def loadCITS(self, Cits_names):
+    def loadCits(self, cits_names):
         """ Slot that launches the reading of the CITS given in arguments. Having several CITS will prompt their averaging but they have to be of the same dimensions"""
-        N_Cits = len(Cits_names)
-        print(Cits_names)
-        if N_Cits == 0:
+        n_cits = len(cits_names)
+        print(cits_names)
+        if n_cits == 0:
             return
         first = True
-        for cits in Cits_names:
+        for cits in cits_names:
             print(cits)
             extension = cits.split('.')[-1]
             if extension == "asc":
@@ -152,18 +155,18 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.m_statusBar.showMessage('Problem while reading ' + cits)
                 return
             # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
-            if N_Cits == 1:
+            if n_cits == 1:
                 self.drawTopo()
                 self.updateWidgets()
                 return
             else:  # Else begin the averaging
-                if (first):  # If this was the first Cits to average, create the mean_data array to store the avergage
-                    mean_data = self.m_data / N_Cits
+                if first:  # If this was the first Cits to average, create the mean_data array to store the avergage
+                    mean_data = self.m_data / n_cits
                     first = False
                 else:  # Else, continue adding to the mean_data
-                    mean_data += self.m_data / N_Cits
+                    mean_data += self.m_data / n_cits
         # If everthing went well and if there was several CITS chosen, clear the map and set the data to mean_data.
-        self.mapName = "Average of " + str(N_Cits) + " CITS"
+        self.mapName = "Average of " + str(n_cits) + " CITS"
         self.clearMap()
         self.dataLoaded = True
         self.m_data = mean_data
@@ -178,37 +181,36 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         header_end_not_found = True
         for line in f:
             # Read the parameters of the map until "Start of Data"
-            line = f.readline()
             # Pixel dimensions in X
-            if ("x-pixels" in line):
+            if "x-pixels" in line:
                 xPx = int(line.split()[-1])
             # Pixel dimensions in Y
-            elif ("y-pixels" in line):
+            elif "y-pixels" in line:
                 yPx = int(line.split()[-1])
             # Metric dimensions in X
-            elif ("x-length" in line):
+            elif "x-length" in line:
                 xL = float(line.split()[-1])
             # Metric dimensions in Y
-            elif ("y-length" in line):
+            elif "y-length" in line:
                 yL = float(line.split()[-1])
             # Number of points IN TOTAL therefore the division per 2 to have the number of points per channel
-            elif ("z-points" in line):
+            elif "z-points" in line:
                 zPt = int(line.split()[-1])
                 # There is zPt/2 points for fwd and zPt/2 points for bwd
                 zPt = zPt / 2
             # Starting voltage of the spectro
-            elif ("Device_1_Start" in line):
+            elif "Device_1_Start" in line:
                 vStart = round(float(line.split()[-2]), 6)
             # Final voltage of the spectro
-            elif ("Device_1_End" in line):
+            elif "Device_1_End" in line:
                 vEnd = round(float(line.split()[-2]), 6)
             # Any eventual divider
-            elif ("divider" in line):
+            elif "divider" in line:
                 divider = float(line.split()[-1])
             # Convert nV in V
-            elif ("value-unit = nV" in line):
+            elif "value-unit = nV" in line:
                 unit = 10 ** (-9)
-            elif ("Start of Data" in line):
+            elif "Start of Data" in line:
                 header_end_not_found = False
                 break
 
@@ -241,7 +243,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
         # Check if a topo file exists and read it if yes
         topopath = osp.join(osp.dirname(filepath), 'Topo.txt')
-        if (osp.exists(topopath)):
+        if osp.exists(topopath):
             self.readTopo(topopath)
         return True
 
@@ -268,7 +270,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 xL = float(line.split(";")[-3]) * (10 ** 9)
                 yL = float(line.split(";")[-2]) * (10 ** 9)
             elif "Sweep Signal" in line:
-                if (line.split('"')[1] == 'Z (m)'):
+                if line.split('"')[1] == 'Z (m)':
                     zSpectro = True
             # Number of points per channel
             elif "Points" in line:
@@ -322,7 +324,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
                 f.close()
                 QtWidgets.QMessageBox.critical(self, 'Oops !',
-                                     "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
+                                               "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
                 return False
         # Format string for unpacking zPt big-endians floats ('>f')
         fmtString = '>' + 'f' * zPt
@@ -340,11 +342,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                     print(
                         "Problem while reading the topo : number of bytes to read different than what was expected at " + str(
                             x) + " " + str(y))
-                while (chan < nChannels):
+                while chan < nChannels:
                     # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
                     b = f.read(bytesToRead)
                     try:
-                        if (not half or chan < nChannels / 2):
+                        if not half or chan < nChannels / 2:
                             self.m_data[chan][y][x] = struct.unpack(fmtString, b)
                     except struct.error:
                         print(
@@ -361,7 +363,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 x = x + 1
             y = y + 1
         f.close()
-        if (half):
+        if half:
             self.channelList = self.channelList[0:nChannels / 2]
         # Store the parameters in a dictonnary to use them later
         dV = (vEnd - vStart) / (zPt)
@@ -369,8 +371,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                          "vEnd": vEnd, "dV": dV}
         print(self.m_params)
         # self.m_statusBar.showMessage(self.m_params)
-        # Test to have currents in nA
-        i = 0
+        # Convert currents in nA
         for i in range(0, len(self.channelList)):
             chan = self.channelList[i]
             if "(A)" in chan:
@@ -386,7 +387,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Post-processing
         # self.extractOutOfPhase(1,2)
         # pylab.close()
-        print(self.m_data)
         return True
 
     ### Reading and loading topo images methods
@@ -399,10 +399,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         h = 0
         for line in f:
             # Treat the headers differently
-            if (line[0] == '#'):
-                if ("Width" in line):
+            if line[0] == '#':
+                if "Width" in line:
                     w = float(line.split()[-2])
-                if ("Height" in line):
+                if "Height" in line:
                     h = float(line.split()[-2])
             else:
                 topo_data.append(line.strip().split())
@@ -488,9 +488,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             # Choose the colormap
             colormap = "afmhot"  # self.m_colorBarBox.currentText()
 
-            if (self.m_scaleMetric.isChecked()):
+            if self.m_scaleMetric.isChecked():
                 # If the map is an Omicron one, I have to invert the y-axis
-                if (self.mapType == "Omicron"):
+                if self.mapType == "Omicron":
                     self.ax_topo.axis([0, w, h, 0])
                 else:
                     self.ax_topo.axis([0, w, 0, h])
@@ -498,7 +498,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 XYmap = self.ax_topo.pcolormesh(np.linspace(0, w, xPx + 1), np.linspace(0, h, yPx + 1), self.topo,
                                                 cmap=colormap)
             else:
-                if (self.mapType == "Omicron"):
+                # If the map is an Omicron one, I have to invert the y-axis
+                if self.mapType == "Omicron":
                     self.ax_topo.axis([0, xPx, yPx, 0])
                 else:
                     self.ax_topo.axis([0, xPx, 0, yPx])
@@ -524,7 +525,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Connect the close handling
         self.fig_topo.canvas.mpl_connect('close_event', self.handleClosingTopo)
 
-        if (self.m_scaleMetric.isChecked()):
+        if self.m_scaleMetric.isChecked():
             self.ax_topo.plot(np.linspace(0, w, xPx), self.topo[0], label="Without line leveling")
             self.ax_topo.plot(np.linspace(0, w, xPx), self.levelTopo()[0], label="With line leveling")
             self.ax_topo.set_xlim(0, w)
@@ -1279,96 +1280,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
 
 ### Complentary functions
-# Shape class that is used to draw the shapes when clicking on the map
-class Shape:
-    def __init__(self, event, fig_map, fig_topo, color, ratioX, ratioY):
-        self.xi = int(event.xdata)
-        self.yi = int(event.ydata)
-        self.xf = int(event.xdata)
-        self.yf = int(event.ydata)
-        self.d = int(event.button)
-        self.color = color
-        self.map1 = fig_map
-        self.map2 = fig_topo
-        self.ratioX = ratioX
-        self.ratioY = ratioY
-        self.create()
-
-    def changeToPt(self):
-        self.d = 0
-        self.create()
-
-    def update(self, event):
-        if (event.xdata != None and event.ydata != None):
-            self.xf = int(event.xdata)
-            self.yf = int(event.ydata)
-            self.draw()
-
-    def forceUpdate(self, x, y, xp, yp):
-        self.xi = x
-        self.yi = y
-        self.xf = xp
-        self.yf = yp
-        self.draw()
-
-    def create(self):
-        if (self.d == 1):
-            self.shape1, = self.map1.axes[0].plot([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5], 'k--')
-            if (self.map2 != 0): self.shape2, = self.map2.axes[0].plot(
-                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY], 'k--')
-        elif (self.d == 3):
-            self.shape1 = self.map1.axes[0].add_patch(
-                patches.Rectangle((self.xi, self.yi), self.xf - self.xi, self.yf - self.yi, color=self.color,
-                                  alpha=0.5))
-            if (self.map2 != 0): self.shape2 = self.map2.axes[0].add_patch(
-                patches.Rectangle((self.xi * self.ratioX, self.yi * self.ratioY), (self.xf - self.xi) * self.ratioX,
-                                  (self.yf - self.yi) * self.ratioY, color=self.color, alpha=0.5))
-        elif (self.d == 0):
-            self.shape1, = self.map1.axes[0].plot([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5],
-                                                  c=self.color, ls='None', marker='o')
-            if (self.map2 != 0): self.shape2, = self.map2.axes[0].plot(
-                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY], c=self.color, ls='None', marker='o')
-        self.drawMaps()
-
-    def recreate(self, fig_map, fig_topo):
-        self.updateMaps(fig_map, fig_topo)
-        self.create()
-
-    def draw(self):
-        if (self.d == 1 or self.d == 0):
-            self.shape1.set_data([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5])
-            if (self.map2 != 0): self.shape2.set_data([(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                                                      [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY])
-        elif (self.d == 3):
-            self.shape1.set_xy([self.xi, self.yi])
-            self.shape1.set_width(self.xf - self.xi)
-            self.shape1.set_height(self.yf - self.yi)
-            if (self.map2 != 0):
-                self.shape2.set_xy([self.xi * self.ratioX, self.yi * self.ratioY])
-                self.shape2.set_width(self.xf * self.ratioX - self.xi * self.ratioX)
-                self.shape2.set_height(self.yf * self.ratioY - self.yi * self.ratioY)
-        self.drawMaps()
-
-    def drawMaps(self):
-        if (self.map1 != 0): self.map1.canvas.draw()
-        if (self.map2 != 0): self.map2.canvas.draw()
-
-    def updateMaps(self, fig_map, fig_topo):
-        self.map1 = fig_map
-        self.map2 = fig_topo
-        self.shape1.set_axes(self.map1.axes[0])
-        if (self.map2 != 0): self.shape2.set_axes(self.map2.axes[0])
-
-    def remove(self):
-        self.shape1.remove()
-        del self.shape1
-        if (self.map2 != 0):
-            self.shape2.remove()
-            del self.shape2
-        self.drawMaps()
-
 
 def plotMapDistrib(data1d, valMax):
     """ ??? """
