@@ -17,7 +17,6 @@ import scipy.signal
 import matplotlib.patches as patches
 import matplotlib.pyplot
 import struct
-import Common.colormaps
 import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
 
@@ -55,7 +54,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.dataLoaded = False
         # Other parameters used after map loading
         self.mapType = ""
-        self.wdir = "E:\\PhD\\Experiments\\STM"
+        self.wdir = "/home/huderl/Bureau/Experiments/STM"
         self.fig_topo = 0
         self.topo = []
         # Connect all widgets
@@ -72,7 +71,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_fitUpperBox.hide()
         self.m_fitLowerBox.hide()
         # ­Calls the loading method at launch
-        # self.loadCITS()
+        self.askCITS()
 
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -113,9 +112,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     ### Reading and loading CITS methods
     def askCITS(self):
         """ Slot that only takes care of opening a file dialog for the user to select one or several CITS - Returns the CITS paths """
-        Cits_names = QtWidgets.QFileDialog.getOpenFileNames(self, "Choose a CITS file to read or several to average", self.wdir,
+        Cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(self, "Choose a CITS file to read or several to average", self.wdir,
                                                   "3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
-        self.loadCITS(Cits_names)
+        # getOpenFilesNames retunrs a tuple with the Cits_names as first element and extension as second. We just need the names.
+        self.loadCITS(Cits_names_and_ext[0])
 
     def loadCITS(self, Cits_names):
         """ Slot that launches the reading of the CITS given in arguments. Having several CITS will prompt their averaging but they have to be of the same dimensions"""
@@ -125,7 +125,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             return
         first = True
         for cits in Cits_names:
-            cits = cits[0]
             print(cits)
             extension = cits.split('.')[-1]
             if extension == "asc":
@@ -255,32 +254,34 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Read the header of the map until its end ("HEADER_END")
         header_end_not_found = True
         for line in f:
+            # Header lines can be treated as regular strings
+            line = line.decode("utf-8")
             # Pixel dimensions
-            if ("Grid dim" in line):
+            if "Grid dim" in line:
                 splitted_line = line.split('"')[1].split()
                 xPx = int(splitted_line[0])
                 yPx = int(splitted_line[-1])
             # Center coordinates and metric dimensions in nm (Grid settings also contains other data)
-            elif ("Grid settings" in line):
+            elif "Grid settings" in line:
                 xC = float(line.split(";")[0].split("=")[-1]) * (10 ** 9)
                 yC = float(line.split(";")[1]) * (10 ** 9)
                 xL = float(line.split(";")[-3]) * (10 ** 9)
                 yL = float(line.split(";")[-2]) * (10 ** 9)
-            elif ("Sweep Signal" in line):
+            elif "Sweep Signal" in line:
                 if (line.split('"')[1] == 'Z (m)'):
                     zSpectro = True
             # Number of points per channel
-            elif ("Points" in line):
+            elif "Points" in line:
                 zPt = int(line.split('=')[-1])
             # Channels recorded
-            elif ("Channels" in line):
+            elif "Channels" in line:
                 self.channelList = line.split('"')[1].split(';')
                 nChannels = len(self.channelList)
             # Experiment parameters. Not used for now, only the number is recorded to skip the corresponding bytes afterwards
-            elif ("Experiment parameters" in line):
+            elif "Experiment parameters" in line:
                 nbExpParams = len(line.split(';'))
             # End of the header
-            elif (":HEADER_END:" in line):
+            elif ":HEADER_END:" in line:
                 header_end_not_found = False
                 break
 
@@ -313,7 +314,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             print("The data is too big ! Or the memory too small...\nI will take half of the channels...\n")
             half = True
         # If the first alloc didn't work, try to halve it
-        if (half):
+        if half:
             try:
                 self.topo = np.zeros(shape=(yPx, xPx))
                 self.m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
@@ -372,7 +373,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         i = 0
         for i in range(0, len(self.channelList)):
             chan = self.channelList[i]
-            if ("(A)" in chan):
+            if "(A)" in chan:
                 self.m_data[i] = np.abs(self.m_data[i]) * 10 ** 9
                 self.channelList[i] = chan.replace("(A)", "(nA)")
         # Convert topo in nm
@@ -380,11 +381,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Level topo
         self.topo = self.levelTopo()
         # Test
-        if (zSpectro):
+        if zSpectro:
             self.extractSlope(0.01, 0)
         # Post-processing
         # self.extractOutOfPhase(1,2)
         # pylab.close()
+        print(self.m_data)
         return True
 
     ### Reading and loading topo images methods
@@ -461,7 +463,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
             lineFit = False
             # Line fitting if necessary
-            if (lineFit):
+            if lineFit:
                 self.topo = self.levelTopo()
             # Get other parameters
             w = self.m_params["xL"]
@@ -575,7 +577,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         """ Slot called when clicking on the spectrum window. Updates the map according to the position of the cursor when clicked """
         if (event.xdata != None and event.ydata != None and self.dataLoaded and self.toolbar_spec._active is None):
             # If the scale is in volts, need to divide by dV to have the index
-            if (self.m_scaleVoltage.isChecked()):
+            if self.m_scaleVoltage.isChecked():
                 pointedIndex = int((event.xdata - self.m_params["vStart"]) / self.m_params["dV"])
             else:
                 pointedIndex = int(event.xdata)
@@ -698,35 +700,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.clearShapesClicked()
         # self.drawTopo()
         self.m_specWidget.draw()
-
-    #    def drawSpectrum2(self,dataToPlot,label,x=-1,y=-1):
-    #        finalLabel=label+" - "+str(self.m_channelBox.currentText())
-    #        shiftX=str(self.m_shiftXBox.text()).lower()
-    #        if(shiftX=="topo"):
-    #            shiftX=self.topo[y][x]
-    #        else:
-    #            shiftX=float(shiftX)
-    #        shiftY=self.nSpectraDrawn*self.m_shiftYBox.value()
-    #        if(self.dataLoaded and dataToPlot.size!=0):
-    #            dV=self.m_params["dV"]
-    #            deriv=np.fabs(sp.signal.savgol_filter(dataToPlot, self.m_derivNBox.value(), 3, deriv=1, delta=dV))
-    #            if(self.m_scaleVoltage.isChecked()):
-    #                vStart=self.m_params["vStart"]
-    #                vEnd=self.m_params["vEnd"]
-    #                V=np.arange(vStart,vEnd,dV)+shiftX
-    #                if(self.lastSpectrum==0):
-    #                    self.lastSpectrum,=self.ax_spec.plot(V,shiftY+dataToPlot,label=finalLabel,c=self.getSpectrumColor(self.nSpectraDrawn))
-    #                else:
-    #                    self.lastSpectrum.set_data(V,shiftY+dataToPlot)
-    #                    self.lastSpectrum.set_label(finalLabel)
-    #            else:
-    #                if(self.lastSpectrum==0):
-    #                    self.lastSpectrum,=self.ax_spec.plot(shiftY+dataToPlot,label=finalLabel,c=self.getSpectrumColor(self.nSpectraDrawn))
-    #                else:
-    #                    self.lastSpectrum.set_data(shiftY+dataToPlot)
-    #                    self.lastSpectrum.set_label(finalLabel)
-    #        if(not self.m_legendBox.isChecked()): self.ax_spec.legend(loc=0)
-    #        self.m_specWidget.draw()
 
     def drawSpectrum(self, dataToPlot, label, x=-1, y=-1):
         """ Method called each time a spectrum needs to be plotted. Takes care of the derivative and different scales stuff and updates the window """
@@ -1092,7 +1065,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.ax_map = fig_map.add_subplot(1, 1, 1, aspect='equal')
             else:
                 self.ax_map = fig_map.add_subplot(1, 1, 1)
-            self.ax_map.hold(True)
+            # self.ax_map.hold(True)
             fig_map.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             # Get the data of the map and draw it
             mapData, self.mapMin, self.mapMax = self.getMapData(voltage)
@@ -1122,12 +1095,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             cbar.ax.yaxis.set_ticks_position('both')
             cbar.ax.tick_params(axis='y', direction='in')
             # Image color scale is adjusted to the data:
-            if (self.m_cbarCustomCheckbox.isChecked()):
+            if self.m_cbarCustomCheckbox.isChecked():
                 XYmap.set_clim(float(self.m_cbarLowerBox.text()), float(self.m_cbarUpperBox.text()))
             else:
                 XYmap.set_clim(self.mapMin, self.mapMax)
             # Plot a dashed line at X=voltage if asked
-            if (self.m_vLineBox.isChecked()):
+            if self.m_vLineBox.isChecked():
                 self.drawVoltageLine(voltage)
             # Recreate the shapes points saved in shapes_clicked
             self.drawShapesClicked(fig_map, self.fig_topo, True)
@@ -1139,18 +1112,16 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         yPx = self.m_params["yPx"]
         mapData = np.ndarray(shape=(yPx, xPx))
         chan = self.m_channelBox.currentIndex()
+        valMin = np.inf
+        valMax = -np.inf
         for y in range(0, yPx):
             for x in range(0, xPx):
                 val = self.m_data[chan][y][x][v]
                 mapData[y][x] = val
-                if (x == 0 and y == 0):
+                if val < valMin:
                     valMin = val
+                elif val > valMax:
                     valMax = val
-                else:
-                    if (val < valMin):
-                        valMin = val
-                    elif (val > valMax):
-                        valMax = val
         return mapData, valMin, valMax
 
     ### Methods related to the voltage guide line in the spectra window
@@ -1158,7 +1129,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def drawVoltageLine(self, voltage):
         """ Draws the vertical line at the given voltage """
         self.clearVoltageLine()
-        if (self.dataLoaded):
+        if self.dataLoaded:
             # Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
             if (self.m_scaleVoltage.isChecked):
                 currentV = self.m_params["vStart"] + voltage * self.m_params["dV"]
@@ -1170,7 +1141,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def clearVoltageLine(self):
         """ Removes the vertical voltage line """
-        if (self.voltageLine):
+        if self.voltageLine:
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
             self.m_specWidget.draw()
         self.voltageLine = 0
