@@ -4,6 +4,7 @@ Created on Mon Aug 03 12:04:19 2015
 
 @author: LH242250
 """
+# Set explictly the backend to Qt for consistency with pyqt.
 import matplotlib
 matplotlib.use('qt5agg')
 from ui_citswidget import Ui_CitsWidget
@@ -20,7 +21,7 @@ import struct
 import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
 from shape import Shape
-from PyQt5.QtCore import QCoreApplication
+
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
