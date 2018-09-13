@@ -4,11 +4,11 @@ Created on Mon Aug 03 12:04:19 2015
 
 @author: LH242250
 """
-
+import matplotlib
+matplotlib.use('qt5agg')
 from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
-import pylab
 import os.path as osp
 import scipy as sp
 import scipy.interpolate
@@ -20,7 +20,7 @@ import struct
 import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
 from shape import Shape
-
+from PyQt5.QtCore import QCoreApplication
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
@@ -476,7 +476,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
             # Set up the figure for the plot
             if self.fig_topo == 0:
-                self.fig_topo = pylab.figure()
+                self.fig_topo = pyplot.figure()
             else:
                 self.fig_topo.clear()
             self.ax_topo = self.fig_topo.add_subplot(1, 1, 1, aspect=float(yPx) / xPx)
@@ -522,7 +522,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # yPx is 1 (line spectro)
 
         # Set up figure
-        fig = pylab.figure()
+        fig = pyplot.figure()
         self.ax_topo = fig.add_subplot(1, 1, 1)
         self.fig_topo = fig
         # Connect the close handling
@@ -539,7 +539,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.ax_topo.plot(self.topo[0], label="Without line leveling")
             self.ax_topo.plot(self.levelTopo(), label="With line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
-        pylab.legend(loc=0)
+        self.ax_topo.legend(loc=0)
 
     def handleClosingTopo(self, event):
         """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
@@ -980,7 +980,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         viewSelected = self.m_viewSelectedBox.isChecked()
         # Matlab convention : Y (v) first then X (z)
         # Plot the built map in a new figure
-        fig = pylab.figure()
+        fig = pyplot.figure()
         # fig.canvas.mplconnect()
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title(self.mapName.split(".")[0] + " - Cut " + str(fig.number))
@@ -1018,11 +1018,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 voltages = self.m_params["vStart"] + voltages * self.m_params["dV"]
                 ax.set_ylabel("Bias (V)")
             if self.m_scaleMetric.isChecked():
-                mapData = pylab.pcolormesh(metricDistances, voltages, dataToPlot, cmap=self.m_colorBarBox.currentText())
+                mapData = pyplot.pcolormesh(metricDistances, voltages, dataToPlot, cmap=self.m_colorBarBox.currentText())
                 ax.axis([metricDistances[0], metricDistances[-1], voltages[0], voltages[-1]])
                 ax.set_xlabel("Distance (nm)")
             else:
-                mapData = pylab.pcolormesh(z_plot, voltages, dataToPlot, cmap=self.m_colorBarBox.currentText())
+                mapData = pyplot.pcolormesh(z_plot, voltages, dataToPlot, cmap=self.m_colorBarBox.currentText())
                 ax.axis([z_plot[0], z_plot[-1], voltages[0], voltages[-1]])
                 ax.set_xlabel("Pixels")
             # Colorbar set up
