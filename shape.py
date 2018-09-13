@@ -79,8 +79,10 @@ class Shape:
         self.drawMaps()
 
     def drawMaps(self):
-        if self.map1 != 0: self.map1.canvas.draw()
-        if self.map2 != 0: self.map2.canvas.draw()
+        if self.map1 != 0:
+            self.map1.canvas.draw()
+        if self.map2 != 0:
+            self.map2.canvas.draw()
 
     def updateMaps(self, fig_map, fig_topo):
         self.map1 = fig_map

@@ -715,7 +715,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             shiftX = self.topo[y][x]
         else:
             shiftX = float(shiftX)
-        shiftY = self.nSpectraDrawn * self.m_shiftYBox.value()
+        shiftY = self.nSpectraDrawn * float(self.m_shiftYBox.text())
         if self.dataLoaded and dataToPlot.size != 0:
             dV = self.m_params["dV"]
             deriv = np.fabs(sp.signal.savgol_filter(dataToPlot, self.m_derivNBox.value(), 3, deriv=1, delta=dV))
@@ -839,6 +839,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.currentShape = Shape(event, self.m_mapWidget.figure, self.fig_topo,
                                       self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.currentShape.update)
+            print('PRESS')
 
     def onReleaseOnMap(self, event):
         """ Slot called when a release event is detected. Disconnects the updating of the currentShape and launch the appropriate method depending on which button was pressed and where it was released """
@@ -876,6 +877,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                                                  min(self.m_params["yPx"], yf + n))
                 # Add the current Shape to the list of clicked Shapes
                 self.addToShapesClicked(self.currentShape)
+            print('RELEASE')
 
     def addToShapesClicked(self, shape):
         """ Method called when a release was detected on the map. The Shape is saved in the shapes_clicked list """
@@ -990,7 +992,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 xc = int(x_plot[z])
                 yc = int(y_plot[z])
                 spectrum = self.m_data[chan][yc][xc]
-                offset = (zf - z) * self.m_shiftYBox.value()
+                offset = (zf - z) * float(self.m_shiftYBox.text())
                 ax.plot(voltages, spectrum + offset, 'k', zorder=(z + 1) * 2)
                 # Uncomment this to enable white filling under the curves
                 ax.fill_between(voltages, spectrum + offset, offset, facecolor='w', lw=0, zorder=(z + 1) * 2 - 1)
