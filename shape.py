@@ -85,9 +85,6 @@ class Shape:
     def updateMaps(self, fig_map, fig_topo):
         self.map1 = fig_map
         self.map2 = fig_topo
-        self.shape1.set_axes(self.map1.axes[0])
-        if self.map2 != 0:
-            self.shape2.set_axes(self.map2.axes[0])
 
     def remove(self):
         self.shape1.remove()

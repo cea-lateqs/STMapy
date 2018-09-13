@@ -44,7 +44,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.map_layout.insertWidget(0, self.toolbar_map)
         self.spec_layout.insertWidget(0, self.toolbar_spec)
         self.fig_spec = self.m_specWidget.figure
-        self.ax_spec = self.fig_spec.add_subplot(1, 1, 1)
+        self.ax_spec = self.fig_spec.add_subplot(111)
         self.fig_spec.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
         # Variables linked to clicks on map
         self.shapes_clicked = []
@@ -846,7 +846,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 yf = self.currentShape.yf
                 # If left-click : either a line was drawn or a spectrum picked
                 if event.button == 1:
-                    if event.xdata == None or event.ydata == None:
+                    if event.xdata is None or event.ydata is None:
                         self.currentShape.remove()
                     # Cut along the XY line if a line is traced (X or Y different)
                     elif xf != xi or yf != yi:
@@ -857,7 +857,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
-                    if event.xdata != None and event.ydata != None:
+                    if event.xdata is not None and event.ydata is not None:
                         if xf != xi or yf != yi:
                             self.averageSpectrum(xi, xf, yi, yf)
                         # If X=Y, we need to force the updating of the Shape so it is drawn around the X,Y point and not starting at X,Y
