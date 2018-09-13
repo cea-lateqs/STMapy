@@ -4,9 +4,7 @@ Created on Mon Aug 03 12:04:19 2015
 
 @author: LH242250
 """
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
+
 from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
@@ -115,13 +113,14 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     ### Reading and loading CITS methods
     def askCITS(self):
         """ Slot that only takes care of opening a file dialog for the user to select one or several CITS - Returns the CITS paths """
-        Cits_names = QFileDialog.getOpenFileNames(self, "Choose a CITS file to read or several to average", self.wdir,
+        Cits_names = QtWidgets.QFileDialog.getOpenFileNames(self, "Choose a CITS file to read or several to average", self.wdir,
                                                   "3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         self.loadCITS(Cits_names)
 
     def loadCITS(self, Cits_names):
         """ Slot that launches the reading of the CITS given in arguments. Having several CITS will prompt their averaging but they have to be of the same dimensions"""
         N_Cits = len(Cits_names)
+        print(Cits_names)
         if (N_Cits == 0): return
         first = True
         for cits in Cits_names:
@@ -244,9 +243,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         f = open(filepath, "rb")
         zSpectro = False
         half = False
-        while (True):
-            # Read the header of the map until its end ("HEADER_END")
-            line = f.readline()
+        # Read the header of the map until its end ("HEADER_END")
+        header_end_not_found = True
+        for line in f:
             # Pixel dimensions
             if ("Grid dim" in line):
                 splitted_line = line.split('"')[1].split()
@@ -273,7 +272,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 nbExpParams = len(line.split(';'))
             # End of the header
             elif (":HEADER_END:" in line):
+                header_end_not_found = False
                 break
+
+        if header_end_not_found:
+            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            return False
 
         # Reading vStart and vEnd (floats of 4 bytes each)
         try:
@@ -282,7 +286,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             print("Problem while reading the file : number of bytes to read different than what was expected")
             return False
         # If it is a Z-Spectroscopy, put the Z boundaries in nm
-        if (zSpectro):
+        if zSpectro:
             vStart = round(reading[0] * 10 ** 9, 6)
             vEnd = round(reading[1] * 10 ** 9, 6)
         else:
