@@ -197,7 +197,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             elif "z-points" in line:
                 zPt = int(line.split()[-1])
                 # There is zPt/2 points for fwd and zPt/2 points for bwd
-                zPt = zPt / 2
+                zPt = zPt // 2
             # Starting voltage of the spectro
             elif "Device_1_Start" in line:
                 vStart = round(float(line.split()[-2]), 6)
@@ -727,7 +727,13 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             if self.m_scaleVoltage.isChecked():
                 vStart = self.m_params["vStart"]
                 vEnd = self.m_params["vEnd"]
+                zPt = self.m_params["zPt"]
                 V = np.arange(vStart, vEnd, dV) + shiftX
+                # Check consistency of V array with the number of points.
+                if len(V) != zPt:
+                    print('Round-off error while computing the voltage array: dV ({}) might be too small. Computing from number of points instead.'.format(dV))
+                    # If this fails, compute from the number of points to be sure to have the same dim as dataToPlot.
+                    V = np.linspace(vStart, vEnd, zPt) + shiftX
                 self.ax_spec.plot(V, shiftY + dataToPlot, label=finalLabel, c=self.getSpectrumColor(self.nSpectraDrawn))
                 if self.m_derivBox.isChecked():
                     self.ax_spec.plot(V, shiftY + deriv, label="Derivative of " + finalLabel, marker='o', markersize=3.,
