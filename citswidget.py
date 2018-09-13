@@ -6,23 +6,23 @@ Created on Mon Aug 03 12:04:19 2015
 """
 
 from ui_citswidget import Ui_CitsWidget
-from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import pylab
 import os.path as osp
-from os import listdir
 import scipy as sp
 import scipy.interpolate
 import scipy.optimize
 import scipy.signal
-import matplotlib.patches as patches
-import matplotlib.pyplot
+import matplotlib.pyplot as pyplot
+import matplotlib.backend_bases
 import struct
 import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
 from shape import Shape
 
 
+# noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     ### Building methods
     def __init__(self, parent):
@@ -63,7 +63,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.connect()
         self.nSpectraDrawn = 0
         self.spectrumColor = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-        self.lastSpectrum = 0
+        self.lastSpectrum = []
         # Set up layouts
         self.m_avgWidget.hide()
         self.m_cbarWidget.hide()
@@ -366,7 +366,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         if half:
             self.channelList = self.channelList[0:nChannels / 2]
         # Store the parameters in a dictonnary to use them later
-        dV = (vEnd - vStart) / (zPt)
+        dV = (vEnd - vStart) / zPt
         self.m_params = {"xPx": xPx, "yPx": yPx, "xC": xC, "yC": yC, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart,
                          "vEnd": vEnd, "dV": dV}
         print(self.m_params)
@@ -443,7 +443,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Numpy array to save the leveled topo
         topo_leveled = np.zeros(shape=(yPx, xPx))
         fitX = np.arange(0, xPx)
-        fitF = lambda z, a, b: a * z + b
+
+        def fitF(z, a, b):
+            return a * z + b
+
         for y in range(0, yPx):
             fitY = self.topo[y]
             f = sp.interpolate.InterpolatedUnivariateSpline(fitX, fitY, k=1)
@@ -481,7 +484,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             # Connect the close handling
             self.fig_topo.canvas.mpl_connect('close_event', self.handleClosingTopo)
             # Put the appropriate title
-            if (lineFit):
+            if lineFit:
                 self.fig_topo.suptitle("Leveled topo (line fit)")
             else:
                 self.fig_topo.suptitle("Raw topo data")
@@ -547,26 +550,28 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     ### Updating methods. Usually called by signals
     def updateAvgVariables(self):
         """ Slot called by the toggling of the average box. Toggling on the box clears everything to start a new averaging. Toggling off averages and plots the data stored by picking spectra """
-        if (self.dataLoaded):
+        if self.dataLoaded:
             # If toggled on, put everything to zero to be ready to store data
-            if (self.m_avgBox.isChecked()):
+            if self.m_avgBox.isChecked():
                 self.tot_data = np.zeros(shape=self.m_params["zPt"])
                 self.nAvgSpectra = 0
             # If toggled off, plot the data stored
             else:
-                if (self.nAvgSpectra == 0): return
-                dataToPlot = self.tot_data / (self.nAvgSpectra)
+                if self.nAvgSpectra == 0: return
+                dataToPlot = self.tot_data / self.nAvgSpectra
                 self.drawSpectrum(dataToPlot, str(self.nAvgSpectra) + " spectra averaged")
 
     def updateAboveValue(self, value):
         """ Slot called when the above slider is changed. Changes the value of the textbox to reflect the change """
         self.m_aboveBar.setValue(value)
-        if (self.dataLoaded): self.m_aboveLine.setText(str(self.mapMax - value * (self.mapMax - self.mapMin) / 100))
+        if self.dataLoaded:
+            self.m_aboveLine.setText(str(self.mapMax - value * (self.mapMax - self.mapMin) / 100))
 
     def updateBelowValue(self, value):
         """ Slot called when the below slider is changed. Changes the value of the textbox to reflect the change """
         self.m_belowBar.setValue(value)
-        if (self.dataLoaded): self.m_belowLine.setText(str(self.mapMin + value * (self.mapMax - self.mapMin) / 100))
+        if self.dataLoaded:
+            self.m_belowLine.setText(str(self.mapMin + value * (self.mapMax - self.mapMin) / 100))
 
     def updateMap(self):
         """ Updates the map by redrawing it. Updates also the above and below sliders """
@@ -576,7 +581,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def updateToPointedX(self, event):
         """ Slot called when clicking on the spectrum window. Updates the map according to the position of the cursor when clicked """
-        if (event.xdata != None and event.ydata != None and self.dataLoaded and self.toolbar_spec._active is None):
+        if event.xdata is not None and event.ydata is not None and self.dataLoaded and self.toolbar_spec._active is None:
             # If the scale is in volts, need to divide by dV to have the index
             if self.m_scaleVoltage.isChecked():
                 pointedIndex = int((event.xdata - self.m_params["vStart"]) / self.m_params["dV"])
@@ -609,8 +614,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def normalizeSpectrum(self):
         """ Normalizes the spectra of displayed index """
         chan = self.m_channelBox.currentIndex()
-        for x in xrange(self.m_params['xPx']):
-            for y in xrange(self.m_params['yPx']):
+        for x in range(self.m_params['xPx']):
+            for y in range(self.m_params['yPx']):
                 self.m_data[chan][x][y] = self.normalizeDOS(self.m_data[chan][x][y], self.m_params['zPt'])
 
     def normalizeDOS(self, dos, dos_length):
@@ -621,15 +626,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def averageSpectrum(self, xi, xf, yi, yf):
         """ Averages the spectra contained in the rectangle drawn by the points (xi,yi);(xf,yi);(xf,yf) and (xi,yf) """
-        if (self.dataLoaded):
+        if self.dataLoaded:
             zPt = self.m_params["zPt"]
             chan = self.m_channelBox.currentIndex()
             avg_data = np.zeros(shape=zPt)
-            if (yf < yi):
+            if yf < yi:
                 t = yf
                 yf = yi
                 yi = t
-            if (xf < xi):
+            if xf < xi:
                 t = xf
                 xf = xi
                 xi = t
@@ -644,7 +649,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def averageSpectrumWithValues(self):
         """ Averages the spectra according their values at a certain voltage """
-        if (self.dataLoaded):
+        if self.dataLoaded:
             voltage = self.m_voltageBox.value()
             chan = self.m_channelBox.currentIndex()
             viewSelected = self.m_viewSelectedBox.isChecked()
@@ -655,7 +660,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             midpoint2 = (self.mapMax - self.mapMin)
             limit_aboveV = self.mapMax - self.m_aboveBar.value() * midpoint2 / 100
             limit_belowV = self.mapMin + self.m_belowBar.value() * midpoint2 / 100
-            if (limit_aboveV < limit_belowV):
+            if limit_aboveV < limit_belowV:
                 print("Above and below spectra intersect !")
                 self.m_statusBar.showMessage("Above and below spectra intersect !")
                 return
@@ -669,29 +674,29 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             for y in range(0, yPx):
                 for x in range(0, xPx):
                     currentValue = self.m_data[chan][y][x][voltage]
-                    if (currentValue > limit_aboveV):
+                    if currentValue > limit_aboveV:
                         avg_data_aboveV += self.m_data[chan][y][x]
                         N_aboveV += 1
-                        if (viewSelected):
+                        if viewSelected:
                             xPts.append(x)
                             yPts.append(y)
                             cPts.append(self.getSpectrumColor(self.nSpectraDrawn))
-                    elif (currentValue < limit_belowV):
+                    elif currentValue < limit_belowV:
                         avg_data_belowV += self.m_data[chan][y][x]
                         N_belowV += 1
-                        if (viewSelected):
+                        if viewSelected:
                             xPts.append(x)
                             yPts.append(y)
                             cPts.append(self.getSpectrumColor(self.nSpectraDrawn + 1))
-            if (N_aboveV != 0):
+            if N_aboveV != 0:
                 avg_data_aboveV /= N_aboveV
                 self.drawSpectrum(avg_data_aboveV,
                                   "Average above " + str(limit_aboveV) + " (" + str(N_aboveV) + " spectra averaged)")
-            if (N_belowV != 0):
+            if N_belowV != 0:
                 avg_data_belowV /= N_belowV
                 self.drawSpectrum(avg_data_belowV,
                                   "Average below " + str(limit_belowV) + " (" + str(N_belowV) + " spectra averaged)")
-            if (viewSelected): self.ax_map.plot(xPts, yPts, c=cPts, marker='o', ls='None')
+            if viewSelected: self.ax_map.plot(xPts, yPts, c=cPts, marker='o', ls='None')
 
     def clearSpectrum(self):
         """ Clears the spectrum window """
@@ -706,40 +711,45 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         """ Method called each time a spectrum needs to be plotted. Takes care of the derivative and different scales stuff and updates the window """
         finalLabel = label + " - " + str(self.m_channelBox.currentText())
         shiftX = str(self.m_shiftXBox.text()).lower()
-        if (shiftX == "topo"):
+        if shiftX == "topo":
             shiftX = self.topo[y][x]
         else:
             shiftX = float(shiftX)
         shiftY = self.nSpectraDrawn * self.m_shiftYBox.value()
-        if (self.dataLoaded and dataToPlot.size != 0):
+        if self.dataLoaded and dataToPlot.size != 0:
             dV = self.m_params["dV"]
             deriv = np.fabs(sp.signal.savgol_filter(dataToPlot, self.m_derivNBox.value(), 3, deriv=1, delta=dV))
-            if (self.m_logBox.isChecked()): dataToPlot = np.log(dataToPlot)
+
+            if self.m_logBox.isChecked():
+                dataToPlot = np.log(dataToPlot)
+
             self.lastSpectrum = [dataToPlot, finalLabel]
-            if (self.m_scaleVoltage.isChecked()):
+            if self.m_scaleVoltage.isChecked():
                 vStart = self.m_params["vStart"]
                 vEnd = self.m_params["vEnd"]
                 V = np.arange(vStart, vEnd, dV) + shiftX
                 self.ax_spec.plot(V, shiftY + dataToPlot, label=finalLabel, c=self.getSpectrumColor(self.nSpectraDrawn))
-                if (self.m_derivBox.isChecked()):
+                if self.m_derivBox.isChecked():
                     self.ax_spec.plot(V, shiftY + deriv, label="Derivative of " + finalLabel, marker='o', markersize=3.,
                                       c=self.getSpectrumColor(self.nSpectraDrawn))
                 self.nSpectraDrawn = self.nSpectraDrawn + 1
             else:
                 self.ax_spec.plot(shiftY + dataToPlot, label=finalLabel, c=self.getSpectrumColor(self.nSpectraDrawn))
-                if (self.m_derivBox.isChecked()):
+                if self.m_derivBox.isChecked():
                     self.ax_spec.plot(shiftY + deriv, label="Derivative of " + finalLabel, marker='o', markersize=3.,
                                       c=self.getSpectrumColor(self.nSpectraDrawn))
                 self.nSpectraDrawn = self.nSpectraDrawn + 1
-        if (not self.m_legendBox.isChecked()): self.ax_spec.legend(loc=0)
+        if not self.m_legendBox.isChecked():
+            self.ax_spec.legend(loc=0)
         self.m_specWidget.draw()
 
     def fitSpectrum(self):
         """ Linear fitting of the last spectrum plotted that is stored in lastSpectrum """
-        if (self.dataLoaded and self.lastSpectrum[0].size != 0):
-            fit_func = lambda v, a, b: a * v + b
+        if self.dataLoaded and self.lastSpectrum[0].size != 0:
+            def fit_func(v, a, b):
+                return a * v + b
             dV = self.m_params["dV"]
-            if (self.m_fitCustomCheckbox.isChecked()):
+            if self.m_fitCustomCheckbox.isChecked():
                 limitL = float(self.m_fitLowerBox.text())
                 limitU = float(self.m_fitUpperBox.text())
                 vStart = min(limitL, limitU)
@@ -772,37 +782,36 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def launchAvgSpectrum(self):
         """ Slot called to average the spectra of the whole map """
-        if (self.dataLoaded):
+        if self.dataLoaded:
             xPx = self.m_params["xPx"]
             yPx = self.m_params["yPx"]
             self.averageSpectrum(0, xPx, 0, yPx)
 
     def pickSpectrum(self, event):
         """ Method called when a press-and-release event is done at the same location of the map. If the average box is checked, it will keep the data in storage to average it later. Otherwise it plots the spectrum in the corresponding widget """
-        if (event.xdata != None and event.ydata != None and self.dataLoaded):
+        if event.xdata is not None and event.ydata is not None and self.dataLoaded:
             PixelX = int(event.xdata)
             PixelY = int(event.ydata)
             chan = self.m_channelBox.currentIndex()
-            if ("Slope" in self.channelList[chan]):
+            if "Slope" in self.channelList[chan]:
                 zPt = self.m_params["zPt"]
                 zPts = np.arange(0, zPt)
-                dataLogCurrent = np.zeros(shape=(zPt))
+                dataLogCurrent = np.zeros(shape=zPt)
                 dataLine = self.m_data[chan][PixelY][PixelX][0] * self.m_params["dV"] * zPts + \
                            self.m_data[chan + 1][PixelY][PixelX][0]
                 cutOff = False
                 for z in zPts:
                     i = self.m_data[0][PixelY][PixelX][z]
-                    if (i < 0.01 or cutOff):
+                    if i < 0.01 or cutOff:
                         dataLogCurrent[z] = dataLine[z]
                     else:
                         dataLogCurrent[z] = np.log(i)
-                self.drawSpectrum(dataLogCurrent, "Log of current at [" + str(PixelX) + "," + str(PixelY) + "]", PixelX,
-                                  PixelY)
+                self.drawSpectrum(dataLogCurrent, "Log of current at [" + str(PixelX) + "," + str(PixelY) + "]", PixelX, PixelY)
                 # self.drawSpectrum(dataLine,"Linear fit of the log at "+str(PixelX)+","+str(PixelY)+"]")
             else:
                 self.m_mapWidget.draw()
                 # Add data to the total data to average if in average mod
-                if (self.m_avgBox.isChecked()):
+                if self.m_avgBox.isChecked():
                     self.tot_data += self.m_data[chan][PixelY][PixelX]
                     self.nAvgSpectra += 1
                     # color='white'
@@ -812,11 +821,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                     self.drawSpectrum(dataToPlot, "[" + str(PixelX) + "," + str(PixelY) + "]", PixelX, PixelY)
 
     ### Methods related to the clicks on the map
-
     def onPressOnMap(self, event):
         """ Slot called when a press event is detected. Creates a Shape object that will be dynamically updated when the mouse moves """
-        if (event.xdata != None and event.ydata != None and self.dataLoaded and self.toolbar_map._active is None):
-            if (self.m_scaleMetric.isChecked()):
+        if (event.xdata is not None and event.ydata is not None) and (self.dataLoaded and self.toolbar_map._active is None):
+            if self.m_scaleMetric.isChecked():
                 ratioX = self.m_params['xL'] / self.m_params['xPx']
                 ratioY = self.m_params['yL'] / self.m_params['yPx']
             else:
@@ -828,8 +836,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def onReleaseOnMap(self, event):
         """ Slot called when a release event is detected. Disconnects the updating of the currentShape and launch the appropriate method depending on which button was pressed and where it was released """
-        if (self.dataLoaded and self.toolbar_map._active is None):
-            if (event.xdata != None and event.ydata != None):
+        if self.dataLoaded and self.toolbar_map._active is None:
+            if event.xdata is not None and event.ydata is not None:
                 # Disconnects the updating of the current Shape and gets its coordinates
                 self.m_mapWidget.mpl_disconnect(self.motionConnection)
                 xi = self.currentShape.xi
@@ -837,11 +845,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 xf = self.currentShape.xf
                 yf = self.currentShape.yf
                 # If left-click : either a line was drawn or a spectrum picked
-                if (event.button == 1):
-                    if (event.xdata == None or event.ydata == None):
+                if event.button == 1:
+                    if event.xdata == None or event.ydata == None:
                         self.currentShape.remove()
                     # Cut along the XY line if a line is traced (X or Y different)
-                    elif (xf != xi or yf != yi):
+                    elif xf != xi or yf != yi:
                         self.cutAlongLine(xi, xf, yi, yf)
                     # Pick spectrum otherwise and change the line shape to a point
                     else:
@@ -849,8 +857,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
-                    if (event.xdata != None and event.ydata != None):
-                        if (xf != xi or yf != yi):
+                    if event.xdata != None and event.ydata != None:
+                        if xf != xi or yf != yi:
                             self.averageSpectrum(xi, xf, yi, yf)
                         # If X=Y, we need to force the updating of the Shape so it is drawn around the X,Y point and not starting at X,Y
                         else:
@@ -870,7 +878,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def drawShapesClicked(self, fig_map, fig_topo, recreate):
         """ Method that draws all the Shapes saved in shapes_clicked or recreates them if the XYmap was cleared"""
         for shape in self.shapes_clicked:
-            if (recreate):
+            if recreate:
                 shape.recreate(fig_map, fig_topo)
             else:
                 shape.draw()
@@ -886,8 +894,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_statusBar.showMessage(
             'Cut from ' + '(' + str(xi) + ',' + str(yi) + ')' + ' to ' + '(' + str(xf) + ',' + str(yf) + ') in ' + str(
                 self.m_channelBox.currentText()))
-        if (xf == xi):
-            if (yi > yf):
+        if xf == xi:
+            if yi > yf:
                 y_plot = np.flipud(np.arange(yf, yi + 1))
             else:
                 y_plot = np.arange(yi, yf + 1)
@@ -895,19 +903,19 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         else:
             # Simple algorithm for cuts
             simple = True
-            if (simple):
+            if simple:
                 # If the line is not vertical, determine its equation y=k*x+c
                 k = float(yf - yi) / (xf - xi)
                 c = yi - k * xi
                 # Check if there is more y or more x to have to most precise arrangment
-                if (abs(xf - xi) > abs(yf - yi)):
-                    if (xi > xf):
+                if abs(xf - xi) > abs(yf - yi):
+                    if xi > xf:
                         x_plot = np.flipud(np.arange(xf, xi + 1))
                     else:
                         x_plot = np.arange(xi, xf + 1)
                     y_plot = k * x_plot + c
                 else:
-                    if (yi > yf):
+                    if yi > yf:
                         y_plot = np.flipud(np.arange(yf, yi + 1))
                     else:
                         y_plot = np.arange(yi, yf + 1)
@@ -920,24 +928,24 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 dy = abs(yi - yf)
                 x0 = xi
                 y0 = yi
-                if (xi < xf):
+                if xi < xf:
                     sx = 1
                 else:
                     sx = -1
-                if (yi < yf):
+                if yi < yf:
                     sy = 1
                 else:
                     sy = -1
                 err = dx - dy
-                while (True):
+                while True:
                     x_plot_p.append(x0)
                     y_plot_p.append(y0)
-                    if (x0 >= xf and y0 >= yf): break
+                    if x0 >= xf and y0 >= yf: break
                     e2 = err * 2
-                    if (e2 > -dy):
+                    if e2 > -dy:
                         err -= dy
                         x0 += sx
-                    if (e2 < dx):
+                    if e2 < dx:
                         err += dx
                         y0 += sy
                 x_plot = np.array(x_plot_p)
@@ -969,8 +977,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title(self.mapName.split(".")[0] + " - Cut " + str(fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
-        if (self.m_waterfallButton.isChecked()):
-            if (self.m_scaleVoltage.isChecked()):
+        if self.m_waterfallButton.isChecked():
+            if self.m_scaleVoltage.isChecked():
                 voltages = self.m_params["vStart"] + voltages * self.m_params["dV"]
             for z in z_plot:
                 xc = int(x_plot[z])
@@ -990,7 +998,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                     xc = int(x_plot[z])
                     yc = int(y_plot[z])
                     dataToPlot[v][z] = self.m_data[chan][yc][xc][v]  # /self.m_data[chan][yc][xc][0]
-                    if (viewSelected): self.addToPtsClicked(xc, yc, color='yellow')
+                    if viewSelected: self.addToPtsClicked(xc, yc, color='yellow')
             ax.set_ylabel("Voltage index")
             fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             # Pcolormesh takes vertices as arguments so need to add the last vertex to have the last quad plotted
@@ -998,10 +1006,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             #            metricDistances=np.append(metricDistances,metricDistances[-1]+(metricDistances[1]-metricDistances[0]))
             #            z_plot=np.append(z_plot,z_plot[-1]+1)
             # Change the scales if needed
-            if (self.m_scaleVoltage.isChecked()):
+            if self.m_scaleVoltage.isChecked():
                 voltages = self.m_params["vStart"] + voltages * self.m_params["dV"]
                 ax.set_ylabel("Bias (V)")
-            if (self.m_scaleMetric.isChecked()):
+            if self.m_scaleMetric.isChecked():
                 mapData = pylab.pcolormesh(metricDistances, voltages, dataToPlot, cmap=self.m_colorBarBox.currentText())
                 ax.axis([metricDistances[0], metricDistances[-1], voltages[0], voltages[-1]])
                 ax.set_xlabel("Distance (nm)")
@@ -1013,7 +1021,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             cbar = fig.colorbar(mapData, shrink=.9, pad=0.05, aspect=15)
             cbar.ax.yaxis.set_ticks_position('both')
             cbar.ax.tick_params(axis='y', direction='in')
-            if (self.m_cbarCustomCheckbox.isChecked()):
+            if self.m_cbarCustomCheckbox.isChecked():
                 mapData.set_clim(float(self.m_cbarLowerBox.text()), float(self.m_cbarUpperBox.text()))
             else:
                 mapData.set_clim(0)
@@ -1021,8 +1029,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def launchBigCut(self):
         """ Launches a cut in the big diagonal """
-        if (self.dataLoaded):
-            if (self.m_scaleMetric.isChecked()):
+        if self.dataLoaded:
+            if self.m_scaleMetric.isChecked():
                 ratioX = self.m_params['xL'] / self.m_params['xPx']
                 ratioY = self.m_params['yL'] / self.m_params['yPx']
             else:
@@ -1043,7 +1051,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             return X, Y, Z
 
     ### Methods related to the map
-
     def clearMap(self):
         """ Unloads the map and clears the map window """
         self.m_mapWidget.figure.clear()
@@ -1058,11 +1065,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Start everything anew
         fig_map = self.m_mapWidget.figure
         fig_map.clear()
-        if (self.dataLoaded):
+        if self.dataLoaded:
             xPx = self.m_params["xPx"]
             yPx = self.m_params["yPx"]
             # zPt=self.m_params["zPt"]
-            if (xPx == yPx):
+            if xPx == yPx:
                 self.ax_map = fig_map.add_subplot(1, 1, 1, aspect='equal')
             else:
                 self.ax_map = fig_map.add_subplot(1, 1, 1)
@@ -1071,7 +1078,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             # Get the data of the map and draw it
             mapData, self.mapMin, self.mapMax = self.getMapData(voltage)
             # Use metric dimensions if the corresponding box is checked (work in progress)
-            if (self.m_scaleMetric.isChecked() and False):
+            if self.m_scaleMetric.isChecked() and False:
                 xL = self.m_params["xL"]
                 yL = self.m_params["yL"]
                 x_m = np.linspace(0, xL, xPx)
@@ -1082,7 +1089,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             else:
                 XYmap = self.ax_map.pcolormesh(mapData, cmap=self.m_colorBarBox.currentText())
                 # If the map is an Omicron one, I have to invert the y-axis
-                if (self.mapType == "Omicron"):
+                if self.mapType == "Omicron":
                     self.ax_map.axis([0, xPx, yPx, 0])
                 else:
                     self.ax_map.axis([0, xPx, 0, yPx])
@@ -1132,7 +1139,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.clearVoltageLine()
         if self.dataLoaded:
             # Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
-            if (self.m_scaleVoltage.isChecked):
+            if self.m_scaleVoltage.isChecked:
                 currentV = self.m_params["vStart"] + voltage * self.m_params["dV"]
             else:
                 currentV = voltage
@@ -1171,7 +1178,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def avgSpectrasX(self):
         """ Slot that averages the spectras in the X direction of the loaded CITS and replaces the loaded CITS by the result """
-        if (self.dataLoaded):  # Check if a CITS was loaded
+        if self.dataLoaded:  # Check if a CITS was loaded
             # Get the needed params
             Navg = self.m_CitsAvgBox.value()
             xPx = self.m_params['xPx']
@@ -1184,19 +1191,19 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 print('Not enough memory to do this operation')
                 return
             # Average in X for each channel and Y
-            for chan in xrange(0, len(self.channelList)):
-                for y in xrange(0, yPx):
+            for chan in range(0, len(self.channelList)):
+                for y in range(0, yPx):
                     # To average, for each x, add every spectrum between x and x+Navg (averaging window) divided by Navg.
-                    for x in xrange(0, xPx, Navg):
+                    for x in range(0, xPx, Navg):
                         if (
                                 x + Navg > xPx):  # If the averaging window is not contained in the CITS data, stop averaging. The last spectras of this window will then will dismissed.
                             break
                         else:  # Else, average by adding the spectras of the avergaging window and dividing by Navg
-                            sp = np.zeros(zPt)
-                            for i in xrange(0, Navg):
-                                sp = sp + self.m_data[chan][y][x + i] / Navg
+                            spectra = np.zeros(zPt)
+                            for i in range(0, Navg):
+                                spectra = spectra + self.m_data[chan][y][x + i] / Navg
                                 # Store the result in new_data
-                                new_data[chan][y][x / Navg] = sp
+                                new_data[chan][y][x / Navg] = spectra
             # If eveything went well, clear the current map and replace it by the created data and change xPx
             self.mapName = "Average_" + str(Navg)
             self.clearMap()
@@ -1230,12 +1237,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         yPx = self.m_params["yPx"]
         xPx = self.m_params["xPx"]
         zPt = self.m_params["zPt"]
-        FFTData = np.zeros(shape=(yPx, xPx, zPt))
-        FFTData = np.fft(self.m_data[numChanToFFT], axis=axisOfFFT)
+        FFTData = np.fft.fft(self.m_data[numChanToFFT], axis=axisOfFFT)
         # Add the channel to the data
         self.addChannel(FFTData, "FFT of " + self.channelList[numChanToFFT])
 
-    def computeAngle(Dmoire, k=True):
+    def computeAngle(self, Dmoire, k=True):
         """ Computes the twist angle of a given graphene moiré of period Dmoire """
         return 2 * np.arcsin(0.246 / (2 * Dmoire)) * 180 / np.pi
 
@@ -1267,7 +1273,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.addChannel(zg, "Zg")
 
     def normalizeCurrentChannel(self):
-        if (self.dataLoaded):
+        if self.dataLoaded:
             yPx = self.m_params["yPx"]
             xPx = self.m_params["xPx"]
             zPt = self.m_params["zPt"]
