@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 03 12:04:19 2015
 
-@author: LH242250
-"""
 # Set explictly the backend to Qt for consistency with pyqt.
 import matplotlib
 matplotlib.use('qt5agg')
-from ui_citswidget import Ui_CitsWidget
+from scampy.ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import os.path
@@ -19,7 +15,7 @@ import matplotlib.pyplot as pyplot
 import matplotlib.backend_bases
 import struct
 import PyQt5.QtWidgets as QtWidgets
-from shape import Shape
+from scampy.shape import Shape
 
 
 # noinspection PyPep8Naming

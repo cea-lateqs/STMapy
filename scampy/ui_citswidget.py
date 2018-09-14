@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 class Ui_CitsWidget(object):
     def setupUi(self, CitsWidget):
@@ -469,4 +469,4 @@ class Ui_CitsWidget(object):
         self.m_cbarUpperBox.setPlaceholderText(_translate("CitsWidget", "0"))
         self.label_11.setText(_translate("CitsWidget", "Custom lower limit"))
 
-from matplotlibwidget import MatplotlibWidget
+from scampy.matplotlibwidget import MatplotlibWidget

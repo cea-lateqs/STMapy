@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Aug 13 12:31:44 2015
 
-@author: LH242250
-"""
-
-# Main program for launching STM_Data_Analysis
+# Main program for launching Scampy
 import PyQt5.QtWidgets as QtWidgets
 import sys
-import citswidget
+from scampy import citswidget
 
 
 def main(args):
