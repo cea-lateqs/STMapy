@@ -18,7 +18,6 @@ import scipy.signal
 import matplotlib.pyplot as pyplot
 import matplotlib.backend_bases
 import struct
-import Common.functions as fc
 import PyQt5.QtWidgets as QtWidgets
 from shape import Shape
 
@@ -1290,5 +1289,5 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             normData = np.zeros(shape=(yPx, xPx, zPt))
             for y in range(0, yPx):
                 for x in range(0, xPx):
-                    normData[y][x] = fc.normalizeLDOS(self.m_data[chan][y][x], 10)
+                    normData[y][x] = self.normalizeDOS(self.m_data[chan][y][x], 10)
             self.addChannel(normData, "Normalized " + self.channelList[chan])
