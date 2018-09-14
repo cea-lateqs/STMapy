@@ -43,10 +43,9 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 #### Clicks on spectrum window
 * Any click: displays the 2D plot at the clicked voltage value
 
-### List of inputs
+#### Basic operations
 * **Open CITS** (_button_): allows to select a CITS to load. If several are selected, they will be averaged.
 * **Draw topo** (_button_): redraws the topo without any shape on it.
-* **Whole length cut** (_button_): does a cut of the data along the great diagonal.
 #### CITS parameters
 * **Displayed channel** (_dropdown_): allows to select the working channel. It will be displayed in the 2D plot and all operations will be used on this channel.
 * **Normalize current channel** (_button_): normalises the current channel. The result of this normalisation will be added as a new channel named 'Normalised' followed by the channel name.
@@ -55,13 +54,14 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 ##### Multiple spectra
 * **Select spectra with left-click** (_checkbox_): allows to select several spectra by left-clicking to average them. Unchecking the box will display the result of the averaging in the bottom-right widget.
 * **Number of pixels for right-click average** (_spinbox_): Right-clicking on the 2D plot at (X, Y) triggers an average over X - N, X + N, Y - N, Y + N. This box allows to change the value of N (default : 2).
-* **Average with respect to value** (_checkbox_): triggers the display of the averaging widget. This widget allows to plot two spectra: one resulting from the average of all spectra that have a value at the current voltage below a certain value (**Minimum value for the below averaging**) and the other resulting from the average of all spectra that have a value at the current voltage above a certain value (**Maximum value for the above averaging**). This operation can be started by clicking **Start the averaging** (may be lengthy).
 ##### Whole CITS
 * **Plot average spectrum** (_button_): plots the average of all spectra of the current channel.
 * **Average CITS** (_button_): averages the neighbouring spectra of the CITS along the X direction and replaces the CITS with the result. The number of spectrum to average together can be changed in the spinbox **Number of spectra to average along X direction**. Useful for line spectroscopies.
+* **Average with respect to value** (_checkbox_): triggers the display of the averaging widget. This widget allows to plot two spectra: one resulting from the average of all spectra that have a value at the current voltage below a certain value (**Minimum value for the below averaging**) and the other resulting from the average of all spectra that have a value at the current voltage above a certain value (**Maximum value for the above averaging**). This operation can be started by clicking **Start the averaging** (may be lengthy).
 #### Cuts
 * **Waterfall** or **2D plot** (_radio buttons_): allows to choose the type of representation for cuts.
 * **View selected spectra** (_checkbox_): allows to underline the pixels in the 2D plot that are chosen when doing a cut (debugging purposes).
+* **Whole length cut** (_button_): does a cut of the 2D plot along the great diagonal.
 #### Spectra plot
 * **Clear spectra** (_button_): clears the spectra window.
 * **Shift plot along X** (_text_): shifts the plotted spectra along the voltage axis by the given value. If 'topo' is given, the spectra will be shifted by the Z value at this position (unstable !).
