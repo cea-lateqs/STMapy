@@ -10,7 +10,7 @@ matplotlib.use('qt5agg')
 from ui_citswidget import Ui_CitsWidget
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
-import os.path as osp
+import os.path
 import scipy as sp
 import scipy.interpolate
 import scipy.optimize
@@ -28,10 +28,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def __init__(self, parent):
         """ Builds the widget with parent widget in arg """
         QtWidgets.QMainWindow.__init__(self, parent)
-        # matplotlib.pyplot.style.use('def')
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.setAutoFillBackground(True)
+        # Initiate arrays
         self.m_data = np.ndarray([])
         self.tot_data = np.ndarray([])
         self.nAvgSpectra = 0
@@ -54,9 +54,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_colorBarBox.setCurrentIndex(145)
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
+        # Read config to set wdir and matplotlib stylesheet
+        self.wdir = ""
+        self.readConfig()
         # Other parameters used after map loading
         self.mapType = ""
-        self.wdir = "/home/huderl/Bureau/Experiments/STM"
         self.fig_topo = 0
         self.topo = []
         # Connect all widgets
@@ -146,8 +148,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 return
             # After reading, check if the data was read correctly and update the working directory and the map name
             if self.dataLoaded:
-                self.wdir = osp.dirname(cits)
-                self.mapName = osp.basename(cits)
+                self.wdir = os.path.dirname(cits)
+                self.mapName = os.path.basename(cits)
                 print(self.mapName + " read as a " + self.mapType + " map")
                 self.m_statusBar.showMessage(self.mapName + " read as a " + self.mapType + " map")
             else:
@@ -172,6 +174,24 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_data = mean_data
         self.updateWidgets()
         return
+
+    def readConfig(self):
+        config = {}
+        with open("config.txt") as f:
+            for line in f:
+                (key, val) = line.split()
+                config[key] = val
+        if 'working_directory' in config.keys():
+            if os.path.exists(config['working_directory']):
+                self.wdir = config['working_directory']
+            else:
+                print("{} is not a valid path ! Check your config file.".format(config['working_directory']))
+
+        if 'matplotlib_stylesheet' in config.keys():
+            try:
+                matplotlib.pyplot.style.use(config['matplotlib_stylesheet'])
+            except IOError:
+                print("{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(config['matplotlib_stylesheet']))
 
     def readCitsAscii(self, filepath):
         """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
@@ -242,8 +262,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             print("A divider of " + str(divider) + " was found and applied")
 
         # Check if a topo file exists and read it if yes
-        topopath = osp.join(osp.dirname(filepath), 'Topo.txt')
-        if osp.exists(topopath):
+        topopath = os.path.join(os.path.dirname(filepath), 'Topo.txt')
+        if os.path.exists(topopath):
             self.readTopo(topopath)
         return True
 

@@ -1,0 +1,2 @@
+working_directory   /home/huderl/Bureau/These/
+matplotlib_stylesheet   def
