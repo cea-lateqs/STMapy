@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>STM Data Analysis</string>
+   <string>Scampy</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
@@ -46,26 +46,6 @@
          <widget class="QPushButton" name="m_topoButton">
           <property name="text">
            <string>Draw topo</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="m_wholeLengthCutButton">
-          <property name="text">
-           <string>Whole length cut</string>
           </property>
          </widget>
         </item>
@@ -112,7 +92,7 @@
            <item>
             <widget class="QLabel" name="label">
              <property name="text">
-              <string>V/Z Index</string>
+              <string>V/Z index</string>
              </property>
             </widget>
            </item>
@@ -187,6 +167,71 @@
              </property>
              <property name="value">
               <number>2</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_14">
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_17">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Whole CITS</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="line_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QPushButton" name="m_avgSpec">
+           <property name="text">
+            <string>Plot average spectrum</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_15">
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_14">
+             <property name="text">
+              <string>Number of spectra to average along X direction</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="m_CitsAvgBox">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>10000000</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="m_averageCitsButton">
+             <property name="text">
+              <string>Average CITS</string>
              </property>
             </widget>
            </item>
@@ -309,71 +354,6 @@
            </layout>
           </widget>
          </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_14">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="label_17">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Whole CITS</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QPushButton" name="m_avgSpec">
-           <property name="text">
-            <string>Plot average spectrum</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_15">
-           <property name="topMargin">
-            <number>10</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="label_14">
-             <property name="text">
-              <string>Number of spectra to average along X direction</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QSpinBox" name="m_CitsAvgBox">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>10000000</number>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="m_averageCitsButton">
-             <property name="text">
-              <string>Average CITS</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
         </layout>
        </widget>
       </item>
@@ -424,6 +404,13 @@
           <widget class="QCheckBox" name="m_viewSelectedBox">
            <property name="text">
             <string>View selected spectra</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="m_wholeLengthCutButton">
+           <property name="text">
+            <string>Whole length cut</string>
            </property>
           </widget>
          </item>
@@ -700,7 +687,7 @@
             <item row="2" column="1">
              <widget class="QLabel" name="label_12">
               <property name="text">
-               <string>Custom upper limit</string>
+               <string>Upper limit</string>
               </property>
              </widget>
             </item>
@@ -723,7 +710,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Custom lower limit</string>
+               <string>Lower limit</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
