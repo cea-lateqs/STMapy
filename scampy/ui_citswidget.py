@@ -467,4 +467,4 @@ class Ui_CitsWidget(object):
         self.m_cbarUpperBox.setPlaceholderText(_translate("CitsWidget", "0"))
         self.label_11.setText(_translate("CitsWidget", "Lower limit"))
 
-from matplotlibwidget import MatplotlibWidget
+from .matplotlibwidget import MatplotlibWidget
