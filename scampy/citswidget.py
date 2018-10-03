@@ -47,7 +47,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.voltageLine = 0
         # Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
-        self.m_colorBarBox.setCurrentIndex(145)
+        # Set default colormap to magma_r
+        index = self.m_colorBarBox.findText('magma_r')
+        if index > 0:
+            self.m_colorBarBox.setCurrentIndex(index)
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
         # Read config to set wdir and matplotlib stylesheet
@@ -69,8 +72,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_fitLowerLabel.hide()
         self.m_fitUpperBox.hide()
         self.m_fitLowerBox.hide()
-        # ­Calls the loading method at launch
-        self.askCits()
+        # Check 'Colorbar settings' by default
+        self.m_cbarCheckBox.setChecked(True)
+        # Calls the loading method at launch
+        # self.askCits()
 
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
