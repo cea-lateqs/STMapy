@@ -640,8 +640,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.m_data[chan][x][y] = self.normalizeDOS(self.m_data[chan][x][y], self.m_params['zPt'])
 
     def normalizeDOS(self, dos, dos_length):
-        mean_l = np.mean(dos[0:dos_length / 4])
-        mean_r = np.mean(dos[3 * dos_length / 4:dos_length])
+        mean_l = np.mean(dos[0:dos_length // 4])
+        mean_r = np.mean(dos[3 * dos_length // 4:dos_length])
         mean = (mean_l + mean_r) / 2
         return dos / mean
 
