@@ -37,6 +37,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Set up figures
         self.toolbar_map = NavigationToolbar(self.m_mapWidget, self)
         self.toolbar_spec = NavigationToolbar(self.m_specWidget, self)
+        self.m_saveCsvButton = QtWidgets.QPushButton('Save as CSV') # Add csv save button
+        self.toolbar_spec.addWidget(self.m_saveCsvButton)
         self.map_layout.insertWidget(0, self.toolbar_map)
         self.spec_layout.insertWidget(0, self.toolbar_spec)
         self.fig_spec = self.m_specWidget.figure
@@ -88,6 +90,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_mapWidget.mpl_connect('button_press_event', self.onPressOnMap)
         self.m_mapWidget.mpl_connect('button_release_event', self.onReleaseOnMap)
         self.m_specWidget.mpl_connect('button_press_event', self.updateToPointedX)
+        self.m_saveCsvButton.clicked.connect(self.saveSpectra)
         self.m_clearSpec.clicked.connect(self.clearSpectrum)
         self.m_scaleVoltage.toggled.connect(self.clearSpectrum)
         # self.m_scaleMetric.toggled.connect(self.updateMap)
@@ -846,6 +849,30 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 else:
                     dataToPlot = self.m_data[chan][PixelY][PixelX]
                     self.drawSpectrum(dataToPlot, "[" + str(PixelX) + "," + str(PixelY) + "]", PixelX, PixelY)
+
+    def saveSpectra(self):
+        """
+        Saves the plotted spectra *as-is* as CSV data
+        """
+        output_path, fmt = QtWidgets.QFileDialog.getSaveFileName(self, "Choose a path to save the CSV file", self.wdir, "CSV (*.csv)")
+        header = ''
+        output = []
+        for line in self.ax_spec.lines:
+            # If first line, add the X-axis data
+            if len(output) == 0:
+                header += 'X-Axis,'
+                output.append(line._x)
+            output.append(line._y)
+            # Replace ',' in the labels to avoid problems when exporting as CSV
+            header += line._label.replace(',', '/') + ','
+        # Crop last comma after looping on lines
+        header = header[:-1]
+        # Save if there is an output
+        if len(output) != 0:
+            # Tranposing the output array to get columns format corresponding to the header
+            np.savetxt(output_path, np.transpose(np.array(output)), delimiter=',', header=header)
+            print('Finished exporting csv at {}'.format(output_path))
+
 
     ### Methods related to the clicks on the map
     def onPressOnMap(self, event):
