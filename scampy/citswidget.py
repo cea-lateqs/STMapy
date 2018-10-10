@@ -77,7 +77,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # Check 'Colorbar settings' by default
         self.m_cbarCheckBox.setChecked(True)
         # Calls the loading method at launch
-        # self.askCits()
+        if self.autoload:
+            self.askCits()
 
     def connect(self):
         """ Connects all the signals. Only called in the constructor """
@@ -196,6 +197,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 matplotlib.pyplot.style.use(config['matplotlib_stylesheet'])
             except IOError:
                 print("{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(config['matplotlib_stylesheet']))
+
+        if 'autoload' in config.keys():
+            autoload = config['autoload'].lower()
+            if 'no' in autoload or 'false' in autoload:
+                self.autoload = False
+            else:
+                self.autoload = True
+        else:
+            self.autoload = False
 
     def readCitsAscii(self, filepath):
         """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
