@@ -50,15 +50,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.voltageLine = 0
         # Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
-        # Set default colormap to magma_r
-        index = self.m_colorBarBox.findText('magma_r')
-        if index > 0:
-            self.m_colorBarBox.setCurrentIndex(index)
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
         # Read config to set wdir and matplotlib stylesheet
         self.wdir = ""
         self.readConfig()
+        # Set default colormap
+        index = self.m_colorBarBox.findText(self.default_cmap)
+        if index >= 0:
+            self.m_colorBarBox.setCurrentIndex(index)
         # Other parameters used after map loading
         self.mapType = ""
         self.fig_topo = 0
