@@ -23,6 +23,8 @@ python3 main.py
 ```
 It should display the following interface.
 
+<img src="scampy.svg" alt="Scampy GUI">
+
 #### File selection
 To load a CITS, click on the **Open CITS** button on top-left corner. A window will appear, prompting to select a CITS of supported format (either .3ds or .asc). The filenames can be filtered according to  the format by selecting _3D binary file_ (.3ds) or _Ascii files_ (.asc).
 
