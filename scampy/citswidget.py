@@ -215,6 +215,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         else:
             self.autoload = False
 
+        if 'default_cmap' in config.keys():
+            self.default_cmap = config['default_cmap']
+        else:
+            self.default_cmap = 'magma_r'
+
     def readCitsAscii(self, filepath):
         """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
         f = open(filepath)
@@ -661,6 +666,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             cbar.ax.yaxis.set_ticks_position('both')
             cbar.ax.tick_params(axis='y', direction='in')
             self.fig_topo.canvas.draw()
+            self.fig_topo.show()
 
     def drawLineTopo(self):
         """ Draws the topography read while opening a Line Spectro """
@@ -689,6 +695,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.ax_topo.plot(self.levelTopo(), label="With line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
         self.ax_topo.legend(loc=0)
+        self.fig_topo.show()
 
     def handleClosingTopo(self, event):
         """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
@@ -1210,6 +1217,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 mapData.set_clim(float(self.m_cbarLowerBox.text()), float(self.m_cbarUpperBox.text()))
             else:
                 mapData.set_clim(0)
+            fig.show()
             return metricDistances, voltages, dataToPlot
 
     def launchBigCut(self):
