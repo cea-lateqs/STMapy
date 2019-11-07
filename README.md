@@ -13,6 +13,8 @@ Using Scampy requires the following to be installed :
 
 If these are not satisfied, I advise to use the [Anaconda distribution](https://www.anaconda.com/distribution/) to install them.
 
+NB : To open a Sm4 file, from RHK electronics, see Matlab File Selection for more info on the requirements of this part.
+
 ## Using Scampy
 ### Starting
 To start Scampy, run the main.py file:
@@ -21,10 +23,17 @@ python3 main.py
 ```
 It should display the following interface.
 
-<img src="scampy.svg" alt="Scampy GUI">
-
 #### File selection
 To load a CITS, click on the **Open CITS** button on top-left corner. A window will appear, prompting to select a CITS of supported format (either .3ds or .asc). The filenames can be filtered according to  the format by selecting _3D binary file_ (.3ds) or _Ascii files_ (.asc).
+
+### Matlab file selection
+The .mat generated from a .sm4 format can now be opened, using sm4tomatlab.m under Octave. (Octave auto saving mode is 'txt' so it has been changed to '-v7'.) 
+One should check the SM4_File_Format folder for more info. In particular the sm4_m_reading.py should help to understand this data loading since it was a first loading trial. It was based on the STSPlot.m matlab program (not working under Octave due to specific matlab packages).
+
+To convert your .sm4 data to .mat format, run sm4tomatlab.m into the folder containing your data (the folder should also contain sm4reader.m). It will convert all .sm4 files to a .mat "equivalent". A usual problem can be missing data : load it (in testGui.py for ex) and check your data using "Spectral.dtype" in python console.
+If gui of sm4_m_reading.py is not working, it might be that you are using a macOs. Try to remove gui.
+
+If some questions remain, contact floriemesple@protonmail.com.
 
 #### Topography
 Once the CITS was selected, Scampy will load the spectroscopic data and will attempt to read the topography to plot it in a seperate window. 
@@ -80,3 +89,6 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 
 ## Further information
 The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analysis). Bugs can be reported on the repository or to directly to [me](mailto:loic.huder@gmail.com).
+
+
+

@@ -11,16 +11,17 @@ import scipy as sp
 import scipy.interpolate
 import scipy.optimize
 import scipy.signal
-import matplotlib.pyplot as pyplot
+import scipy.io
+from matplotlib import pyplot as pyplot
+from matplotlib.patches import Circle
 import matplotlib.backend_bases
 import struct
 import PyQt5.QtWidgets as QtWidgets
 from scampy.shape import Shape
 
-
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
-    ### Building methods
+    #%% Building methods
     def __init__(self, parent):
         """ Builds the widget with parent widget in arg """
         QtWidgets.QMainWindow.__init__(self, parent)
@@ -49,15 +50,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.voltageLine = 0
         # Colormaps
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
+        # Set default colormap to magma_r
+        index = self.m_colorBarBox.findText('magma_r')
+        if index > 0:
+            self.m_colorBarBox.setCurrentIndex(index)
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
         # Read config to set wdir and matplotlib stylesheet
         self.wdir = ""
         self.readConfig()
-        # Set default colormap
-        index = self.m_colorBarBox.findText(self.default_cmap)
-        if index >= 0:
-            self.m_colorBarBox.setCurrentIndex(index)
         # Other parameters used after map loading
         self.mapType = ""
         self.fig_topo = 0
@@ -117,13 +118,14 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.m_fitCustomCheckbox.toggled.connect(self.m_fitUpperLabel.setVisible)
         self.m_fitCustomCheckbox.toggled.connect(self.m_fitLowerLabel.setVisible)
 
-    ### Reading and loading CITS methods
+
+    #%% Reading and loading CITS methods
     def askCits(self):
         """ Slot that only takes care of opening a file dialog for the user to select one or several CITS - Returns the CITS paths """
         cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(self,
                                                                     "Choose a CITS file to read or several to average",
                                                                     self.wdir,
-                                                                    "3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
+                                                                    " Matlab file (*.mat);;3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)")
         # getOpenFilesNames retunrs a tuple with the Cits_names as first element and extension as second. We just need the names.
         self.loadCits(cits_names_and_ext[0])
 
@@ -147,6 +149,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.dataLoaded = self.readCitsBin(cits)
             elif extension == "txt":
                 self.readTopo(cits)
+            elif extension =="" or extension =="mat":
+                self.clearMap()
+                print('sm4')
+                self.mapType = "Sm4"
+                self.dataLoaded = self.readCitsSm4(cits)
             else:
                 print("Extension not recognized")
                 self.m_statusBar.showMessage("Extension not recognized")
@@ -162,9 +169,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.m_statusBar.showMessage('Problem while reading ' + cits)
                 return
             # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
+            print(n_cits)
             if n_cits == 1:
-                self.drawTopo()
                 self.updateWidgets()
+                self.drawTopo()
                 return
             else:  # Else begin the averaging
                 if first:  # If this was the first Cits to average, create the mean_data array to store the avergage
@@ -206,11 +214,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.autoload = True
         else:
             self.autoload = False
-
-        if 'default_cmap' in config.keys():
-            self.default_cmap = config['default_cmap']
-        else:
-            self.default_cmap = 'magma_r'
 
     def readCitsAscii(self, filepath):
         """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
@@ -285,6 +288,93 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         if os.path.exists(topopath):
             self.readTopo(topopath)
         return True
+    
+    def readCitsSm4(self, filepath):
+        zSpectro = False
+        #file loading : see sm4_m_reading
+        loadedData = scipy.io.loadmat(filepath)
+        Spatial = loadedData['Spatial']
+        Spectral = loadedData['Spectral']
+        Image = Spatial['TopoData'][0,0];
+        FImage = Image[0,0]# Image forward
+        BImage = Image[0,1]#Image bacward 
+        spectraType = Spectral['type'][0,0];#see scipy.org : scipy.io.loadmat    
+        if spectraType == 'Point': print('You didnt load a CITS. Use sm4_reader to read this data') ;
+ 
+        #find out how many measurement locations were taken along a line :
+        #each measurement is taken at a coordinate, but several measurements (repetitions) are taken on the same spot. Eg if repetitions = 4, 2 measurements, one forward, one backward (saved in right direction)
+        numOfMeasurements = np.shape(Spectral['xCoord'][0,0])[0]; 
+        repetitions = 0;
+        pointdiff = 0;
+        repindex = 0;
+        while pointdiff == 0 :  #step through data points until there is a difference between the current (x,y) point and the next (x1,y1)point
+            pointdiff = (Spectral['xCoord'][0,0][repindex+1]- Spectral['xCoord'][0,0][repindex]) + (Spectral['yCoord'][0,0][repindex+1]- Spectral['yCoord'][0,0][repindex]); #adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
+            repetitions = repetitions+1;
+            repindex = repindex+1;
+        numberOfPlots = numOfMeasurements/repetitions; #this is the number of distinct plotting locations  
+        #Load spectral data
+        try :
+            SpectralData_y = Spectral['dIdV_Line_Data'][0,0]
+        except ValueError : print ( 'The file seems to contain no dIdV_Line_Data. Use sm4_reader to read this data or check the .mat file loading/Saving')
+        SpectralData_x = Spectral['xdata'][0,0]*1000;#mV 
+                # Center coordinates and metric dimensions in nm
+        xL = Spatial['width'][0,0]* (10 ** 9);
+        yL = Spatial['height'][0,0]* (10 ** 9);
+        xC = Spatial['xoffset'][0,0]* (10 ** 9);
+        yC = Spatial['yoffset'][0,0]* (10 ** 9);
+        #repetition_index = 1 #0(forw),1(back),2(forw)... according to the number of repetitions.
+        #size spatial data
+        xPx = int((Spatial['lines'][0,0]))
+        yPx = int((Spatial['points'][0,0]))
+        #size spectral data ( not necessarily the same in RHK )
+        xSpec= int(np.sqrt(numberOfPlots))
+        ySpec = int(np.sqrt(numberOfPlots))
+        zPt = int(len(SpectralData_y[:,0]))#nbre of points in spec data
+#        x_m = np.linspace(0, xL*1e+9, xPx)#?
+#        y_m = np.linspace(0, yL*1e+9, yPx)
+        try:
+            self.topo = np.zeros(shape=(xPx,yPx))
+            self.m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
+            print(np.shape(self.m_data))
+        except MemoryError:
+            print("The data is too big ! Or the memory too small...")
+         
+            
+        #in Spectraldata_y, dIdV info corresponds to the spec data saved from left to right and increasing y(downwards in RHK), with same nbre of repetions at each spot
+        for r in range (0,repetitions):#even : forward, odd : backwards
+            for y in range( 0 , ySpec):#len(SpectralData_y[:,0])):
+                for x in range( 0, xSpec):
+                    self.m_data[r][y][x] = SpectralData_y[:,(xSpec*y+x)*repetitions+r]
+        
+        patch = []
+        for m in range (0,numOfMeasurements,repetitions): #iterate over the number of locations
+                            patch.append(Circle((-xC + xL/2 + Spectral['xCoord'][0,0][m]*1e+9,- yC + yL/2 + Spectral['yCoord'][0,0][m]*1e+9),yL/5000,facecolor='r',edgecolor='None'));
+
+        self.channelList = list(np.zeros((1,repetitions))[0])
+        for i in range (repetitions) :
+            self.channelList[i] = 'Data {}'.format(i)        
+
+        self.m_params = {"xPx": xSpec , "yPx" : ySpec ,"xL": xL, "yL": yL, "zPt": zPt, "vStart": SpectralData_x[0],
+                             "vEnd": SpectralData_x[-1], "dV": abs(SpectralData_x[-1] - SpectralData_x[0]) / (zPt) ,"Patch": patch}
+
+        self.topo = FImage
+
+        print(np.shape(self.topo))
+        
+        #!!! create average Data :
+        average = True
+        if average ==True :
+            average = np.zeros(shape=(ySpec, xSpec, zPt))
+            for y in range( 0 , ySpec):#len(SpectralData_y[:,0])):
+                for x in range( 0, xSpec):
+                    for r in range (repetitions):
+                        average[y][x] += SpectralData_y[:,(xSpec*y+x)*repetitions+r]/repetitions  
+            print('okk')
+            self.addChannel(average, "average")
+        
+
+        return True
+
 
     def readCitsBin(self, filepath):
         """ Reads a binary CITS file (Nanonis) and stores all the parameters"""
@@ -428,9 +518,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # pylab.close()
         return True
 
-    ### Reading and loading topo images methods
 
-    def readTopo(self, filepath):
+#%% Reading and loading topo images methods    
+    def readTopo(self, filepath):#used for txt files
         """ Reads a topography file (in test) """
         f = open(filepath)
         topo_data = []
@@ -477,8 +567,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     #        #self.addChannel(data,"Z (nm)")
 
     def levelTopo(self):
-        yPx = self.m_params["yPx"]
-        xPx = self.m_params["xPx"]
+        xPx = len(self.topo[0])
+        yPx = len(self.topo[:,0])
         # Numpy array to save the leveled topo
         topo_leveled = np.zeros(shape=(yPx, xPx))
         fitX = np.arange(0, xPx)
@@ -497,26 +587,29 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def drawTopo(self):
         """ Draws the topography read while opening the CITS."""
         if len(self.topo) != 0:
-            yPx = self.m_params["yPx"]
-            # If yPx==1, it is a Line Spectro so I need to call the specific method to draw the topo
-            if yPx == 1:
-                self.drawLineTopo()
-                return
-
-            lineFit = False
-            # Line fitting if necessary
-            if lineFit:
-                self.topo = self.levelTopo()
-            # Get other parameters
+            # Get parameters
             w = self.m_params["xL"]
             h = self.m_params["yL"]
             xPx = len(self.topo[0])
-            yPx = len(self.topo)
-
+            yPx = len(self.topo[:,0])
+            yspec = self.m_params["yPx"]
+            # If yspec==1, it is a Line Spectro so I need to call the specific method to draw the topo
+            if yspec == 1:
+                print('ySpec = 1')
+                self.drawLineTopo()
+                return
+        
+#!!! decide linefit
+            lineFit = True
+            # Line fitting if necessary
+            if lineFit:
+                self.topo = self.levelTopo()
             # Set up the figure for the plot
             if self.fig_topo == 0:
+                print('self fig topo = 0')
                 self.fig_topo = pyplot.figure()
             else:
+                print('self fig topo =! 0')
                 self.fig_topo.clear()
             self.ax_topo = self.fig_topo.add_subplot(1, 1, 1, aspect=float(yPx) / xPx)
             self.fig_topo.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
@@ -531,19 +624,36 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             colormap = "afmhot"  # self.m_colorBarBox.currentText()
 
             if self.m_scaleMetric.isChecked():
+                print( 'scale metric is checked' )
                 # If the map is an Omicron one, I have to invert the y-axis
                 if self.mapType == "Omicron":
                     self.ax_topo.axis([0, w, h, 0])
+                    # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
+                    XYmap = self.ax_topo.pcolormesh(np.linspace(0, w, xPx + 1), np.linspace(0, h, yPx + 1), self.topo,
+                                                    cmap=colormap)
+                if self.mapType == "Sm4" : 
+                    XYmap = self.ax_topo.imshow(self.topo,extent=[0,w,0,h]);
+                                #We plot our spec location points.
+                    locations = True
+                    if locations == True:
+                        print('Spectrum Locations will be printed')
+                        patch = self.m_params['Patch']
+                        for m in range (0,len(patch)): #iterate over the number of locations
+                            self.ax_topo.add_patch(patch[m]);
+
                 else:
                     self.ax_topo.axis([0, w, 0, h])
-                # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
-                XYmap = self.ax_topo.pcolormesh(np.linspace(0, w, xPx + 1), np.linspace(0, h, yPx + 1), self.topo,
-                                                cmap=colormap)
+                        # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED 
+                    XYmap = self.ax_topo.pcolormesh(np.linspace(0, w, xPx + 1), np.linspace(0, h, yPx + 1), self.topo,
+                                                    cmap=colormap)
+                
             else:
                 # If the map is an Omicron one, I have to invert the y-axis
                 if self.mapType == "Omicron":
                     self.ax_topo.axis([0, xPx, yPx, 0])
+                    #if self.maptype == "Sm4" : ax.imshow(FImage,extent=[0,fxscale*1e+9,0,fyscale*1e+9], vmin = (imagerms - 5*imagestd) , vmax = (imagerms + 5*imagestd));#
                 else:
+                    print(self.maptype)
                     self.ax_topo.axis([0, xPx, 0, yPx])
                 XYmap = self.ax_topo.pcolormesh(self.topo, cmap=colormap)
             # Colorbar stuff
@@ -551,7 +661,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             cbar.ax.yaxis.set_ticks_position('both')
             cbar.ax.tick_params(axis='y', direction='in')
             self.fig_topo.canvas.draw()
-            self.fig_topo.show()
 
     def drawLineTopo(self):
         """ Draws the topography read while opening a Line Spectro """
@@ -580,7 +689,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.ax_topo.plot(self.levelTopo(), label="With line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
         self.ax_topo.legend(loc=0)
-        self.fig_topo.show()
 
     def handleClosingTopo(self, event):
         """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
@@ -588,7 +696,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         self.fig_topo = 0
         return
 
-    ### Updating methods. Usually called by signals
+#%% Updating methods. Usually called by signals
     def updateAvgVariables(self):
         """ Slot called by the toggling of the average box. Toggling on the box clears everything to start a new averaging. Toggling off averages and plots the data stored by picking spectra """
         if self.dataLoaded:
@@ -638,20 +746,24 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # self.m_voltageBox.setMaximum(Vmax)
         # self.m_voltageBox.setSingleStep(dV)
         self.m_voltageBox.setMinimum(0)
-        self.m_voltageBox.setMaximum(zPt - 1)
+        self.m_voltageBox.setMaximum(zPt-1)
+        print(zPt-1)
         self.m_voltageBox.setSingleStep(1)
 
     def updateWidgets(self):
         """ Slot called after the reading of the CITS. Sets the values combo box (voltage and channels) and draws the map """
         self.updateVoltageBox(self.m_params["vStart"], self.m_params["vEnd"], self.m_params["zPt"])
         self.m_channelBox.clear()
+        print('done1!')
         self.m_channelBox.addItems(self.channelList)
+        print('done!')
         self.drawXYMap(self.m_voltageBox.value())
         self.updateAboveValue(self.m_aboveBar.value())
         self.updateBelowValue(self.m_belowBar.value())
         self.m_CitsAvgBox.setMaximum(self.m_params["xPx"])
+        print('done!')
 
-    ### Methods related to spectra
+#%% Methods related to spectra
     def normalizeSpectrum(self):
         """ Normalizes the spectra of displayed index """
         chan = self.m_channelBox.currentIndex()
@@ -891,7 +1003,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             print('Finished exporting csv at {}'.format(output_path))
 
 
-    ### Methods related to the clicks on the map
+#%% Methods related to the clicks on the map
     def onPressOnMap(self, event):
         """ Slot called when a press event is detected. Creates a Shape object that will be dynamically updated when the mouse moves """
         if (event.xdata is not None and event.ydata is not None) and (self.dataLoaded and self.toolbar_map._active is None):
@@ -937,7 +1049,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                             n = self.m_rcAvgBox.value()
                             self.currentShape.forceUpdate(max(0, xi - n), max(0, yi - n),
                                                           min(self.m_params["xPx"], xf + n),
-                                                          min(self.m_params["yPx"], yf + n))
+                                                          min(self.m_params["yPy"], yf + n))
                             self.averageSpectrum(max(0, xi - n), min(self.m_params["xPx"], xf + n), max(0, yi - n),
                                                  min(self.m_params["yPx"], yf + n))
                 # Add the current Shape to the list of clicked Shapes
@@ -1098,7 +1210,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 mapData.set_clim(float(self.m_cbarLowerBox.text()), float(self.m_cbarUpperBox.text()))
             else:
                 mapData.set_clim(0)
-            fig.show()
             return metricDistances, voltages, dataToPlot
 
     def launchBigCut(self):
@@ -1124,7 +1235,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.m_mapWidget.draw()
             return X, Y, Z
 
-    ### Methods related to the map
+#%% Methods related to the map
     def clearMap(self):
         """ Unloads the map and clears the map window """
         self.m_mapWidget.figure.clear()
@@ -1206,7 +1317,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                     valMax = val
         return mapData, valMin, valMax
 
-    ### Methods related to the voltage guide line in the spectra window
+#%% Methods related to the voltage guide line in the spectra window
 
     def drawVoltageLine(self, voltage):
         """ Draws the vertical line at the given voltage """
@@ -1232,12 +1343,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def addChannel(self, newChannelData, channelName):
         """ Adds a channel to the whole data array """
         # Gets parameters for reshaping
-        nChannels = len(self.channelList)
+        nChannels = len(self.channelList) 
         xPx = self.m_params["xPx"]
         yPx = self.m_params["yPx"]
         zPt = self.m_params["zPt"]
         try:
-            newData = np.zeros(shape=(nChannels + 1, yPx, xPx, zPt))
+            newData = np.zeros(shape=(nChannels+1, yPx, xPx, zPt))
         except MemoryError:
             print("The data is too big ! Or the memory too small...")
             return
@@ -1252,7 +1363,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
     def avgSpectrasX(self):
         """ Slot that averages the spectras in the X direction of the loaded CITS and replaces the loaded CITS by the result """
-        if self.dataLoaded:  # Check if a CITS was loaded
+        if self.dataLoaded == True :  # Check if a CITS was loaded
             # Get the needed params
             Navg = self.m_CitsAvgBox.value()
             xPx = self.m_params['xPx']
@@ -1260,7 +1371,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             zPt = self.m_params['zPt']
             # Try the allocation
             try:
-                new_data = np.zeros(shape=(len(self.channelList), yPx, xPx / Navg, zPt))
+                new_data = np.zeros(shape=(len(self.channelList), yPx, int(xPx / Navg), zPt))
+                print (np.shape(new_data))
             except MemoryError:
                 print('Not enough memory to do this operation')
                 return
@@ -1268,16 +1380,16 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             for chan in range(0, len(self.channelList)):
                 for y in range(0, yPx):
                     # To average, for each x, add every spectrum between x and x+Navg (averaging window) divided by Navg.
-                    for x in range(0, xPx, Navg):
+                    for x in range(0, xPx, int(Navg)):
                         if (
                                 x + Navg > xPx):  # If the averaging window is not contained in the CITS data, stop averaging. The last spectras of this window will then will dismissed.
                             break
                         else:  # Else, average by adding the spectras of the avergaging window and dividing by Navg
                             spectra = np.zeros(zPt)
-                            for i in range(0, Navg):
+                            for i in range(0, int(Navg)):
                                 spectra = spectra + self.m_data[chan][y][x + i] / Navg
                                 # Store the result in new_data
-                                new_data[chan][y][x / Navg] = spectra
+                                new_data[chan][y][int(x / Navg)] = spectra
             # If eveything went well, clear the current map and replace it by the created data and change xPx
             self.mapName = "Average_" + str(Navg)
             self.clearMap()
