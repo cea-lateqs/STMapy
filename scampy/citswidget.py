@@ -461,10 +461,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         fmtString = '>' + 'f' * zPt
         # zPt floats to read of 4 bytes each
         bytesToRead = 4 * zPt
-        y = 0
-        while y < yPx:
-            x = 0
-            while x < xPx:
+        for y in range(yPx):
+            for x in range(xPx):
                 chan = 0
                 b = f.read(nbExpParams * 4)
                 try:
@@ -491,11 +489,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 # After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
                 f.read(8)
                 # f.read(8+nbExpParams*4)
-                x = x + 1
-            y = y + 1
         f.close()
         if half:
-            self.channelList = self.channelList[0:nChannels / 2]
+            self.channelList = self.channelList[0:nChannels // 2]
         # Store the parameters in a dictonnary to use them later
         dV = (vEnd - vStart) / zPt
         self.m_params = {"xPx": xPx, "yPx": yPx, "xC": xC, "yC": yC, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart,
@@ -517,7 +513,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.extractSlope(0.01, 0)
         # Post-processing
         # self.extractOutOfPhase(1,2)
-        # pylab.close()
         return True
 
 
@@ -569,8 +564,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     #        #self.addChannel(data,"Z (nm)")
 
     def levelTopo(self):
-        xPx = len(self.topo[0])
-        yPx = len(self.topo[:,0])
+        yPx, xPx = self.topo.shape
         # Numpy array to save the leveled topo
         topo_leveled = np.zeros(shape=(yPx, xPx))
         fitX = np.arange(0, xPx)
