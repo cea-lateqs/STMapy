@@ -17,7 +17,7 @@ from matplotlib.patches import Circle
 import matplotlib.backend_bases
 import struct
 import PyQt5.QtWidgets as QtWidgets
-from scampy.shape import Shape
+from scampy.shape import generateShape, changeToDot
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
@@ -149,7 +149,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.dataLoaded = self.readCitsBin(cits)
             elif extension == "txt":
                 self.readTopo(cits)
-            elif extension =="" or extension =="mat":
+            elif extension == "" or extension == "mat":
                 self.clearMap()
                 print('sm4')
                 self.mapType = "Sm4"
@@ -1020,7 +1020,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             else:
                 ratioX = 1
                 ratioY = 1
-            self.currentShape = Shape(event, self.m_mapWidget.figure, self.fig_topo,
+            self.currentShape = generateShape(event, self.m_mapWidget.figure, self.fig_topo,
                                       self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.currentShape.update)
             print('PRESS')
@@ -1044,7 +1044,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                         self.cutAlongLine(xi, xf, yi, yf)
                     # Pick spectrum otherwise and change the line shape to a point
                     else:
-                        self.currentShape.changeToPt()
+                        self.currentShape = changeToDot(self.currentShape)
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
@@ -1234,7 +1234,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                                                            button=1)
             simEvent.xdata = 0
             simEvent.ydata = 0
-            self.currentShape = Shape(simEvent, self.m_mapWidget.figure, self.fig_topo,
+            self.currentShape = generateShape(simEvent, self.m_mapWidget.figure, self.fig_topo,
                                       self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             simEvent.xdata = self.m_params['xPx'] - 1
             simEvent.ydata = self.m_params['yPx'] - 1
