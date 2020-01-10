@@ -1056,7 +1056,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                             n = self.m_rcAvgBox.value()
                             self.currentShape.forceUpdate(max(0, xi - n), max(0, yi - n),
                                                           min(self.m_params["xPx"], xf + n),
-                                                          min(self.m_params["yPy"], yf + n))
+                                                          min(self.m_params["yPx"], yf + n))
                             self.averageSpectrum(max(0, xi - n), min(self.m_params["xPx"], xf + n), max(0, yi - n),
                                                  min(self.m_params["yPx"], yf + n))
                 # Add the current Shape to the list of clicked Shapes
