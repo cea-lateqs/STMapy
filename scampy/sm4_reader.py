@@ -7,11 +7,14 @@ Created on Thu Feb 13 11:49:34 2020
 
 %SM4READER takes a file ID of an RHK .sm4 file, then reads
 
-SEE => SM4 DATA FILE FORMAT V5.pdf
+SEE => 
 
-%Further information can be found at: 
-%     http://unh2d.weebly.com/using-sm4-files-in-matlab.html
-%     http://unh2d.weebly.com/sm4readerm-and-the-mat-file-format.html
+SM4 DATA FILE FORMAT V5.pdf
+
+AND =>
+
+http://unh2d.weebly.com/using-sm4-files-in-matlab.html
+http://unh2d.weebly.com/sm4readerm-and-the-mat-file-format.html
 
 """
 # -*- coding: utf-8 -*-
@@ -22,11 +25,15 @@ import unittest
 import numpy as np
 
 
+def string(array):
+    array = list(map(lambda x: chr(x), array))
+    array = ("".join(array))
+    return array
+
+
 filepath='/home/florie/Documents/LABO/Python/SM4_File_Format/FCg01-2-010719_0061.sm4'
 def readCitsSm4Bin(filepath):
-    nbrelines = 0
-    error = 0
-    byte = 0
+
     ObjectIDCode = ['Undefined', 'Page Index Header', 'Page Index Array',
                     'Page Header', 'Page Data', 'Image Drift Header',
                     'Image Drift', 'Spec Drift Header',
@@ -39,17 +46,15 @@ def readCitsSm4Bin(filepath):
                     'Lockin1 Info', 'ZPI Info', 'KPI Info', 'Aux PI Info',
                     'Low-pass Filter0 Info', 'Low-pass Filter1 Info']
     f = open(filepath, "rb")
-    
+
     # File Header
     Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-    Signature = np.fromfile(f, dtype=np.uint16, count=18)
-    Signature = list(map(lambda x: chr(x), Signature))
-    Signature = ("".join(Signature))
+    Signature = string(np.fromfile(f, dtype=np.uint16, count=18))
     Total_Pagecount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
     ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
     ObjectFieldSize = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
-    Reserved = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
-    
+    Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0])
+
     # iterate over the known objects from file header
     ObjectlistName = []
     ObjectlistOffset = []
@@ -62,7 +67,7 @@ def readCitsSm4Bin(filepath):
     # Read and record the Page Index Header
     PageIndexHeader_PageCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0]) # the number of pages in the Page Index Array
     PageIndexHeader_ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])# %the count of objects stored after the Page Index Header
-                                                                        #currently there is just one: Page Index Array        
+                                                                        #currently there is just one: Page Index Array    
     PageIndexHeader_Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0]) #two fields reserved for future use 
 
     # Read and record the Page Index Array
@@ -71,26 +76,27 @@ def readCitsSm4Bin(filepath):
     PageIndexHeader_Size = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
 
     # Get info on each page
-    PageHeaderIndex = []
+    PageIndex = []
     for j in range(PageIndexHeader_PageCount):
-        PageHeaderIndex.append({'PageID': np.fromfile(f, dtype=np.uint16, count=8)[0],
+        PageIndex.append({'PageID': np.fromfile(f, dtype=np.uint16, count=8)[0],
                                 'PageDataType': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                                 'PageSourceType': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                                 'ObjectListCount': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                                 'MinorVersion': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                                 'ObjectList': []
                                 })
-        for i in range(PageHeaderIndex[j]['ObjectListCount']):
+        for i in range(PageIndex[j]['ObjectListCount']):
             dict1 = {'ObjectID': ObjectIDCode[int(np.fromfile(f, dtype=np.uint32, count=1)[0])],
                      'Offset': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                      'Size': int(np.fromfile(f, dtype=np.uint32, count=1)[0])}
-            PageHeaderIndex[j]['ObjectList'].append(dict1)
+            PageIndex[j]['ObjectList'].append(dict1)
 
 
     # Read and record the Page Index Headers and Page Headers for each Page
     PageHeader = []
+    TextStrings = []
     for j in range(PageIndexHeader_PageCount):
-        f.seek(PageHeaderIndex[j]['ObjectList'][0]['Offset'], 0)
+        f.seek(PageIndex[j]['ObjectList'][0]['Offset'], 0)
 #        fseek(fileID,outfile.PageIndex(j).Offset(1) ,'bof'); %use the offsets
 #        %we read to earlier to find the beginning of the Page Header
     
@@ -123,126 +129,141 @@ def readCitsSm4Bin(filepath):
                           'ColorInfoListCount': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                           'GridXSize': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                           'GridYSize': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
-                          'ObjectListCount': int(np.fromfile(f, dtype=np.uint32, count=1)[0])
+                          'ObjectListCount': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
+                          'ObjectList': []
                           })
-    print(PageIndexHeader_PageCount)
-    PageHeader[0]['XScale']
-    
-#       %Skip flags and reserved data
-#       fseek(fileID,1+3+60,0);
-#
-#       %Read the Object List
-#       for i=1:outfile.PageHeader(j).ObjectListCount
-#        outfile.PageHeader(j).ObjectID(i) = fread(fileID,1,'uint32');
-#        outfile.PageHeader(j).Offset(i) = fread(fileID,1,'uint32');     % 4 bytes
-#        outfile.PageHeader(j).Size(i) = fread(fileID,1,'uint32');
-#       end
-#
-#       
-#       
-#       %Read and record the Text Strings for each Page
-#       %----------------------------------------------
-#       %PageheaderObjectList
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strLabel = fread(fileID,count,'uint16=>char');%string that goes on top of plot window, such as "current image"
-#        outfile.TextString(j).strLabel=transpose(outfile.TextString(j).strLabel);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strSystemText = fread(fileID,count,'uint16=>char');%a comment describing the data
-#        outfile.TextString(j).strSystemText=transpose(outfile.TextString(j).strSystemText);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strSessionText = fread(fileID,count,'uint16=>char');%general session comments
-#        outfile.TextString(j).strSessionText=transpose(outfile.TextString(j).strSessionText);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strUserText = fread(fileID,count,'uint16=>char');%user comments
-#        outfile.TextString(j).strUserText=transpose(outfile.TextString(j).strUserText);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strPath = fread(fileID,count,'uint16=>char');%Path
-#        outfile.TextString(j).strPath=transpose(outfile.TextString(j).strPath);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strDate = fread(fileID,count,'uint16=>char');%DAQ date
-#        outfile.TextString(j).strDate=transpose(outfile.TextString(j).strDate);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strTime = fread(fileID,count,'uint16=>char');%DAQ time
-#        outfile.TextString(j).strTime=transpose(outfile.TextString(j).strTime);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strXUnits = fread(fileID,count,'uint16=>char');%physical units of x axis
-#        outfile.TextString(j).strXUnits=transpose(outfile.TextString(j).strXUnits);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strYUnits = fread(fileID,count,'uint16=>char');%physical units of Y axis
-#        outfile.TextString(j).strYUnits=transpose(outfile.TextString(j).strYUnits);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strZUnits = fread(fileID,count,'uint16=>char');%physical units of Z axis
-#        outfile.TextString(j).strZUnits=transpose(outfile.TextString(j).strZUnits);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strXLabel = fread(fileID,count,'uint16=>char');
-#        outfile.TextString(j).strXLabel=transpose(outfile.TextString(j).strXLabel);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strYLabel = fread(fileID,count,'uint16=>char');
-#        outfile.TextString(j).strYLabel=transpose(outfile.TextString(j).strYLabel);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strStatusChannelText = fread(fileID,count,'uint16=>char');%status channel text
-#        outfile.TextString(j).strStatusChannelText=transpose(outfile.TextString(j).strStatusChannelText);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strCompletedLineCount = fread(fileID,count,'uint16=>char');%contains last saved line count for an image data page
-#        outfile.TextString(j).strCompletedLineCount=transpose(outfile.TextString(j).strCompletedLineCount);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strOverSamplingCount = fread(fileID,count,'uint16=>char');%Oversampling count for image data pages
-#        outfile.TextString(j).strOverSamplingCount=transpose(outfile.TextString(j).strOverSamplingCount);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strSlicedVoltage = fread(fileID,count,'uint16=>char');%voltage at which the sliced image is created from the spectra page.  empty if not a sliced image
-#        outfile.TextString(j).strSlicedVoltage=transpose(outfile.TextString(j).strSlicedVoltage);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strPLLProStatus = fread(fileID,count,'uint16=>char');%PLLPro status text: blank, master or user
-#        outfile.TextString(j).strPLLProStatus=transpose(outfile.TextString(j).strPLLProStatus);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strSetpointUnit = fread(fileID,count,'uint16=>char');%ZPI controller item's set-point unit
-#        outfile.TextString(j).strSetpointUnit=transpose(outfile.TextString(j).strSetpointUnit);
-#
-#        count=fread(fileID,1,'uint16'); %tells how long the next string is
-#        outfile.TextString(j).strCHDriveValues = fread(fileID,count,'uint16=>char');%staores value of CH1 and CH2 if they are in hardware space
-#        outfile.TextString(j).strCHDriveValues=transpose(outfile.TextString(j).strCHDriveValues);
-#    end
-    
-    
-#    file = f.read()
-#    first_four_bytes = f.read(byte + 4)
-#    print(first_four_bytes)
-    #read Header 
-#    Headersize = lines[1].decode('utf-8')
-#    print(Headersize)
-#    for line in file:
-#        try:
-#            L = line.decode("utf-8")
-#            if 'Current' in L:
-#                print ('youpi')
-#            if 'LIA Current' in L:
-#                print ('youpi')
-#            nbrelines +=1
-#        except UnicodeDecodeError : error +=1; pass
-#    print(nbrelines, error)
-#    print(lines[6])
-#        # Header lines can be treated as regular strings
-#        if header_end_not_found:
-#            print("Problem while reading the file : could not find ':HEADER END:' in file")
-#            f.close()
-#            return False
+#    print(PageIndexHeader_PageCount)
+#    print(PageIndex[6]['PageID'])
+#    print(PageHeader[0]['XScale'])
+#    
+        # Skip flags and reserved data
+        f.seek(1+3+60,1);
 
+        # Read the Object List
+        for i in range(PageIndex[j]['ObjectListCount']):
+            dict1 = {'ObjectID': ObjectIDCode[int(np.fromfile(f, dtype=np.uint32, count=1)[0])],
+                     'Offset': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
+                     'Size': int(np.fromfile(f, dtype=np.uint32, count=1)[0])}
+            PageHeader[j]['ObjectList'].append(dict1)
+
+        # Read and record the Text Strings = (str lenghth ; str) for each Page
+
+        # PageheaderObjectList
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d = {'strLabel': string(np.fromfile(f, dtype=np.uint16, count=count))} # eg "current image"
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strSystemText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strSessionText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strUserText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strPath'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strDate'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # DAQ time
+        d['strTime'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # physical units of x axis
+        d['strXUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strYUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+    
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strZUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strYLabel'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        d['strStatusChannelText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # contains last saved line count for an image data page
+        d['strCompletedLineCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # Oversampling count for image data pages
+        d['strOverSamplingCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # voltage at which the sliced image is created from the spectra page.  empty if not a sliced image
+        d['strSlicedVoltage'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # PLLPro status text: blank, master or user
+        d['strPLLProStatus'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # ZPI controller item's set-point unit
+        d['strSetpointUnit'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+
+        count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
+        # stores value of CH1 and CH2 if they are in hardware space
+        d['strCHDriveValues'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+    
+        TextStrings.append(d)
+
+
+    # Page Header – Sequential Data Page
+    Data = []
+    ScaleData = []
+    for j in range(PageIndexHeader_PageCount):
+        f.seek(PageIndex[j]['ObjectList'][1]['Offset'],0)
+        Data.append(np.fromfile(f, dtype=np.uint32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
+        #/4 because total data size is divided by the number of bytes that use each 'long' data
+        a = PageHeader[j]['ZOffset']+Data[j]*PageHeader[j]['ZScale']
+        a = np.reshape(a,(PageHeader[j]['Width'],PageHeader[j]['Height']), order="F")
+        #order Fortran = "F" to match readCITSsm4File function
+        ScaleData.append(a)
+
+
+############################################################
+    # Initialize variables that track how many pages of each type there are
+
+    topocount = 0  # Topography
+    currentcount = 0  # Spatial current
+    liacurrentcount = 0  # Spatial LIA current
+    IV_Point_Speccount = 0  # Spectral point current
+    dIdV_Point_Speccount = 0  # Spectral point LIA (dIdV) current
+    IV_Line_Speccount = 0  # Spectral line current
+    dIdV_Line_Speccount = 0  # Spectral line LIA (dIdV) current
+    Spatialpagenumber = 0  # Total number of spatial pages
+    Pointspectrapagenumber = 0  # Total number of point line pages
+    Linespectrapagenumber = 0  # Total number of line spectra pages
+    Frequencyspectrapagenumber = 0  # Total number of frequency sweep pages
+    SpatialPLLpagenumber = 0  # Spatial pages
+    PLLPageNumber = 0  # PLL Page
+    PLLTrue = 0  # Logical for if there is PLL data, start at 0 (false)
+
+    # number of PLL and AFM pages
+    PLLAmpcount = 0
+    PLLPhasecount = 0
+    dFcount = 0
+    dFspeccount = 0
+    PLLDrivecount = 0
+    PLLAmp_Speccount = 0
+    PLLPhase_Speccount = 0
+    PLLDrive_Speccount = 0
+
+    Spatial = []
+    for j in range(PageIndexHeader_PageCount):
+        #Spatial Data : is label topo ?
+        if TextStrings[j]['strLabel'] == 'Topography':
+            print('Topo!!')
+            topocount += 1
+
+
+
+    Spatial = 1
+    Spectral = 1
+    return Spatial, Spectral
 
 readCitsSm4Bin(filepath)

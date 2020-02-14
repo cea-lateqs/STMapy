@@ -85,7 +85,7 @@ from tkinter import filedialog
 import Common.functions as fc
 root = tk.Tk()
 root.withdraw()
-plt.style.use('/home/florie/Documents/LABO/Python/plot_kerelski/nature.mplstyle') #pour avoir les jolies ecritures
+plt.style.use('/home/florie/Documents/LABO/Python/nature.mplstyle') #pour avoir les jolies ecritures
 mpl.rcParams['contour.negative_linestyle'] = 'solid'
 
 
@@ -162,6 +162,7 @@ def STSplot(yPlot,yOffset,repetitionNumber, smoothwidth = False , arrow = False 
     #Check to see what kind of data is present by loading the first file
     loadedData = scipy.io.loadmat(filename)
     Spectral = loadedData['Spectral']
+    print(np.shape(Spectral))
     spectraType = Spectral['type'][0,0];#see scipy.org : scipy.io.loadmat    
     #I am making the assumption that the data is only point spectra or line
     #spectra, but not both
