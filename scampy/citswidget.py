@@ -17,7 +17,7 @@ from matplotlib.patches import Circle
 import matplotlib.backend_bases
 import struct
 import PyQt5.QtWidgets as QtWidgets
-from scampy.shape import Shape
+from scampy.shape import generateShape, changeToDot
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
@@ -149,7 +149,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.dataLoaded = self.readCitsBin(cits)
             elif extension == "txt":
                 self.readTopo(cits)
-            elif extension =="" or extension =="mat":
+            elif extension == "" or extension == "mat":
                 self.clearMap()
                 print('sm4')
                 self.mapType = "Sm4"
@@ -300,86 +300,83 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         loadedData = scipy.io.loadmat(filepath)
         Spatial = loadedData['Spatial']
         Spectral = loadedData['Spectral']
-        Image = Spatial['TopoData'][0,0];
-        FImage = Image[0,0]# Image forward
-        BImage = Image[0,1]#Image bacward 
-        spectraType = Spectral['type'][0,0];#see scipy.org : scipy.io.loadmat    
-        if spectraType == 'Point': print('You didnt load a CITS. Use sm4_reader to read this data') ;
+        Image = Spatial['TopoData'][0, 0]
+        FImage = Image[0, 0]# Image forward
+        BImage = Image[0, 1]#Image bacward
+        spectraType = Spectral['type'][0, 0]#see scipy.org : scipy.io.loadmat
+        if spectraType == 'Point':
+            print('You didnt load a CITS. Use sm4_reader to read this data')
  
         #find out how many measurement locations were taken along a line :
         #each measurement is taken at a coordinate, but several measurements (repetitions) are taken on the same spot. Eg if repetitions = 4, 2 measurements, one forward, one backward (saved in right direction)
-        numOfMeasurements = np.shape(Spectral['xCoord'][0,0])[0]; 
-        repetitions = 0;
-        pointdiff = 0;
-        repindex = 0;
-        while pointdiff == 0 :  #step through data points until there is a difference between the current (x,y) point and the next (x1,y1)point
-            pointdiff = (Spectral['xCoord'][0,0][repindex+1]- Spectral['xCoord'][0,0][repindex]) + (Spectral['yCoord'][0,0][repindex+1]- Spectral['yCoord'][0,0][repindex]); #adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
-            repetitions = repetitions+1;
-            repindex = repindex+1;
-        numberOfPlots = numOfMeasurements/repetitions; #this is the number of distinct plotting locations  
+        numOfMeasurements = np.shape(Spectral['xCoord'][0, 0])[0]
+        repetitions = 0
+        pointdiff = 0
+        repindex = 0
+        while pointdiff == 0:  #step through data points until there is a difference between the current (x,y) point and the next (x1,y1)point
+            pointdiff = (Spectral['xCoord'][0,0][repindex+1]- Spectral['xCoord'][0,0][repindex]) + (Spectral['yCoord'][0,0][repindex+1]- Spectral['yCoord'][0,0][repindex]) #adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
+            repetitions = repetitions+1
+            repindex = repindex+1
+        numberOfPlots = numOfMeasurements/repetitions #this is the number of distinct plotting locations
         #Load spectral data
-        try :
-            SpectralData_y = Spectral['dIdV_Line_Data'][0,0]
-        except ValueError : print ( 'The file seems to contain no dIdV_Line_Data. Use sm4_reader to read this data or check the .mat file loading/Saving')
-        SpectralData_x = Spectral['xdata'][0,0]*1000;#mV 
-                # Center coordinates and metric dimensions in nm
-        xL = Spatial['width'][0,0]* (10 ** 9);
-        yL = Spatial['height'][0,0]* (10 ** 9);
-        xC = Spatial['xoffset'][0,0]* (10 ** 9);
-        yC = Spatial['yoffset'][0,0]* (10 ** 9);
+        try:
+            SpectralData_y = Spectral['dIdV_Line_Data'][0, 0]
+        except ValueError:
+            print('The file seems to contain no dIdV_Line_Data. Use sm4_reader to read this data or check the .mat file loading/Saving')
+        SpectralData_x = Spectral['xdata'][0, 0] * 1000#mV
+        # Center coordinates and metric dimensions in nm
+        xL = Spatial['width'][0, 0] * (10 ** 9)
+        yL = Spatial['height'][0, 0] * (10 ** 9)
+        xC = Spatial['xoffset'][0, 0] * (10 ** 9)
+        yC = Spatial['yoffset'][0, 0] * (10 ** 9)
         #repetition_index = 1 #0(forw),1(back),2(forw)... according to the number of repetitions.
         #size spatial data
-        xPx = int((Spatial['lines'][0,0]))
-        yPx = int((Spatial['points'][0,0]))
+        xPx = int((Spatial['lines'][0, 0]))
+        yPx = int((Spatial['points'][0, 0]))
         #size spectral data ( not necessarily the same in RHK )
-        xSpec= int(np.sqrt(numberOfPlots))
+        xSpec = int(np.sqrt(numberOfPlots))
         ySpec = int(np.sqrt(numberOfPlots))
-        zPt = int(len(SpectralData_y[:,0]))#nbre of points in spec data
+        zPt = int(len(SpectralData_y[:, 0]))#nbre of points in spec data
 #        x_m = np.linspace(0, xL*1e+9, xPx)#?
 #        y_m = np.linspace(0, yL*1e+9, yPx)
         try:
-            self.topo = np.zeros(shape=(xPx,yPx))
+            self.topo = np.zeros(shape=(xPx, yPx))
             self.m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
             print(np.shape(self.m_data))
         except MemoryError:
             print("The data is too big ! Or the memory too small...")
-         
+            return False
             
         #in Spectraldata_y, dIdV info corresponds to the spec data saved from left to right and increasing y(downwards in RHK), with same nbre of repetions at each spot
-        for r in range (0,repetitions):#even : forward, odd : backwards
-            for y in range( 0 , ySpec):#len(SpectralData_y[:,0])):
-                for x in range( 0, xSpec):
-                    self.m_data[r][y][x] = SpectralData_y[:,(xSpec*y+x)*repetitions+r]
+        for r in range(repetitions):#even : forward, odd : backwards
+            for y in range(ySpec):#len(SpectralData_y[:,0])):
+                for x in range(xSpec):
+                    self.m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
         
         patch = []
-        for m in range (0,numOfMeasurements,repetitions): #iterate over the number of locations
-                            patch.append(Circle((-xC + xL/2 + Spectral['xCoord'][0,0][m]*1e+9,- yC + yL/2 + Spectral['yCoord'][0,0][m]*1e+9),yL/5000,facecolor='r',edgecolor='None'));
+        for m in range(0, numOfMeasurements, repetitions): #iterate over the number of locations
+                            patch.append(Circle((-xC + xL/2 + Spectral['xCoord'][0,0][m]*1e+9,- yC + yL/2 + Spectral['yCoord'][0,0][m]*1e+9), yL/5000,facecolor='r',edgecolor='None'))
 
-        self.channelList = list(np.zeros((1,repetitions))[0])
-        for i in range (repetitions) :
-            self.channelList[i] = 'Data {}'.format(i)        
+        self.channelList = ['Data {}'.format(i) for i in range(repetitions)]
 
-        self.m_params = {"xPx": xSpec , "yPx" : ySpec ,"xL": xL, "yL": yL, "zPt": zPt, "vStart": SpectralData_x[0],
-                             "vEnd": SpectralData_x[-1], "dV": abs(SpectralData_x[-1] - SpectralData_x[0]) / (zPt) ,"Patch": patch}
+        self.m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL, "zPt": zPt,
+                         "vStart": SpectralData_x[0],"vEnd": SpectralData_x[-1], "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt,
+                         "Patch": patch}
 
         self.topo = FImage
-
         print(np.shape(self.topo))
         
         #!!! create average Data :
         average = True
-        if average ==True :
+        if average:
             average = np.zeros(shape=(ySpec, xSpec, zPt))
-            for y in range( 0 , ySpec):#len(SpectralData_y[:,0])):
-                for x in range( 0, xSpec):
-                    for r in range (repetitions):
-                        average[y][x] += SpectralData_y[:,(xSpec*y+x)*repetitions+r]/repetitions  
+            for y in range(ySpec):#len(SpectralData_y[:,0])):
+                for x in range(xSpec):
+                    for r in range(repetitions):
+                        average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
             print('okk')
             self.addChannel(average, "average")
-        
-
         return True
-
 
     def readCitsBin(self, filepath):
         """ Reads a binary CITS file (Nanonis) and stores all the parameters"""
@@ -464,10 +461,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         fmtString = '>' + 'f' * zPt
         # zPt floats to read of 4 bytes each
         bytesToRead = 4 * zPt
-        y = 0
-        while y < yPx:
-            x = 0
-            while x < xPx:
+        for y in range(yPx):
+            for x in range(xPx):
                 chan = 0
                 b = f.read(nbExpParams * 4)
                 try:
@@ -494,11 +489,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 # After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
                 f.read(8)
                 # f.read(8+nbExpParams*4)
-                x = x + 1
-            y = y + 1
         f.close()
         if half:
-            self.channelList = self.channelList[0:nChannels / 2]
+            self.channelList = self.channelList[0:nChannels // 2]
         # Store the parameters in a dictonnary to use them later
         dV = (vEnd - vStart) / zPt
         self.m_params = {"xPx": xPx, "yPx": yPx, "xC": xC, "yC": yC, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart,
@@ -520,7 +513,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             self.extractSlope(0.01, 0)
         # Post-processing
         # self.extractOutOfPhase(1,2)
-        # pylab.close()
         return True
 
 
@@ -572,8 +564,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     #        #self.addChannel(data,"Z (nm)")
 
     def levelTopo(self):
-        xPx = len(self.topo[0])
-        yPx = len(self.topo[:,0])
+        yPx, xPx = self.topo.shape
         # Numpy array to save the leveled topo
         topo_leveled = np.zeros(shape=(yPx, xPx))
         fitX = np.arange(0, xPx)
@@ -1020,7 +1011,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             else:
                 ratioX = 1
                 ratioY = 1
-            self.currentShape = Shape(event, self.m_mapWidget.figure, self.fig_topo,
+            self.currentShape = generateShape(event, self.m_mapWidget.figure, self.fig_topo,
                                       self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.currentShape.update)
             print('PRESS')
@@ -1044,7 +1035,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                         self.cutAlongLine(xi, xf, yi, yf)
                     # Pick spectrum otherwise and change the line shape to a point
                     else:
-                        self.currentShape.changeToPt()
+                        self.currentShape = changeToDot(self.currentShape)
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
@@ -1056,7 +1047,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                             n = self.m_rcAvgBox.value()
                             self.currentShape.forceUpdate(max(0, xi - n), max(0, yi - n),
                                                           min(self.m_params["xPx"], xf + n),
-                                                          min(self.m_params["yPy"], yf + n))
+                                                          min(self.m_params["yPx"], yf + n))
                             self.averageSpectrum(max(0, xi - n), min(self.m_params["xPx"], xf + n), max(0, yi - n),
                                                  min(self.m_params["yPx"], yf + n))
                 # Add the current Shape to the list of clicked Shapes
@@ -1234,7 +1225,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                                                            button=1)
             simEvent.xdata = 0
             simEvent.ydata = 0
-            self.currentShape = Shape(simEvent, self.m_mapWidget.figure, self.fig_topo,
+            self.currentShape = generateShape(simEvent, self.m_mapWidget.figure, self.fig_topo,
                                       self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             simEvent.xdata = self.m_params['xPx'] - 1
             simEvent.ydata = self.m_params['yPx'] - 1
