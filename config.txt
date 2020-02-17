@@ -1,4 +1,4 @@
-working_directory   /home/huderl/Bureau/These/
+working_directory   /home/florie/Documents/LABO/
 matplotlib_stylesheet   def
 autoload    no
 default_cmap    viridis
