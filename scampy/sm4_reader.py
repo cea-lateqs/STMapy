@@ -286,10 +286,9 @@ def readCitsSm4Bin(filepath):
 
     ###################### Get spectra coordinates
     # Nbre of measurements taken along a line :
-    nbreScans = np.shape(SpectralData_y)[0]
+    nbreScans = np.shape(SpectralData_y)[1]
     print(nbreScans)
     xCoord = np.zeros(nbreScans)
-    print(np.shape(xCoord))
     yCoord = np.zeros(nbreScans)
     f.seek(TipTrackData_offset,0)  # Go to beggining of header
     for i in range(nbreScans):
@@ -299,9 +298,6 @@ def readCitsSm4Bin(filepath):
         xCoord[i] = a
         yCoord[i] = np.float(np.fromfile(f, dtype=np.float32, count=1)[0])
         f.seek(16, 1)  # skip dx dy xcumul ycumul fields
-    print(np.shape(xCoord))
-    print(xCoord[0])
-    print((PageHeader[Linespectrapagenumber]['Width']))
     SpectralData_x = PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0,PageHeader[Linespectrapagenumber]['Width']))) * 1000.0#mV
     #each measurement is taken at a coordinate,
     #but several measurements (repetitions) are taken on the same spot.
@@ -328,7 +324,8 @@ def readCitsSm4Bin(filepath):
     #size spectral data ( not necessarily the same in RHK )
     xSpec = int(np.sqrt(numberOfPlots))
     ySpec = int(np.sqrt(numberOfPlots))
-    zPt = int(len(SpectralData_y[:, 0]))#nbre of points in spec data
+    zPt = np.shape(SpectralData_y)[0]  #  nbre of points in spec data
+    print(zPt)
 #        x_m = np.linspace(0, xL*1e+9, xPx)#?
 #        y_m = np.linspace(0, yL*1e+9, yPx)
     try:
@@ -346,8 +343,8 @@ def readCitsSm4Bin(filepath):
                 m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
     
     patch = []
-    for m in range(0, numberOfPlots, repetitions): #iterate over the number of locations
-                        patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9,- yC + yL/2 + yCoord[m]*1e+9), yL/5000,facecolor='r',edgecolor='None'))
+    for m in range(0, int(numberOfPlots), repetitions):  # iterate over the number of locations
+        patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9,- yC + yL/2 + yCoord[m]*1e+9), yL/5000, facecolor='r', edgecolor='None'))
 
     channelList = ['Data {}'.format(i) for i in range(repetitions)]
 
@@ -368,6 +365,7 @@ def readCitsSm4Bin(filepath):
                     average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
         print('okk')
 #        self.addChannel(average, "average")
+                        print(self.m_data[chan][y][x][v])
     return True
         
 readCitsSm4Bin(filepath)

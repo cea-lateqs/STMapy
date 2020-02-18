@@ -151,7 +151,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 self.readTopo(cits)
             elif extension == "" or extension == "mat":
                 self.clearMap()
-                print('sm4 to mat')
                 self.mapType = "Sm4 to .mat"
                 self.dataLoaded = self.loadCitsSm4(cits)
             elif extension == "sm4":
@@ -177,7 +176,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             print(n_cits)
             if n_cits == 1:
                 self.updateWidgets()
+                print('updated')
                 self.drawTopo()
+                print('drawn')
                 return
             else:  # Else begin the averaging
                 if first:  # If this was the first Cits to average, create the mean_data array to store the avergage
@@ -323,6 +324,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             repetitions = repetitions+1
             repindex = repindex+1
         numberOfPlots = numOfMeasurements/repetitions #this is the number of distinct plotting locations
+        print(numOfMeasurements)
         #Load spectral data
         try:
             SpectralData_y = Spectral['dIdV_Line_Data'][0, 0]
@@ -379,17 +381,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 for x in range(xSpec):
                     for r in range(repetitions):
                         average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
-            print('okk')
             self.addChannel(average, "average")
         return True
 
-    def string(array):
+    def string(self, array):
         array = list(map(lambda x: chr(x), array))
         array = ("".join(array))
         return array
 
     def readCitsSm4Bin(self, filepath):
-
         ObjectIDCode = ['Undefined', 'Page Index Header', 'Page Index Array',
                         'Page Header', 'Page Data', 'Image Drift Header',
                         'Image Drift', 'Spec Drift Header',
@@ -405,8 +405,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     
         # File Header
         Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-        Signature = string(np.fromfile(f, dtype=np.uint16, count=18))
-    #    print(Signature)
+        Signature = self.string(np.fromfile(f, dtype=np.uint16, count=18))
+        print(Signature)
         Total_Pagecount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
         ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
         ObjectFieldSize = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
@@ -506,63 +506,63 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     
             # PageheaderObjectList
             c = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d = {'strLabel': string(np.fromfile(f, dtype=np.uint16, count=c))} # eg "current image"
+            d = {'strLabel': self.string(np.fromfile(f, dtype=np.uint16, count=c))} # eg "current image"
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strSystemText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSystemText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strSessionText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSessionText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strUserText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strUserText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strPath'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strPath'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strDate'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strDate'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # DAQ time
-            d['strTime'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strTime'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # physical units of x axis
-            d['strXUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strXUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strYUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strYUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strZUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strZUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strYLabel'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strYLabel'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strStatusChannelText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strStatusChannelText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # contains last saved line count for an image data page
-            d['strCompletedLineCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strCompletedLineCount'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # Oversampling count for image data pages
-            d['strOverSamplingCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strOverSamplingCount'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # voltage at which the sliced image is created from the spectra page.  empty if not a sliced image
-            d['strSlicedVoltage'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSlicedVoltage'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # PLLPro status text: blank, master or user
-            d['strPLLProStatus'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strPLLProStatus'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # ZPI controller item's set-point unit
-            d['strSetpointUnit'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSetpointUnit'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # stores value of CH1 and CH2 if they are in hardware space
-            d['strCHDriveValues'] = string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strCHDriveValues'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
 
             TextStrings.append(d)
 
@@ -570,7 +570,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             Data = []
             f.seek(PageIndex[j]['ObjectList'][1]['Offset'],0)
             Data.append(np.fromfile(f, dtype=np.uint32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
-            print(np.shape(Data))
+#            print(np.shape(Data))
             #/4 because total data size is divided by the number of bytes that use each 'long' data
             ScaleData = PageHeader[j]['ZOffset']+Data[0]*PageHeader[j]['ZScale']
             ScaleData = np.reshape(ScaleData,(PageHeader[j]['Width'],PageHeader[j]['Height']), order="F")
@@ -588,6 +588,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 SpatialInfo.append({'TopoUnit': TextStrings[j]['strZUnits']})
                 if topocount == 1:
                     FImage = Spatial[-1]['TopoData']  # Image forward
+                    print(np.shape(FImage))
                 elif topocount ==2:
                     BImage = Spatial[-1]['TopoData']  # Image bacward
                 else:
@@ -618,7 +619,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 Linespectrapagenumber = j
                 if dIdV_Line_Speccount == 1 :
                     SpectralData_y = Spectral[-1]['dIdV_Line_Data']
-                    print(PageHeader[j]['XScale'])
                     #Get spectra coordinates offset
                     for objectNbre in range(PageHeader[j]['ObjectListCount']):
                         # 7 == Tip track Info Header
@@ -642,10 +642,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     
         ###################### Get spectra coordinates
         # Nbre of measurements taken along a line :
-        nbreScans = np.shape(SpectralData_y)[0]
+        nbreScans = np.shape(SpectralData_y)[1]
         print(nbreScans)
         xCoord = np.zeros(nbreScans)
-        print(np.shape(xCoord))
         yCoord = np.zeros(nbreScans)
         f.seek(TipTrackData_offset,0)  # Go to beggining of header
         for i in range(nbreScans):
@@ -655,13 +654,15 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             xCoord[i] = a
             yCoord[i] = np.float(np.fromfile(f, dtype=np.float32, count=1)[0])
             f.seek(16, 1)  # skip dx dy xcumul ycumul fields
-        print(np.shape(xCoord))
-        print(xCoord[0])
-        print((PageHeader[Linespectrapagenumber]['Width']))
-        SpectralData_x = PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0,PageHeader[Linespectrapagenumber]['Width']))) * 1000.0#mV
-        #each measurement is taken at a coordinate,
-        #but several measurements (repetitions) are taken on the same spot.
-        #Eg if repetitions = 4, 2 measurements, one forward, one backward (saved in right direction)
+#        print(xCoord[0])
+#        print((PageHeader[Linespectrapagenumber]['Width']))
+
+        SpectralData_x = PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width']))) * 1000.0#mV
+#        print(np.shape(SpectralData_x))
+
+        # each measurement is taken at a coordinate,
+        # but several measurements (repetitions) are taken on the same spot.
+        # Eg if repetitions = 4, 2, one forward, one backward (saved in right direction)
         repetitions = 0
         pointdiff = 0
         repindex = 0
@@ -671,7 +672,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             repetitions = repetitions+1
             repindex = repindex+1
         numberOfPlots = nbreScans/repetitions  # number of distinct plotting locations
-    
         # Center coordinates and metric dimensions in nm
         xL = abs(PageHeader[Spatialpagenumber]['XScale']*PageHeader[Spatialpagenumber]['Width']) * (10 ** 9)
         yL = abs(PageHeader[Spatialpagenumber]['YScale']*PageHeader[Spatialpagenumber]['Height']) * (10 ** 9)
@@ -684,41 +684,42 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         # size spectral data ( not necessarily the same in RHK )
         xSpec = int(np.sqrt(numberOfPlots))
         ySpec = int(np.sqrt(numberOfPlots))
-        zPt = int(len(SpectralData_y[:, 0]))  #  nbre of points in spec data
+        zPt = np.shape(SpectralData_y)[0]  #  nbre of points in spec data
     #        x_m = np.linspace(0, xL*1e+9, xPx)#?
     #        y_m = np.linspace(0, yL*1e+9, yPx)
         try:
-            topo = np.zeros(shape=(xPx, yPx))
-            m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
-            print(np.shape(m_data))
+            self.topo = np.zeros(shape=(xPx, yPx))
+            self.m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
+            print(np.shape(self.m_data))
         except MemoryError:
             print("The data is too big ! Or the memory too small...")
             return False
-            
+
         # in Spectraldata_y, dIdV info corresponds to the spec data saved
         # from left to right and increasing y(downwards in RHK),
         # with same nbre of repetions at each spot
-        for r in range(repetitions):#even : forward, odd : backwards
-            for y in range(ySpec):#len(SpectralData_y[:,0])):
+        for r in range(repetitions):  # even : forward, odd : backwards
+            for y in range(ySpec):
                 for x in range(xSpec):
-                    m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
-        
+                    self.m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
+
         patch = []
-        for m in range(0, numberOfPlots, repetitions): #iterate over the number of locations
-                            patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9,- yC + yL/2 + yCoord[m]*1e+9), yL/5000,facecolor='r',edgecolor='None'))
-    
-        channelList = ['Data {}'.format(i) for i in range(repetitions)]
+        for m in range(0, int(numberOfPlots), repetitions):  # iterate over the number of locations
+            patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9, - yC + yL/2 + yCoord[m]*1e+9), yL/5000, facecolor='r', edgecolor='None'))
 
-        m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL, "zPt": zPt,
-                    "vStart": SpectralData_x[0], "vEnd": SpectralData_x[-1],
-                    "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt,
-                    "Patch": patch}
+        self.channelList = ['Data {}'.format(i) for i in range(repetitions)]
 
-        topo = FImage
-        print(np.shape(topo))
+        self.m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL,
+                         "zPt": zPt, "vStart": SpectralData_x[0],
+                         "vEnd": SpectralData_x[-1],
+                         "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt,
+                         "Patch": patch}
 
-        #!!! create average Data :
-        average = True
+        self.topo = FImage
+        print(np.shape(self.topo))
+
+        # create average Data :
+        average = 1
         if average:
             average = np.zeros(shape=(ySpec, xSpec, zPt))
             for y in range(ySpec):#len(SpectralData_y[:,0])):
@@ -1101,11 +1102,12 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def updateWidgets(self):
         """ Slot called after the reading of the CITS. Sets the values combo box (voltage and channels) and draws the map """
         self.updateVoltageBox(self.m_params["vStart"], self.m_params["vEnd"], self.m_params["zPt"])
+        print('done0')
         self.m_channelBox.clear()
-        print('done1!')
         self.m_channelBox.addItems(self.channelList)
-        print('done!')
+        print('done1!')
         self.drawXYMap(self.m_voltageBox.value())
+        print('done2')
         self.updateAboveValue(self.m_aboveBar.value())
         self.updateBelowValue(self.m_belowBar.value())
         self.m_CitsAvgBox.setMaximum(self.m_params["xPx"])
