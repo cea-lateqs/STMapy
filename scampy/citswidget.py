@@ -570,9 +570,11 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             Data = []
             f.seek(PageIndex[j]['ObjectList'][1]['Offset'],0)
             Data.append(np.fromfile(f, dtype=np.uint32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
-#            print(np.shape(Data))
+            print('%%%%%%%%%%%%%')
+            print(type(Data))
+            print(type(PageHeader[j]['ZScale']))
             #/4 because total data size is divided by the number of bytes that use each 'long' data
-            ScaleData = PageHeader[j]['ZOffset']+Data[0]*PageHeader[j]['ZScale']
+            ScaleData = [x*PageHeader[j]['ZScale']+PageHeader[j]['ZOffset'] for x in Data[-1]]
             ScaleData = np.reshape(ScaleData,(PageHeader[j]['Width'],PageHeader[j]['Height']), order="F")
             #order Fortran = "F" to match readCITSsm4File function
             print(np.shape(ScaleData))
@@ -657,7 +659,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 #        print(xCoord[0])
 #        print((PageHeader[Linespectrapagenumber]['Width']))
 
-        SpectralData_x = PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width']))) * 1000.0#mV
+        SpectralData_x = (PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width']))) )* 1000.0#mV
 #        print(np.shape(SpectralData_x))
 
         # each measurement is taken at a coordinate,
@@ -696,18 +698,18 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             return False
 
         # in Spectraldata_y, dIdV info corresponds to the spec data saved
-        # from left to right and increasing y(downwards in RHK),
+        # from spatial left to right and increasing y(downwards in RHK),
         # with same nbre of repetions at each spot
-        for r in range(repetitions):  # even : forward, odd : backwards
+        for r in range(int(repetitions)):  # even : forward, odd : backwards
             for y in range(ySpec):
                 for x in range(xSpec):
                     self.m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
-
+        print('nnh')
         patch = []
-        for m in range(0, int(numberOfPlots), repetitions):  # iterate over the number of locations
+        for m in range(0, int(numberOfPlots), int(repetitions)):  # iterate over the number of locations
             patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9, - yC + yL/2 + yCoord[m]*1e+9), yL/5000, facecolor='r', edgecolor='None'))
 
-        self.channelList = ['Data {}'.format(i) for i in range(repetitions)]
+        self.channelList = ['Data {}'.format(i) for i in range(int(repetitions))]
 
         self.m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL,
                          "zPt": zPt, "vStart": SpectralData_x[0],
