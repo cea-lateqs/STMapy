@@ -5,8 +5,252 @@ Created on Thu Mar 12 10:08:46 2020
 
 @author: florie
 """
+import numpy as np
+from scampy import citswidget as cw
+import struct
+import os.path
+import PyQt5.QtWidgets as QtWidgets
 
- def readCitsSm4Bin(self, filepath):
+
+def readCitsAscii(filepath):
+        """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
+        f = open(filepath)
+        divider = 1
+        unit = 1
+        header_end_not_found = True
+        for line in f:
+            # Read the parameters of the map until "Start of Data"
+            # Pixel dimensions in X
+            if "x-pixels" in line:
+                xPx = int(line.split()[-1])
+            # Pixel dimensions in Y
+            elif "y-pixels" in line:
+                yPx = int(line.split()[-1])
+            # Metric dimensions in X
+            elif "x-length" in line:
+                xL = float(line.split()[-1])
+            # Metric dimensions in Y
+            elif "y-length" in line:
+                yL = float(line.split()[-1])
+            # Number of points IN TOTAL therefore the division per 2 to have the number of points per channel
+            elif "z-points" in line:
+                zPt = int(line.split()[-1])
+                # There is zPt/2 points for fwd and zPt/2 points for bwd
+                zPt = zPt // 2
+            # Starting voltage of the spectro
+            elif "Device_1_Start" in line:
+                vStart = round(float(line.split()[-2]), 6)
+            # Final voltage of the spectro
+            elif "Device_1_End" in line:
+                vEnd = round(float(line.split()[-2]), 6)
+            # Any eventual divider
+            elif "divider" in line:
+                divider = float(line.split()[-1])
+            # Convert nV in V
+            elif "value-unit = nV" in line:
+                unit = 10 ** (-9)
+            elif "Start of Data" in line:
+                header_end_not_found = False
+                break
+
+        if header_end_not_found:
+            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            f.close()
+            return False
+        # Matlab convention : columns first then rows hence [y][x]
+        # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
+        channelList = ["Data [Fwd]", "Data [Bwd]"]
+        m_data = np.zeros(shape=(2, yPx, xPx, zPt))
+        for y in range(0, yPx):
+            for x in range(0, xPx):
+                # The line read is an array containing the dI/dV (or I(V)) values indexed by the voltage index
+                # Strip to remove the newline at the end and split to transform the string in a list
+                data_list = f.readline().strip().split()
+                # Forward data
+                m_data[0][y][x] = data_list[0:zPt]
+                m_data[0][y][x] = m_data[0][y][x] * unit
+                # No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
+                # Backward data
+                m_data[1][y][x] = (data_list[zPt:2 * zPt])
+                m_data[1][y][x] = m_data[1][y][x] * unit
+        f.close()
+        # Store the parameters in a dictonnary to use them later
+        m_params = {"xPx": xPx, "yPx": yPx, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart / divider,
+                    "vEnd": vEnd / divider, "dV": abs(vEnd - vStart) / (divider * zPt)}
+        if divider != 1:
+            print("A divider of " + str(divider) + " was found and applied")
+
+        # Check if a topo file exists and read it if yes
+        topopath = os.path.join(os.path.dirname(filepath), 'Topo.txt')
+        if os.path.exists(topopath):
+            topo = readTopo(topopath)
+        return topo, m_data, channelList, m_params
+
+
+def readTopo(filepath):#used for txt files
+        """ Reads a topography file (in test) """
+        f = open(filepath)
+        topo_data = []
+        w = 0
+        h = 0
+        for line in f:
+            # Treat the headers differently
+            if line[0] == '#':
+                if "Width" in line:
+                    w = float(line.split()[-2])
+                if "Height" in line:
+                    h = float(line.split()[-2])
+            else:
+                topo_data.append(line.strip().split())
+        f.close()
+        topo = (np.asfarray(topo_data))
+        return topo
+
+
+def readCits3dsBin(filepath):
+        # The divider is already taken into account by Nanonis during the experiment so no need to process it again*
+        f = open(filepath, "rb")
+        zSpectro = False
+        half = False
+        # Read the header of the map until its end ("HEADER_END")
+        header_end_not_found = True
+        for line in f:
+            # Header lines can be treated as regular strings
+            line = line.decode("utf-8")
+            # Pixel dimensions
+            if "Grid dim" in line:
+                splitted_line = line.split('"')[1].split()
+                xPx = int(splitted_line[0])
+                yPx = int(splitted_line[-1])
+            # Center coordinates and metric dimensions in nm (Grid settings also contains other data)
+            elif "Grid settings" in line:
+                xC = float(line.split(";")[0].split("=")[-1]) * (10 ** 9)
+                yC = float(line.split(";")[1]) * (10 ** 9)
+                xL = float(line.split(";")[-3]) * (10 ** 9)
+                yL = float(line.split(";")[-2]) * (10 ** 9)
+            elif "Sweep Signal" in line:
+                if line.split('"')[1] == 'Z (m)':
+                    zSpectro = True
+            # Number of points per channel
+            elif "Points" in line:
+                zPt = int(line.split('=')[-1])
+            # Channels recorded
+            elif "Channels" in line:
+                channelList = line.split('"')[1].split(';')
+                nChannels = len(channelList)
+            # Experiment parameters. Not used for now, only the number is recorded to skip the corresponding bytes afterwards
+            elif "Experiment parameters" in line:
+                nbExpParams = len(line.split(';'))
+            # End of the header
+            elif ":HEADER_END:" in line:
+                header_end_not_found = False
+                break
+
+        if header_end_not_found:
+            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            f.close()
+            return False
+
+        # Reading vStart and vEnd (floats of 4 bytes each)
+        try:
+            reading = struct.unpack('>' + 'f' * 2, f.read(8))
+        except struct.error:
+            print("Problem while reading the file : number of bytes to read different than what was expected")
+            f.close()
+            return False
+        # If it is a Z-Spectroscopy, put the Z boundaries in nm
+        if zSpectro:
+            vStart = round(reading[0] * 10 ** 9, 6)
+            vEnd = round(reading[1] * 10 ** 9, 6)
+        else:
+            vStart = round(reading[0], 6)
+            vEnd = round(reading[1], 6)
+        # Reading experiment parameters (nbExpParams*4 bytes)
+        # f.read(nbExpParams*4)
+        # Matlab convention : columns first then rows hence [y][x]
+        try:
+            topo = np.zeros(shape=(yPx, xPx))
+            m_data = np.zeros(shape=(nChannels, yPx, xPx, zPt))
+        except MemoryError:
+            print("The data is too big ! Or the memory too small...\nI will take half of the channels...\n")
+            half = True
+        # If the first alloc didn't work, try to halve it
+        if half:
+            try:
+                topo = np.zeros(shape=(yPx, xPx))
+                m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
+            except MemoryError:
+                print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
+                f.close()
+                QtWidgets.QMessageBox.critical('Oops !',
+                                               "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
+                return False
+        # Format string for unpacking zPt big-endians floats ('>f')
+        fmtString = '>' + 'f' * zPt
+        # zPt floats to read of 4 bytes each
+        bytesToRead = 4 * zPt
+        for y in range(yPx):
+            for x in range(xPx):
+                chan = 0
+                b = f.read(nbExpParams * 4)
+                try:
+                    topo[y][x] = struct.unpack('>' + 'f' * nbExpParams, b)[2]
+                except struct.error:
+                    print(
+                        "Problem while reading the topo : number of bytes to read different than what was expected at " + str(
+                            x) + " " + str(y))
+                while chan < nChannels:
+                    # Each channel is written successively by sequences of 4*zPt bytes. I then read these bytes and unpack them as big-endians floats ('>f')
+                    b = f.read(bytesToRead)
+                    try:
+                        if not half or chan < nChannels / 2:
+                            m_data[chan][y][x] = struct.unpack(fmtString, b)
+                    except struct.error:
+                        print(
+                            "Problem while reading the file : number of bytes to read different than what was expected at" + str(
+                                x) + " " + str(y) + " " + str(chan))
+                        # Set chan,x,y to exit the loop
+                        chan = nChannels
+                        x = xPx
+                        y = yPx
+                    chan = chan + 1
+                # After each loop over channels, a new "experiment" begins so I need to skip the vStart, vEnd and experiments parameters floats that are written once again before the channels
+                f.read(8)
+                # f.read(8+nbExpParams*4)
+        f.close()
+        if half:
+            channelList = channelList[0:nChannels // 2]
+        # Store the parameters in a dictonnary to use them later
+        dV = (vEnd - vStart) / zPt
+        m_params = {"xPx": xPx, "yPx": yPx, "xC": xC, "yC": yC, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart,
+                         "vEnd": vEnd, "dV": dV}
+
+        # self.m_statusBar.showMessage(self.m_params)
+        # Convert currents in nA
+        for i in range(0, len(channelList)):
+            chan = channelList[i]
+            if "(A)" in chan:
+                m_data[i] = np.abs(m_data[i]) * 10 ** 9
+                channelList[i] = chan.replace("(A)", "(nA)")
+        # Convert topo in nm
+        topo = topo * 10 ** 9
+        # Level topo
+        topo = cw.levelTopo()
+        # Test
+        if zSpectro:
+            cw.extractSlope(0.01, 0)
+        # Post-processing
+        # self.extractOutOfPhase(1,2)
+        return topo, m_data, channelList, m_params
+
+
+def string(array):
+        array = list(map(lambda x: chr(x), array))
+        array = ("".join(array))
+        return array
+
+
+def readCitsSm4Bin(filepath):
         ObjectIDCode = ['Undefined', 'Page Index Header', 'Page Index Array',
                         'Page Header', 'Page Data', 'Image Drift Header',
                         'Image Drift', 'Spec Drift Header',
@@ -19,10 +263,10 @@ Created on Thu Mar 12 10:08:46 2020
                         'Lockin1 Info', 'ZPI Info', 'KPI Info', 'Aux PI Info',
                         'Low-pass Filter0 Info', 'Low-pass Filter1 Info']
         f = open(filepath, "rb")
-    
+
         # File Header
         Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-        Signature = self.string(np.fromfile(f, dtype=np.uint16, count=18))
+        Signature = string(np.fromfile(f, dtype=np.uint16, count=18))
         print(Signature)
         Total_Pagecount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
         ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
@@ -39,10 +283,12 @@ Created on Thu Mar 12 10:08:46 2020
             ObjectlistSize.append(np.fromfile(f, dtype=np.uint32, count=1))
 
         # Read and record the Page Index Header
-        PageIndexHeader_PageCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0]) # the number of pages in the Page Index Array
-        PageIndexHeader_ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])# %the count of objects stored after the Page Index Header
-                                                                            #currently there is just one: Page Index Array    
-        PageIndexHeader_Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0]) #two fields reserved for future use 
+        PageIndexHeader_PageCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
+        # the number of pages in the Page Index Array
+        PageIndexHeader_ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
+        # count of objects stored after Page Index Header
+        # currently there is just one: Page Index Array    
+        PageIndexHeader_Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0])
 
         # Read and record the Page Index Array
         PageIndexHeader_ObjectID = int(np.fromfile(f, dtype=np.uint32, count=1)[0])  
@@ -70,7 +316,6 @@ Created on Thu Mar 12 10:08:46 2020
         TextStrings = []
         Spatial = []
         Spectral = []
-        SpectralInfo = []
         SpatialInfo = []
         topocount = 0
         currentcount = 0
@@ -123,63 +368,63 @@ Created on Thu Mar 12 10:08:46 2020
     
             # PageheaderObjectList
             c = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d = {'strLabel': self.string(np.fromfile(f, dtype=np.uint16, count=c))} # eg "current image"
+            d = {'strLabel': string(np.fromfile(f, dtype=np.uint16, count=c))} # eg "current image"
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strSystemText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSystemText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strSessionText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSessionText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strUserText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strUserText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strPath'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strPath'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strDate'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strDate'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # DAQ time
-            d['strTime'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strTime'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])  # physical units of x axis
-            d['strXUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strXUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strYUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strYUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strZUnits'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strZUnits'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strYLabel'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strYLabel'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
-            d['strStatusChannelText'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strStatusChannelText'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # contains last saved line count for an image data page
-            d['strCompletedLineCount'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strCompletedLineCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # Oversampling count for image data pages
-            d['strOverSamplingCount'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strOverSamplingCount'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # voltage at which the sliced image is created from the spectra page.  empty if not a sliced image
-            d['strSlicedVoltage'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSlicedVoltage'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # PLLPro status text: blank, master or user
-            d['strPLLProStatus'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strPLLProStatus'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # ZPI controller item's set-point unit
-            d['strSetpointUnit'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strSetpointUnit'] = string(np.fromfile(f, dtype=np.uint16, count=count))
     
             count = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
             # stores value of CH1 and CH2 if they are in hardware space
-            d['strCHDriveValues'] = self.string(np.fromfile(f, dtype=np.uint16, count=count))
+            d['strCHDriveValues'] = string(np.fromfile(f, dtype=np.uint16, count=count))
 
             TextStrings.append(d)
 
@@ -200,27 +445,28 @@ Created on Thu Mar 12 10:08:46 2020
             # is it label topo ? # cf p.28 of SM4 DATA FILE FORMAT V5.pdf
             print(TextStrings[j]['strLabel'])
             if TextStrings[j]['strLabel'] == 'Topography' and PageHeader[j]['PageType_DataSource'] == 1:
-                topocount += 1
-                Spatialpagenumber = j  # records last spatial page; to read the rest of the spatial data later
+                topocount += 1 
+                Spatialpagenumber = j
+                # records last spatial page; to read the rest of the spatial data later
     # !!! rotate ? transpose ?
-                Spatial.append({'TopoData': np.rot90(ScaleData,3)})
+                Spatial.append({'TopoData': np.rot90(ScaleData, 3)})
                 SpatialInfo.append({'TopoUnit': TextStrings[j]['strZUnits']})
                 if topocount == 1:
                     FImage = Spatial[-1]['TopoData']  # Image forward
                     print(np.shape(FImage))
-                elif topocount ==2:
+                elif topocount == 2:
                     BImage = Spatial[-1]['TopoData']  # Image bacward
                 else:
                     print('there is more topo data than expected')
             # is it spatial Current data ?
             elif TextStrings[j]['strLabel'] == 'Current' and PageHeader[j]['PageType_DataSource'] == 2:
                 currentcount += 1
-                Spatial.append({'CurrentData': np.rot90(ScaleData,3)})  
+                Spatial.append({'CurrentData': np.rot90(ScaleData, 3)})
                 Spatial[-1]['CurrentUnit'] = TextStrings[j]['strZUnits']
                 Spatialpagenumber = j
                 if currentcount == 1:
                     FImage_I = Spatial[-1]['CurrentData']  # Image forward
-                elif currentcount ==2:
+                elif currentcount == 2:
                     BImage_I = Spatial[-1]['CurrentData']  # Image bacward
                 else:
                     print('there is more current data than expected')
@@ -229,7 +475,7 @@ Created on Thu Mar 12 10:08:46 2020
             # Is it Spectral Point(38) ? Not taken in charge currently
             elif PageHeader[j]['PageType_DataSource'] == 38:
                 print('You didnt load a CITS. Use sm4_reader to read this data')
-                
+
             # CITS is recarded as a line of LIA
             # Is it Spectral Line(16) LIA ?
             elif TextStrings[j]['strLabel'] == 'LIA' and PageHeader[j]['PageType_DataSource'] == 16:
@@ -250,7 +496,7 @@ Created on Thu Mar 12 10:08:46 2020
                             TipTrackData_Size = PageHeader[j]['ObjectList'][objectNbre]['Size']
                 else:
                     print('there is more spectral data than expected')
-    
+
             # We could add 'Spaectral line Current', or 'PLL Amplitude' ;
             # 'PLL Phase' ; 'dF' ; 'PLL Drive'spectra, AFM, ... in the same way
             else:
@@ -258,14 +504,14 @@ Created on Thu Mar 12 10:08:46 2020
                       + ' or PageType_DataSource '
                       + str(PageHeader[j]['PageType_DataSource'])
                       + ' not found. Check spelling or add it.')
-    
+
         ###################### Get spectra coordinates
         # Nbre of measurements taken along a line :
         nbreScans = np.shape(SpectralData_y)[1]
         print(nbreScans)
         xCoord = np.zeros(nbreScans)
         yCoord = np.zeros(nbreScans)
-        f.seek(TipTrackData_offset,0)  # Go to beggining of header
+        f.seek(TipTrackData_offset, 0)  # Go to beggining of header
         for i in range(nbreScans):
             f.seek(4, 1)  # skip start time
             a = np.float(np.fromfile(f, dtype=np.float32, count=1)[0])
@@ -276,8 +522,10 @@ Created on Thu Mar 12 10:08:46 2020
 #        print(xCoord[0])
 #        print((PageHeader[Linespectrapagenumber]['Width']))
 
-        SpectralData_x = (PageHeader[Linespectrapagenumber]['XOffset'] + PageHeader[Linespectrapagenumber]['XScale'] * np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width']))) )* 1000.0#mV
-#        print(np.shape(SpectralData_x))
+        SpectralData_x = (PageHeader[Linespectrapagenumber]['XOffset'] + 
+                          PageHeader[Linespectrapagenumber]['XScale'] *
+                          np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width'])))) * 1000.0#mV
+        # print(np.shape(SpectralData_x))
 
         # each measurement is taken at a coordinate,
         # but several measurements (repetitions) are taken on the same spot.
@@ -285,9 +533,11 @@ Created on Thu Mar 12 10:08:46 2020
         repetitions = 0
         pointdiff = 0
         repindex = 0
-        # step through data points until there is a difference between the current (x,y) point and the next (x1,y1) point
-        while pointdiff == 0: 
-            pointdiff = (xCoord[repindex+1]- xCoord[repindex]) + (xCoord[repindex+1]- xCoord[repindex]) #adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
+        # step through data points until there is a difference between the 
+        # current (x,y) point and the next (x1,y1) point
+        while pointdiff == 0:
+            pointdiff = (xCoord[repindex+1]- xCoord[repindex]) + (xCoord[repindex+1]- xCoord[repindex])
+            # adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
             repetitions = repetitions+1
             repindex = repindex+1
         numberOfPlots = nbreScans/repetitions  # number of distinct plotting locations
@@ -295,7 +545,7 @@ Created on Thu Mar 12 10:08:46 2020
         xL = abs(PageHeader[Spatialpagenumber]['XScale']*PageHeader[Spatialpagenumber]['Width']) * (10 ** 9)
         yL = abs(PageHeader[Spatialpagenumber]['YScale']*PageHeader[Spatialpagenumber]['Height']) * (10 ** 9)
         xC = PageHeader[Spatialpagenumber]['XOffset'] * (10 ** 9)
-        yC = PageHeader[Spatialpagenumber]['YOffset'] * (10 ** 9) * (10 ** 9)
+        yC = PageHeader[Spatialpagenumber]['YOffset'] * (10 ** 9)
         # repetition_index = 1 #0(forw),1(back),2(forw)...
         # size spatial data
         xPx = int(PageHeader[Spatialpagenumber]['Height'])
@@ -307,9 +557,9 @@ Created on Thu Mar 12 10:08:46 2020
     #        x_m = np.linspace(0, xL*1e+9, xPx)#?
     #        y_m = np.linspace(0, yL*1e+9, yPx)
         try:
-            self.topo = np.zeros(shape=(xPx, yPx))
-            self.m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
-            print(np.shape(self.m_data))
+            topo = np.zeros(shape=(xPx, yPx))
+            m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
+            print(np.shape(m_data))
         except MemoryError:
             print("The data is too big ! Or the memory too small...")
             return False
@@ -320,30 +570,22 @@ Created on Thu Mar 12 10:08:46 2020
         for r in range(int(repetitions)):  # even : forward, odd : backwards
             for y in range(ySpec):
                 for x in range(xSpec):
-                    self.m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
-        print('nnh')
-        patch = []
-        for m in range(0, int(numberOfPlots), int(repetitions)):  # iterate over the number of locations
-            patch.append(Circle((-xC + xL/2 + xCoord[m]*1e+9, - yC + yL/2 + yCoord[m]*1e+9), yL/5000, facecolor='r', edgecolor='None'))
+                    m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
 
-        self.channelList = ['Data {}'.format(i) for i in range(int(repetitions))]
+        channelList = ['Data {}'.format(i) for i in range(int(repetitions))]
 
-        self.m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL,
+        m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL,
                          "zPt": zPt, "vStart": SpectralData_x[0],
                          "vEnd": SpectralData_x[-1],
-                         "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt,
-                         "Patch": patch}
+                         "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt}
 
-        self.topo = FImage
-        print(np.shape(self.topo))
+        topo = FImage
+        print(np.shape(topo))
 
         # create average Data :
-        average = 1
-        if average:
-            average = np.zeros(shape=(ySpec, xSpec, zPt))
-            for y in range(ySpec):#len(SpectralData_y[:,0])):
-                for x in range(xSpec):
-                    for r in range(repetitions):
-                        average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
-            self.addChannel(average, "average")
-        return True
+        average = np.zeros(shape=(ySpec, xSpec, zPt))
+        for y in range(ySpec):#len(SpectralData_y[:,0])):
+            for x in range(xSpec):
+                for r in range(repetitions):
+                    average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
+        return topo, m_data, channelList, m_params, average
