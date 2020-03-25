@@ -274,13 +274,14 @@ def readCitsSm4Bin(filepath):
         Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0])
 
         # iterate over the known objects from file header
-        ObjectlistName = []
-        ObjectlistOffset = []
-        ObjectlistSize = []
-        for i in range(ObjectListCount):
-            ObjectlistName.append(ObjectIDCode[np.fromfile(f, dtype=np.uint32, count=1)[0]])
-            ObjectlistOffset.append(np.fromfile(f, dtype=np.uint32, count=1))
-            ObjectlistSize.append(np.fromfile(f, dtype=np.uint32, count=1))
+#        ObjectlistName = []
+#        ObjectlistOffset = []
+#        ObjectlistSize = []
+#        for i in range(ObjectListCount):
+#            ObjectlistName.append(ObjectIDCode[np.fromfile(f, dtype=np.uint32, count=1)[0]])
+#            ObjectlistOffset.append(np.fromfile(f, dtype=np.uint32, count=1))
+#            ObjectlistSize.append(np.fromfile(f, dtype=np.uint32, count=1))
+        f.seek(ObjectListCount*3*4, 1)
 
         # Read and record the Page Index Header
         PageIndexHeader_PageCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
@@ -431,11 +432,10 @@ def readCitsSm4Bin(filepath):
             # Page Header – Sequential Data Page - Get Datas
             Data = []
             f.seek(PageIndex[j]['ObjectList'][1]['Offset'],0)
-            Data.append(np.fromfile(f, dtype=np.uint32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
+            Data.append(np.fromfile(f, dtype=np.int32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
             print('%%%%%%%%%%%%%')
-            print(type(Data))
-            print(type(PageHeader[j]['ZScale']))
             #/4 because total data size is divided by the number of bytes that use each 'long' data
+            #!!! This takes too much time ?
             ScaleData = [x*PageHeader[j]['ZScale']+PageHeader[j]['ZOffset'] for x in Data[-1]]
             ScaleData = np.reshape(ScaleData,(PageHeader[j]['Width'],PageHeader[j]['Height']), order="F")
             #order Fortran = "F" to match readCITSsm4File function
@@ -448,7 +448,6 @@ def readCitsSm4Bin(filepath):
                 topocount += 1 
                 Spatialpagenumber = j
                 # records last spatial page; to read the rest of the spatial data later
-    # !!! rotate ? transpose ?
                 Spatial.append({'TopoData': np.rot90(ScaleData, 3)})
                 SpatialInfo.append({'TopoUnit': TextStrings[j]['strZUnits']})
                 if topocount == 1:
@@ -486,12 +485,8 @@ def readCitsSm4Bin(filepath):
                     SpectralData_y = Spectral[-1]['dIdV_Line_Data']
                     #Get spectra coordinates offset
                     for objectNbre in range(PageHeader[j]['ObjectListCount']):
-                        # 7 == Tip track Info Header
-                        if PageHeader[j]['ObjectList'][objectNbre]['ObjectID'] == 7:
-                            TipTrackInfo_offset = PageHeader[j]['ObjectList'][objectNbre]['Offset']
-                            TipTrackInfo_Size = PageHeader[j]['ObjectList'][objectNbre]['Size']
                         # 8 == Tip track Data
-                        elif PageHeader[j]['ObjectList'][objectNbre]['ObjectID'] == 8:
+                        if PageHeader[j]['ObjectList'][objectNbre]['ObjectID'] == 8:
                             TipTrackData_offset = PageHeader[j]['ObjectList'][objectNbre]['Offset']
                             TipTrackData_Size = PageHeader[j]['ObjectList'][objectNbre]['Size']
                 else:
@@ -533,7 +528,7 @@ def readCitsSm4Bin(filepath):
         repetitions = 0
         pointdiff = 0
         repindex = 0
-        # step through data points until there is a difference between the 
+        # step through data points until there is a difference between the
         # current (x,y) point and the next (x1,y1) point
         while pointdiff == 0:
             pointdiff = (xCoord[repindex+1]- xCoord[repindex]) + (xCoord[repindex+1]- xCoord[repindex])
