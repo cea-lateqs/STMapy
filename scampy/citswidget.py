@@ -17,7 +17,9 @@ from matplotlib.patches import Circle
 import matplotlib.backend_bases
 import PyQt5.QtWidgets as QtWidgets
 from scampy.shape import generateShape, changeToDot
-from scampy.readCits import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
+from scampy.reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
+from scampy.DataProcessing import extractSlope, levelTopo
+
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
@@ -147,7 +149,14 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             elif extension == "3ds":
                 self.clearMap()
                 self.mapType = "Nanonis"
-                self.topo, self.m_data, self.channelList, self.m_params = readCits3dsBin(cits)
+                zSpectro = False
+                if zSpectro:
+                    self.topo, self.m_data, self.channelList, self.m_params, slopeData, slopeDataName, coefData, coefDataName, zg = readCits3dsBin(cits, zSpectro)
+                    self.addChannel(slopeData, slopeDataName)
+                    self.addChannel(coefData, coefDataName)
+                    self.addChannel(zg, "Zg")
+                else:
+                    self.topo, self.m_data, self.channelList, self.m_params = readCits3dsBin(cits, zSpectro)                    
                 self.dataLoaded = True
             elif extension == "txt":
                 self.readTopo(cits)
@@ -232,112 +241,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         else:
             self.default_cmap = 'magma_r'
 
-    
-    def loadCitsSm4(self, filepath):
-        zSpectro = False
-        #file loading : see sm4_m_reading
-        loadedData = scipy.io.loadmat(filepath)
-        Spatial = loadedData['Spatial']
-        Spectral = loadedData['Spectral']
-        Image = Spatial['TopoData'][0, 0]
-        FImage = Image[0, 0]# Image forward
-        BImage = Image[0, 1]#Image bacward
-        spectraType = Spectral['type'][0, 0]#see scipy.org : scipy.io.loadmat
-        if spectraType == 'Point':
-            print('You didnt load a CITS. Use sm4_reader to read this data')
- 
-        #find out how many measurement locations were taken along a line :
-        #each measurement is taken at a coordinate, but several measurements (repetitions) are taken on the same spot. Eg if repetitions = 4, 2 measurements, one forward, one backward (saved in right direction)
-        numOfMeasurements = np.shape(Spectral['xCoord'][0, 0])[0]
-        repetitions = 0
-        pointdiff = 0
-        repindex = 0
-        while pointdiff == 0:  #step through data points until there is a difference between the current (x,y) point and the next (x1,y1)point
-            pointdiff = (Spectral['xCoord'][0,0][repindex+1]- Spectral['xCoord'][0,0][repindex]) + (Spectral['yCoord'][0,0][repindex+1]- Spectral['yCoord'][0,0][repindex]) #adds the x and y difference values together.  if this is anything other than 0, we have found the limit of the repetitions
-            repetitions = repetitions+1
-            repindex = repindex+1
-        numberOfPlots = numOfMeasurements/repetitions #this is the number of distinct plotting locations
-        print(numOfMeasurements)
-        #Load spectral data
-        try:
-            SpectralData_y = Spectral['dIdV_Line_Data'][0, 0]
-        except ValueError:
-            print('The file seems to contain no dIdV_Line_Data. Use sm4_reader to read this data or check the .mat file loading/Saving')
-        SpectralData_x = Spectral['xdata'][0, 0] * 1000#mV
-        # Center coordinates and metric dimensions in nm
-        xL = Spatial['width'][0, 0] * (10 ** 9)
-        yL = Spatial['height'][0, 0] * (10 ** 9)
-        xC = Spatial['xoffset'][0, 0] * (10 ** 9)
-        yC = Spatial['yoffset'][0, 0] * (10 ** 9)
-        #repetition_index = 1 #0(forw),1(back),2(forw)... according to the number of repetitions.
-        #size spatial data
-        xPx = int((Spatial['lines'][0, 0]))
-        yPx = int((Spatial['points'][0, 0]))
-        #size spectral data ( not necessarily the same in RHK )
-        xSpec = int(np.sqrt(numberOfPlots))
-        ySpec = int(np.sqrt(numberOfPlots))
-        zPt = int(len(SpectralData_y[:, 0]))#nbre of points in spec data
-#        x_m = np.linspace(0, xL*1e+9, xPx)#?
-#        y_m = np.linspace(0, yL*1e+9, yPx)
-        try:
-            self.topo = np.zeros(shape=(xPx, yPx))
-            self.m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
-            print(np.shape(self.m_data))
-        except MemoryError:
-            print("The data is too big ! Or the memory too small...")
-            return False
-            
-        #in Spectraldata_y, dIdV info corresponds to the spec data saved from left to right and increasing y(downwards in RHK), with same nbre of repetions at each spot
-        for r in range(repetitions):#even : forward, odd : backwards
-            for y in range(ySpec):#len(SpectralData_y[:,0])):
-                for x in range(xSpec):
-                    self.m_data[r][y][x] = SpectralData_y[:, (xSpec*y+x)*repetitions+r]
-        
-        patch = []
-        for m in range(0, numOfMeasurements, repetitions): #iterate over the number of locations
-                            patch.append(Circle((-xC + xL/2 + Spectral['xCoord'][0,0][m]*1e+9,- yC + yL/2 + Spectral['yCoord'][0,0][m]*1e+9), yL/5000,facecolor='r',edgecolor='None'))
-
-        self.channelList = ['Data {}'.format(i) for i in range(repetitions)]
-
-        self.m_params = {"xPx": xSpec, "yPx": ySpec, "xL": xL, "yL": yL, "zPt": zPt,
-                         "vStart": SpectralData_x[0],"vEnd": SpectralData_x[-1], "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt,
-                         "Patch": patch}
-
-        self.topo = FImage
-        print(np.shape(self.topo))
-        
-        #!!! create average Data :
-        average = True
-        if average:
-            average = np.zeros(shape=(ySpec, xSpec, zPt))
-            for y in range(ySpec):#len(SpectralData_y[:,0])):
-                for x in range(xSpec):
-                    for r in range(repetitions):
-                        average[y][x] += SpectralData_y[:, (xSpec*y+x)*repetitions+r]/repetitions
-            self.addChannel(average, "average")
-        return True
-
-
 
 
 #%% Reading and loading topo images methods    
 
-    def levelTopo(self):
-        yPx, xPx = self.topo.shape
-        # Numpy array to save the leveled topo
-        topo_leveled = np.zeros(shape=(yPx, xPx))
-        fitX = np.arange(0, xPx)
-
-        def fitF(z, a, b):
-            return a * z + b
-
-        for y in range(0, yPx):
-            fitY = self.topo[y]
-            f = sp.interpolate.InterpolatedUnivariateSpline(fitX, fitY, k=1)
-            popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
-            topo_leveled[y] = fitY - (popt[0] * fitX + popt[1])
-        # Return the leveled topo
-        return topo_leveled
 
     def drawTopo(self):
         """ Draws the topography read while opening the CITS."""
@@ -346,9 +253,10 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             w = self.m_params["xL"]
             h = self.m_params["yL"]
             xPx = len(self.topo[0])
-            yPx = len(self.topo[:,0])
+            yPx = len(self.topo[:, 0])
             yspec = self.m_params["yPx"]
-            # If yspec==1, it is a Line Spectro so I need to call the specific method to draw the topo
+            # If yspec==1, it is a Line Spectro so I need to call the specific
+            # method to draw the topo
             if yspec == 1:
                 print('ySpec = 1')
                 self.drawLineTopo()
@@ -358,7 +266,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             lineFit = True
             # Line fitting if necessary
             if lineFit:
-                self.topo = self.levelTopo()
+                self.topo = levelTopo(self.topo)
             # Set up the figure for the plot
             if self.fig_topo == 0:
                 print('self fig topo = 0')
@@ -435,14 +343,14 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
 
         if self.m_scaleMetric.isChecked():
             self.ax_topo.plot(np.linspace(0, w, xPx), self.topo[0], label="Without line leveling")
-            self.ax_topo.plot(np.linspace(0, w, xPx), self.levelTopo()[0], label="With line leveling")
+            self.ax_topo.plot(np.linspace(0, w, xPx), levelTopo(self.topo)[0], label="With line leveling")
             self.ax_topo.set_xlim(0, w)
             self.ax_topo.set_xlabel("Distance (nm)")
             self.ax_topo.set_ylabel("Z (nm)")
         else:
             self.ax_topo.set_xlim(0, xPx)
             self.ax_topo.plot(self.topo[0], label="Without line leveling")
-            self.ax_topo.plot(self.levelTopo(), label="With line leveling")
+            self.ax_topo.plot(levelTopo(self.topo), label="With line leveling")
             self.ax_topo.set_ylabel("Z (nm)")
         self.ax_topo.legend(loc=0)
         self.fig_topo.show()
@@ -1189,33 +1097,6 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
     def computeAngle(self, Dmoire, k=True):
         """ Computes the twist angle of a given graphene moiré of period Dmoire """
         return 2 * np.arcsin(0.246 / (2 * Dmoire)) * 180 / np.pi
-
-    def extractSlope(self, cutOffValue, numChanToFit):
-        """ Do a linear fit of the data in the asked channel and add the slope and the coef found as channels (usually called for zSpectros) """
-        yPx = self.m_params["yPx"]
-        xPx = self.m_params["xPx"]
-        zPt = self.m_params["zPt"]
-        dZ = self.m_params["dV"]
-        zg = np.zeros(shape=(yPx, xPx, zPt))
-        slopeData = np.zeros(shape=(yPx, xPx, zPt))
-        coefData = np.zeros(shape=(yPx, xPx, zPt))
-        fit_func = lambda v, a, b: a * v + b
-        xArray = np.arange(0, zPt) * dZ
-        for y in range(0, yPx):
-            for x in range(0, xPx):
-                rawData = self.m_data[numChanToFit][y][x]
-                mask = rawData > cutOffValue
-                xArrayFiltered = xArray[mask]
-                dataFiltered = np.log(rawData[mask])
-                popt, pcov = sp.optimize.curve_fit(fit_func, xArrayFiltered, dataFiltered)
-                zg[y][x] = 1 / 20.5 * np.log(rawData) + np.arange(0, zPt * dZ, dZ) + self.topo[y][x]
-                for z in range(0, zPt):
-                    slopeData[y][x][z] = popt[0]
-                    coefData[y][x][z] = popt[1]
-        # Add the created channel to the data
-        self.addChannel(slopeData, "Slope by linear fit of " + self.channelList[numChanToFit])
-        self.addChannel(coefData, "Coef by linear fit of " + self.channelList[numChanToFit])
-        self.addChannel(zg, "Zg")
 
     def normalizeCurrentChannel(self):
         if self.dataLoaded:
