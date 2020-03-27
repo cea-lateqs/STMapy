@@ -6,7 +6,7 @@ Created on Thu Mar 12 10:08:46 2020
 @author: florie
 """
 import numpy as np
-from scampy.DataProcessing import extractSlope, levelTopo
+from scampy.DataProcessing import extractSlope, levelTopo, stringify
 import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
@@ -410,8 +410,7 @@ def sm4readpageHeader(f,PageHeader, TextStrings, PageIndex, PageIndexHeader_Page
 
     return PageHeader, TextStrings
 
-def stringify(array):
-    return ''.join([chr(x) for x in array])
+
 def readCitsSm4Bin(filepath):
         ObjectIDCode = ['Undefined', 'Page Index Header', 'Page Index Array',
                         'Page Header', 'Page Data', 'Image Drift Header',
