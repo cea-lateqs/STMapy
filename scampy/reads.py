@@ -410,13 +410,8 @@ def sm4readpageHeader(f,PageHeader, TextStrings, PageIndex, PageIndexHeader_Page
 
     return PageHeader, TextStrings
 
-
 def stringify(array):
-        array = list(map(lambda x: chr(x), array))
-        array = ("".join(array))
-        return array
-
-
+    return ''.join([chr(x) for x in array])
 def readCitsSm4Bin(filepath):
         ObjectIDCode = ['Undefined', 'Page Index Header', 'Page Index Array',
                         'Page Header', 'Page Data', 'Image Drift Header',
