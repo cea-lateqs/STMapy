@@ -18,7 +18,7 @@ import matplotlib.backend_bases
 import PyQt5.QtWidgets as QtWidgets
 from scampy.shape import generateShape, changeToDot
 from scampy.reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
-from scampy.DataProcessing import extractSlope, levelTopo
+from scampy.DataProcessing import levelTopo
 
 
 # noinspection PyPep8Naming
@@ -490,8 +490,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             xPts = []
             yPts = []
             cPts = []
-            for y in range(0, yPx):
-                for x in range(0, xPx):
+            for y in range(yPx):
+                for x in range(xPx):
                     currentValue = self.m_data[chan][y][x][voltage]
                     if currentValue > limit_aboveV:
                         avg_data_aboveV += self.m_data[chan][y][x]
@@ -580,7 +580,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 vStart = min(limitL, limitU)
                 vEnd = max(limitL, limitU)
                 zPt = self.m_params["zPt"]
-                xArray = np.arange(0, zPt) * dV + self.m_params["vStart"]
+                xArray = np.arange(zPt) * dV + self.m_params["vStart"]
                 # Take the portion to fit
                 mask1 = xArray > vStart
                 mask2 = xArray < vEnd
@@ -620,7 +620,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             chan = self.m_channelBox.currentIndex()
             if "Slope" in self.channelList[chan]:
                 zPt = self.m_params["zPt"]
-                zPts = np.arange(0, zPt)
+                zPts = np.arange(zPt)
                 dataLogCurrent = np.zeros(shape=zPt)
                 dataLine = self.m_data[chan][PixelY][PixelX][0] * self.m_params["dV"] * zPts + \
                            self.m_data[chan + 1][PixelY][PixelX][0]
@@ -807,9 +807,9 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         """ Method called by cutAlongLine. Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) """
         # Build the data to plot with v as Y and z (number of pixels gone through) as X
         zPt = self.m_params['zPt']
-        voltages = np.arange(0, zPt)
+        voltages = np.arange(zPt)
         chan = self.m_channelBox.currentIndex()
-        z_plot = np.arange(0, x_plot.size)
+        z_plot = np.arange(x_plot.size)
         dataToPlot = np.ndarray(shape=(zPt, z_plot.size))
         xi = x_plot[0]
         yi = y_plot[0]
@@ -974,8 +974,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         chan = self.m_channelBox.currentIndex()
         valMin = np.inf
         valMax = -np.inf
-        for y in range(0, yPx):
-            for x in range(0, xPx):
+        for y in range(yPx):
+            for x in range(xPx):
                 val = self.m_data[chan][y][x][v]
                 mapData[y][x] = val
                 if val < valMin:
@@ -1044,16 +1044,16 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
                 print('Not enough memory to do this operation')
                 return
             # Average in X for each channel and Y
-            for chan in range(0, len(self.channelList)):
-                for y in range(0, yPx):
+            for chan in range(len(self.channelList)):
+                for y in range(yPx):
                     # To average, for each x, add every spectrum between x and x+Navg (averaging window) divided by Navg.
-                    for x in range(0, xPx, int(Navg)):
+                    for x in range(xPx, int(Navg)):
                         if (
                                 x + Navg > xPx):  # If the averaging window is not contained in the CITS data, stop averaging. The last spectras of this window will then will dismissed.
                             break
                         else:  # Else, average by adding the spectras of the avergaging window and dividing by Navg
                             spectra = np.zeros(zPt)
-                            for i in range(0, int(Navg)):
+                            for i in range(int(Navg)):
                                 spectra = spectra + self.m_data[chan][y][x + i] / Navg
                                 # Store the result in new_data
                                 new_data[chan][y][int(x / Navg)] = spectra
@@ -1079,8 +1079,8 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
         xPx = self.m_params["xPx"]
         zPt = self.m_params["zPt"]
         derivData = np.zeros(shape=(yPx, xPx, zPt))
-        for y in range(0, yPx):
-            for x in range(0, xPx):
+        for y in range(yPx):
+            for x in range(xPx):
                 derivData[y][x] = sp.signal.savgol_filter(self.m_data[numChanToDeriv][y][x], 9, 2, deriv=1, delta=dV)
         # Add the channel to the data
         self.addChannel(derivData, "Derivative of " + self.channelList[numChanToDeriv])
@@ -1105,7 +1105,7 @@ class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
             zPt = self.m_params["zPt"]
             chan = self.m_channelBox.currentIndex()
             normData = np.zeros(shape=(yPx, xPx, zPt))
-            for y in range(0, yPx):
-                for x in range(0, xPx):
+            for y in range(yPx):
+                for x in range(xPx):
                     normData[y][x] = self.normalizeDOS(self.m_data[chan][y][x], 10)
             self.addChannel(normData, "Normalized " + self.channelList[chan])

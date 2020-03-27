@@ -61,8 +61,8 @@ def readCitsAscii(filepath):
             # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
             channelList = ["Data [Fwd]", "Data [Bwd]"]
             m_data = np.zeros(shape=(2, yPx, xPx, zPt))
-            for y in range(0, yPx):
-                for x in range(0, xPx):
+            for y in range(yPx):
+                for x in range(xPx):
                     # The line read is an array containing the dI/dV (or I(V)) values indexed by the voltage index
                     # Strip to remove the newline at the end and split to transform the string in a list
                     data_list = f.readline().strip().split()
@@ -226,7 +226,7 @@ def readCits3dsBin(filepath, zSpectro):
 
         # self.m_statusBar.showMessage(self.m_params)
         # Convert currents in nA
-        for i in range(0, len(channelList)):
+        for i in range(len(channelList)):
             chan = channelList[i]
             if "(A)" in chan:
                 m_data[i] = np.abs(m_data[i]) * 10 ** 9
@@ -237,7 +237,7 @@ def readCits3dsBin(filepath, zSpectro):
         topo = levelTopo(topo)
         # Test
         if zSpectro:
-            slopeData, slopeDataName, coefData, coefDataName, zg = extractSlope(m_data, m_params, channelList, 0.01, 0)
+            slopeData, slopeDataName, coefData, coefDataName, zg = extractSlope(topo, m_data, m_params, channelList, 0.01, 0)
             # return data and data to be added by addchannel
             return topo, m_data, channelList, m_params, slopeData, slopeDataName, coefData, coefDataName, zg
 
@@ -539,7 +539,7 @@ def readCitsSm4Bin(filepath):
 
         SpectralData_x = (PageHeader[Linespectrapagenumber]['XOffset'] + 
                           PageHeader[Linespectrapagenumber]['XScale'] *
-                          np.array(list(range(0, PageHeader[Linespectrapagenumber]['Width'])))) * 1000.0#mV
+                          np.array(list(range(PageHeader[Linespectrapagenumber]['Width'])))) * 1000.0#mV
         # print(np.shape(SpectralData_x))
 
         # each measurement is taken at a coordinate,
