@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-
+Data processing functions
 """
 import numpy as np
 import scipy as sp

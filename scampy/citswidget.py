@@ -18,7 +18,7 @@ import matplotlib.backend_bases
 import PyQt5.QtWidgets as QtWidgets
 from scampy.shape import generateShape, changeToDot
 from scampy.reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
-from scampy.DataProcessing import levelTopo
+from scampy.processing import levelTopo
 
 
 # noinspection PyPep8Naming

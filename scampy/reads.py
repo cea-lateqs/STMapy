@@ -6,7 +6,7 @@ Created on Thu Mar 12 10:08:46 2020
 @author: florie
 """
 import numpy as np
-from scampy.DataProcessing import extractSlope, levelTopo, stringify
+from scampy.processing import extractSlope, levelTopo, stringify
 import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
