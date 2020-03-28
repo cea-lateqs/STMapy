@@ -13,98 +13,92 @@ import PyQt5.QtWidgets as QtWidgets
 
 
 def readCitsAscii(filepath):
-        """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
-        with open(filepath, 'rb') as f:
-            divider = 1
-            unit = 1
-            header_end_not_found = True
-            for line in f:
-                # Read the parameters of the map until "Start of Data"
-                # Pixel dimensions in X
-                if "x-pixels" in line:
-                    xPx = int(line.split()[-1])
-                # Pixel dimensions in Y
-                elif "y-pixels" in line:
-                    yPx = int(line.split()[-1])
-                # Metric dimensions in X
-                elif "x-length" in line:
-                    xL = float(line.split()[-1])
-                # Metric dimensions in Y
-                elif "y-length" in line:
-                    yL = float(line.split()[-1])
-                # Number of points IN TOTAL therefore the division per 2 to have the number of points per channel
-                elif "z-points" in line:
-                    zPt = int(line.split()[-1])
-                    # There is zPt/2 points for fwd and zPt/2 points for bwd
-                    zPt = zPt // 2
-                # Starting voltage of the spectro
-                elif "Device_1_Start" in line:
-                    vStart = round(float(line.split()[-2]), 6)
-                # Final voltage of the spectro
-                elif "Device_1_End" in line:
-                    vEnd = round(float(line.split()[-2]), 6)
-                # Any eventual divider
-                elif "divider" in line:
-                    divider = float(line.split()[-1])
-                # Convert nV in V
-                elif "value-unit = nV" in line:
-                    unit = 10 ** (-9)
-                elif "Start of Data" in line:
-                    header_end_not_found = False
-                    break
-    
-            if header_end_not_found:
-                print("Problem while reading the file : could not find ':HEADER END:' in file")
-                f.close()
-                return False
-            # Matlab convention : columns first then rows hence [y][x]
-            # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
-            channelList = ["Data [Fwd]", "Data [Bwd]"]
-            m_data = np.zeros(shape=(2, yPx, xPx, zPt))
-            for y in range(yPx):
-                for x in range(xPx):
-                    # The line read is an array containing the dI/dV (or I(V)) values indexed by the voltage index
-                    # Strip to remove the newline at the end and split to transform the string in a list
-                    data_list = f.readline().strip().split()
-                    # Forward data
-                    m_data[0][y][x] = data_list[0:zPt]
-                    m_data[0][y][x] = m_data[0][y][x] * unit
-                    # No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
-                    # Backward data
-                    m_data[1][y][x] = (data_list[zPt:2 * zPt])
-                    m_data[1][y][x] = m_data[1][y][x] * unit
-            f.close()
-        # Store the parameters in a dictonnary to use them later
-        m_params = {"xPx": xPx, "yPx": yPx, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart / divider,
-                    "vEnd": vEnd / divider, "dV": abs(vEnd - vStart) / (divider * zPt)}
-        if divider != 1:
-            print("A divider of " + str(divider) + " was found and applied")
+    """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
+    with open(filepath, 'r') as f:
+        divider = 1
+        unit = 1
+        header_end_not_found = True
+        for line in f:
+            # Read the parameters of the map until "Start of Data"
+            # Pixel dimensions in X
+            if "x-pixels" in line:
+                xPx = int(line.split()[-1])
+            # Pixel dimensions in Y
+            elif "y-pixels" in line:
+                yPx = int(line.split()[-1])
+            # Metric dimensions in X
+            elif "x-length" in line:
+                xL = float(line.split()[-1])
+            # Metric dimensions in Y
+            elif "y-length" in line:
+                yL = float(line.split()[-1])
+            # Number of points IN TOTAL therefore the division per 2 to have the number of points per channel
+            elif "z-points" in line:
+                zPt = int(line.split()[-1])
+                # There is zPt/2 points for fwd and zPt/2 points for bwd
+                zPt = zPt // 2
+            # Starting voltage of the spectro
+            elif "Device_1_Start" in line:
+                vStart = round(float(line.split()[-2]), 6)
+            # Final voltage of the spectro
+            elif "Device_1_End" in line:
+                vEnd = round(float(line.split()[-2]), 6)
+            # Any eventual divider
+            elif "divider" in line:
+                divider = float(line.split()[-1])
+            # Convert nV in V
+            elif "value-unit = nV" in line:
+                unit = 10 ** (-9)
+            elif "Start of Data" in line:
+                header_end_not_found = False
+                break
 
-        # Check if a topo file exists and read it if yes
-        topopath = os.path.join(os.path.dirname(filepath), 'Topo.txt')
-        if os.path.exists(topopath):
-            topo = readTopo(topopath)
-        return topo, m_data, channelList, m_params
+        if header_end_not_found:
+            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            return False
+        # Matlab convention : columns first then rows hence [y][x]
+        # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
+        channelList = ["Data [Fwd]", "Data [Bwd]"]
+        m_data = np.zeros(shape=(2, yPx, xPx, zPt))
+        for y in range(yPx):
+            for x in range(xPx):
+                # The line read is an array containing the dI/dV (or I(V)) values indexed by the voltage index
+                # Strip to remove the newline at the end and split to transform the string in a list
+                data_list = f.readline().strip().split()
+                # Forward data
+                m_data[0][y][x] = np.float64(data_list[0:zPt]) * unit
+                # No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
+                # Backward data
+                m_data[1][y][x] = np.float64(data_list[zPt:2 * zPt]) * unit
+    # Store the parameters in a dictonnary to use them later
+    m_params = {"xPx": xPx, "yPx": yPx, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart / divider,
+                "vEnd": vEnd / divider, "dV": abs(vEnd - vStart) / (divider * zPt)}
+    if divider != 1:
+        print("A divider of " + str(divider) + " was found and applied")
+
+    # Check if a topo file exists and read it if yes
+    topopath = os.path.join(os.path.dirname(filepath), 'Topo.txt')
+    topo = readTopo(topopath) if os.path.exists(topopath) else None
+    return topo, m_data, channelList, m_params
 
 
-def readTopo(filepath):#used for txt files
-        """ Reads a topography file (in test) """
-        with open(filepath, 'rb') as f:
-            topo_data = []
-            w = 0
-            h = 0
-            for line in f:
-                # Treat the headers differently
-                if line[0] == '#':
-                    if "Width" in line:
-                        w = float(line.split()[-2])
-                    if "Height" in line:
-                        h = float(line.split()[-2])
-                else:
-                    topo_data.append(line.strip().split())
-            f.close()
-        topo = (np.asfarray(topo_data))
-        return topo
+def readTopo(filepath):
+    """ Reads a topography file (in test). Used for txt files. """
+    with open(filepath, 'r') as f:
+        topo_data = []
+        width, height = None, None
+        for line in f:
+            # Treat the headers differently
+            if line[0] == '#':
+                if "Width" in line:
+                    width = float(line.split()[-2])
+                if "Height" in line:
+                    height = float(line.split()[-2])
+            else:
+                topo_data.append(line.strip().split())
+    if width is None or height is None:
+        raise IOError('No width/height read in topo file {} !'.format(filepath))
+    return np.asfarray(topo_data)
 
 
 def readCits3dsBin(filepath, zSpectro):
