@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 
-# Set explictly the backend to Qt for consistency with pyqt.
-import matplotlib
-matplotlib.use('qt5agg')
-from scampy.ui_citswidget import Ui_CitsWidget
-from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import os.path
 import scipy as sp
-import scipy.interpolate
 import scipy.optimize
 import scipy.signal
 import scipy.io
-from matplotlib import pyplot as pyplot
+import matplotlib
+from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
+from matplotlib import pyplot
 from matplotlib.patches import Circle
 import matplotlib.backend_bases
 import PyQt5.QtWidgets as QtWidgets
-from scampy.shape import generateShape, changeToDot
-from scampy.reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
-from scampy.processing import levelTopo
+from .ui_citswidget import Ui_CitsWidget
+from .shape import generateShape, changeToDot
+from .reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
+from .processing import levelTopo
+
+# Set explictly the backend to Qt for consistency with pyqt.
+matplotlib.use('qt5agg')
 
 
 # noinspection PyPep8Naming
