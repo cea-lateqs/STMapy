@@ -1,11 +1,15 @@
-# Ignore python-compiled files
+# Python-compiled files
 *.pyc
-# Ignore Windows temp files
+# Windows temp files
 *.db
 *.tmp
-# Ignore Spyder file
+# Spyder file
 .spyder*
-# Ignore PyCharm folder
+# PyCharm folder
 .idea/*
-# Ignore bat file
+# Bat file
 updateUi.bat
+# VS Code folder
+.vscode
+# Linting folders
+.mypy*
