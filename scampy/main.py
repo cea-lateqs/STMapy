@@ -6,12 +6,12 @@ import sys
 from scampy import citswidget
 
 
-def main(args):
-    app = QtWidgets.QApplication(args)
+def main():
+    app = QtWidgets.QApplication(sys.argv)
     mw = citswidget.CitsWidget(None)
     mw.show()
     app.exec_()
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
