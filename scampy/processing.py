@@ -8,6 +8,8 @@ import scipy as sp
 import scipy.interpolate
 import scipy.optimize
 
+def linear_fit_function(x, a, b):
+    return a * x + b
 
 def levelTopo(topo):
     yPx, xPx = topo.shape
@@ -21,14 +23,10 @@ def levelTopo(topo):
     for y in range(0, yPx):
         fitY = topo[y]
         f = sp.interpolate.InterpolatedUnivariateSpline(fitX, fitY, k=1)
-        popt, pcov = sp.optimize.curve_fit(fitF, fitX, f(fitX))
+        popt, pcov = sp.optimize.curve_fit(linear_fit_function, fitX, f(fitX))
         topo_leveled[y] = fitY - (popt[0] * fitX + popt[1])
     # Return the leveled topo
     return topo_leveled
-
-
-def fit_func(v, a, b):
-    return a * v + b
 
 
 def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit):
@@ -47,7 +45,7 @@ def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit)
             mask = rawData > cutOffValue
             xArrayFiltered = xArray[mask]
             dataFiltered = np.log(rawData[mask])
-            popt, pcov = sp.optimize.curve_fit(fit_func, xArrayFiltered, dataFiltered)
+            popt, pcov = sp.optimize.curve_fit(linear_fit_function, xArrayFiltered, dataFiltered)
             zg[y][x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y][x]
             for z in range(zPt):
                 slopeData[y][x][z] = popt[0]

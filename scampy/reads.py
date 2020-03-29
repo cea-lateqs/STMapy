@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 12 10:08:46 2020
-
-@author: florie
-"""
+""" Reading functions. """
 import numpy as np
-from scampy.processing import extractSlope, levelTopo, stringify
 import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
+from scampy.processing import extractSlope, levelTopo, stringify
 
 
 def readCitsAscii(filepath):
