@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import os.path
+import numpy as np
 import scipy as sp
 import scipy.optimize
 import scipy.signal
@@ -9,10 +9,7 @@ import scipy.io
 import matplotlib
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot
-from matplotlib.patches import Circle
-import matplotlib.backend_bases
-import PyQt5.QtWidgets as QtWidgets
-from .ui_citswidget import Ui_CitsWidget
+from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot
 from .reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
 from .processing import levelTopo
@@ -22,13 +19,13 @@ matplotlib.use('qt5agg')
 
 
 # noinspection PyPep8Naming
-class CitsWidget(QtWidgets.QMainWindow, Ui_CitsWidget):
+class CitsWidget(QtWidgets.QMainWindow):
     # %% Building methods
     def __init__(self, parent):
         """ Builds the widget with parent widget in arg """
         QtWidgets.QMainWindow.__init__(self, parent)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), "ui_citswidget.ui"), self)
         # Set up the user interface from Designer.
-        self.setupUi(self)
         self.setAutoFillBackground(True)
         # Initiate arrays
         self.m_data = np.ndarray([])
