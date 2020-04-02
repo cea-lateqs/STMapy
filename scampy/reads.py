@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """ Reading functions. """
+import logging
 import numpy as np
 import struct
 import os.path
@@ -50,7 +51,7 @@ def readCitsAscii(filepath):
                 break
 
         if header_end_not_found:
-            print("Problem while reading the file : could not find ':HEADER END:' in file")
+            logging.error("Problem while reading the file : could not find ':HEADER END:' in file")
             return False
         # Matlab convention : columns first then rows hence [y][x]
         # In Omicron CITS, there is only two channels : fwd and bwd so it is read as such
@@ -70,7 +71,7 @@ def readCitsAscii(filepath):
     m_params = {"xPx": xPx, "yPx": yPx, "xL": xL, "yL": yL, "zPt": zPt, "vStart": vStart / divider,
                 "vEnd": vEnd / divider, "dV": abs(vEnd - vStart) / (divider * zPt)}
     if divider != 1:
-        print("A divider of " + str(divider) + " was found and applied")
+        logging.info("A divider of " + str(divider) + " was found and applied")
 
     # Check if a topo file exists and read it if yes
     topopath = os.path.join(os.path.dirname(filepath), 'Topo.txt')
@@ -136,15 +137,14 @@ def readCits3dsBin(filepath, zSpectro):
                     break
 
             if header_end_not_found:
-                print("Problem while reading the file : could not find ':HEADER END:' in file")
+                logging.error("Problem while reading the file : could not find ':HEADER END:' in file")
                 f.close()
                 return False
-            print('endfound')
             # Reading vStart and vEnd (floats of 4 bytes each)
             try:
                 reading = struct.unpack('>' + 'f' * 2, f.read(8))
             except struct.error:
-                print("Problem while reading the file : number of bytes to read different than what was expected")
+                logging.error("Problem while reading the file : number of bytes to read different than what was expected")
                 f.close()
                 return False
             # If it is a Z-Spectroscopy, put the Z boundaries in nm
@@ -161,7 +161,7 @@ def readCits3dsBin(filepath, zSpectro):
                 topo = np.zeros(shape=(yPx, xPx))
                 m_data = np.zeros(shape=(nChannels, yPx, xPx, zPt))
             except MemoryError:
-                print("The data is too big ! Or the memory too small...\nI will take half of the channels...\n")
+                logging.warning("The data is too big ! Or the memory too small...\nI will take half of the channels...\n")
                 half = True
             # If the first alloc didn't work, try to halve it
             if half:
@@ -169,7 +169,7 @@ def readCits3dsBin(filepath, zSpectro):
                     topo = np.zeros(shape=(yPx, xPx))
                     m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
                 except MemoryError:
-                    print("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
+                    logging.error("The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
                     f.close()
                     QtWidgets.QMessageBox.critical('Oops !',
                                                    "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n")
@@ -185,7 +185,7 @@ def readCits3dsBin(filepath, zSpectro):
                     try:
                         topo[y][x] = struct.unpack('>' + 'f' * nbExpParams, b)[2]
                     except struct.error:
-                        print(
+                        logging.error(
                             "Problem while reading the topo : number of bytes to read different than what was expected at " + str(
                                 x) + " " + str(y))
                     while chan < nChannels:
@@ -195,7 +195,7 @@ def readCits3dsBin(filepath, zSpectro):
                             if not half or chan < nChannels / 2:
                                 m_data[chan][y][x] = struct.unpack(fmtString, b)
                         except struct.error:
-                            print(
+                            logging.error(
                                 "Problem while reading the file : number of bytes to read different than what was expected at" + str(
                                     x) + " " + str(y) + " " + str(chan))
                             # Set chan,x,y to exit the loop
@@ -239,7 +239,6 @@ def sm4readFileHeader(f, ObjectIDCode):
 
     Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
     Signature = stringify(np.fromfile(f, dtype=np.uint16, count=18))
-    print(Signature)
     Total_Pagecount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
     ObjectListCount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
     ObjectFieldSize = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
@@ -288,7 +287,6 @@ def sm4readFileHeader(f, ObjectIDCode):
 
 
 def sm4readpageHeader(f,PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j):
-    print(PageIndex[j])
     #f.seek(nbytes,0 = a partir du début) va au byte n + 1
     f.seek(PageIndex[j]['ObjectList'][0]['Offset'], 0)
 
@@ -333,7 +331,6 @@ def sm4readpageHeader(f,PageHeader, TextStrings, PageIndex, PageIndexHeader_Page
                  'Offset': int(np.fromfile(f, dtype=np.uint32, count=1)[0]),
                  'Size': int(np.fromfile(f, dtype=np.uint32, count=1)[0])}
         PageHeader[j]['ObjectList'].append(dict1)
-    print('nobug')
 
     # read text describing file
     c = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
@@ -418,7 +415,6 @@ def readCitsSm4Bin(filepath):
 
             # Get main info from File Header
             PageIndexHeader_PageCount, PageIndex = sm4readFileHeader(f, ObjectIDCode)
-            print(PageIndexHeader_PageCount)
     
             # Read and record each Pages Headers and Data
             PageHeader = []
@@ -432,7 +428,6 @@ def readCitsSm4Bin(filepath):
     
             for j in range(PageIndexHeader_PageCount):
                 
-                print(j)
     
                 PageHeader, TextStrings = sm4readpageHeader(f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j)
     
@@ -440,17 +435,15 @@ def readCitsSm4Bin(filepath):
                 Data = []
                 f.seek(PageIndex[j]['ObjectList'][1]['Offset'], 0)
                 Data.append(np.fromfile(f, dtype=np.int32, count=int(round(PageIndex[j]['ObjectList'][1]['Size']/4))))
-                print('%%%%%%%%%%%%%')
                 # /4 because total data size is divided by the number of bytes that use each 'long' data
                 #!!! This takes too much time ?
                 ScaleData = [x*PageHeader[j]['ZScale']+PageHeader[j]['ZOffset'] for x in Data[-1]]
                 ScaleData = np.reshape(ScaleData,(PageHeader[j]['Width'],PageHeader[j]['Height']), order="F")
                 #order Fortran = "F" to match readCITSsm4File function
-                print(np.shape(ScaleData))
     
                 ###################### Spatial Data
                 # is it label topo ? # cf p.28 of SM4 DATA FILE FORMAT V5.pdf
-                print(TextStrings[j]['strLabel'])
+                logging.debug("Page {0} contains {1}".format(j, TextStrings[j]['strLabel']))
                 if TextStrings[j]['strLabel'] == 'Topography' and PageHeader[j]['PageType_DataSource'] == 1:
                     topocount += 1 
                     Spatialpagenumber = j
@@ -459,11 +452,10 @@ def readCitsSm4Bin(filepath):
                     SpatialInfo.append({'TopoUnit': TextStrings[j]['strZUnits']})
                     if topocount == 1:
                         FImage = Spatial[-1]['TopoData']  # Image forward
-                        print(np.shape(FImage))
                     elif topocount == 2:
                         BImage = Spatial[-1]['TopoData']  # Image bacward
                     else:
-                        print('there is more topo data than expected')
+                        logging.warning('There is more topo data than expected')
                 # is it spatial Current data ?
                 elif TextStrings[j]['strLabel'] == 'Current' and PageHeader[j]['PageType_DataSource'] == 2:
                     currentcount += 1
@@ -475,12 +467,12 @@ def readCitsSm4Bin(filepath):
                     elif currentcount == 2:
                         BImage_I = Spatial[-1]['CurrentData']  # Image bacward
                     else:
-                        print('there is more current data than expected')
+                        logging.warning('There is more current data than expected')
         
                 ###################### Spectral Data - can be Point or Line
                 # Is it Spectral Point(38) ? Not taken in charge currently
                 elif PageHeader[j]['PageType_DataSource'] == 38:
-                    print('You didnt load a CITS. Use sm4_reader to read this data')
+                    logging.error('You didnt load a CITS. Use sm4_reader to read this data')
     
                 # CITS is recarded as a line of LIA
                 # Is it Spectral Line(16) LIA ?
@@ -497,21 +489,19 @@ def readCitsSm4Bin(filepath):
                                 TipTrackData_offset = PageHeader[j]['ObjectList'][objectNbre]['Offset']
                                 TipTrackData_Size = PageHeader[j]['ObjectList'][objectNbre]['Size']
                     else:
-                        print('there is more spectral data than expected')
+                        logging.warning('There is more spectral data than expected')
     
                 # We could add 'Spaectral line Current', or 'PLL Amplitude' ;
                 # 'PLL Phase' ; 'dF' ; 'PLL Drive'spectra, AFM, ... in the same way
                 else:
-                    print('Data Type '+str(TextStrings[j]['strLabel'])
+                    logging.warning('Data Type '+str(TextStrings[j]['strLabel'])
                           + ' or PageType_DataSource '
                           + str(PageHeader[j]['PageType_DataSource'])
                           + ' not found. Check spelling or add it.')
-                print(j)
     
             ###################### Get spectra coordinates
             # Nbre of measurements taken along a line :
             nbreScans = np.shape(SpectralData_y)[1]
-            print(nbreScans)
             xCoord = np.zeros(nbreScans)
             yCoord = np.zeros(nbreScans)
             f.seek(TipTrackData_offset, 0)  # Go to beggining of header
@@ -524,7 +514,6 @@ def readCitsSm4Bin(filepath):
         SpectralData_x = (PageHeader[Linespectrapagenumber]['XOffset'] + 
                           PageHeader[Linespectrapagenumber]['XScale'] *
                           np.array(list(range(PageHeader[Linespectrapagenumber]['Width'])))) * 1000.0#mV
-        # print(np.shape(SpectralData_x))
 
         # each measurement is taken at a coordinate,
         # but several measurements (repetitions) are taken on the same spot.
@@ -555,9 +544,8 @@ def readCitsSm4Bin(filepath):
         try:
             topo = np.zeros(shape=(xPx, yPx))
             m_data = np.zeros(shape=(repetitions, ySpec, xSpec, zPt))
-            print(np.shape(m_data))
         except MemoryError:
-            print("The data is too big ! Or the memory too small...")
+            logging.error("The data is too big ! Or the memory too small...")
             return False
 
         # in Spectraldata_y, dIdV info corresponds to the spec data saved
@@ -576,7 +564,6 @@ def readCitsSm4Bin(filepath):
                          "dV": abs(SpectralData_x[-1] - SpectralData_x[0])/zPt}
 
         topo = FImage
-        print(np.shape(topo))
 
         # create average Data :
         average = np.zeros(shape=(ySpec, xSpec, zPt))
