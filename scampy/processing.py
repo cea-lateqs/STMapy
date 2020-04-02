@@ -8,8 +8,10 @@ import scipy as sp
 import scipy.interpolate
 import scipy.optimize
 
+
 def linear_fit_function(x, a, b):
     return a * x + b
+
 
 def levelTopo(topo):
     yPx, xPx = topo.shape
@@ -45,7 +47,9 @@ def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit)
             mask = rawData > cutOffValue
             xArrayFiltered = xArray[mask]
             dataFiltered = np.log(rawData[mask])
-            popt, pcov = sp.optimize.curve_fit(linear_fit_function, xArrayFiltered, dataFiltered)
+            popt, pcov = sp.optimize.curve_fit(
+                linear_fit_function, xArrayFiltered, dataFiltered
+            )
             zg[y][x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y][x]
             for z in range(zPt):
                 slopeData[y][x][z] = popt[0]
@@ -59,4 +63,4 @@ def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit)
 
 
 def stringify(array):
-    return ''.join([chr(x) for x in array])
+    return "".join([chr(x) for x in array])

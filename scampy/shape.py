@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from matplotlib import patches
 
 
@@ -10,15 +10,23 @@ def generateShape(event, fig_map, fig_topo, color, ratioX, ratioY):
     elif event.button == 3:
         return Rectangle(event, fig_map, fig_topo, color, ratioX, ratioY)
     else:
-        raise ValueError('Event button not recognized in generateShape !')
+        raise ValueError("Event button not recognized in generateShape !")
 
 
 def changeToDot(shape):
-    return Dot(shape.origin_event, shape.map1, shape.map2, shape.color, shape.ratioX, shape.ratioY)
+    return Dot(
+        shape.origin_event,
+        shape.map1,
+        shape.map2,
+        shape.color,
+        shape.ratioX,
+        shape.ratioY,
+    )
 
 
 class Shape:
     """ Shape class that is used to draw the shapes when clicking on the map """
+
     def __init__(self, event, fig_map, fig_topo, color, ratioX, ratioY):
         self.origin_event = event
         self.xi = int(event.xdata)
@@ -48,14 +56,14 @@ class Shape:
         self.draw()
 
     def create(self):
-        raise NotImplementedError('Create not implemented !')
+        raise NotImplementedError("Create not implemented !")
 
     def recreate(self, fig_map, fig_topo):
         self.updateMaps(fig_map, fig_topo)
         self.create()
 
     def draw(self):
-        raise NotImplementedError('Draw not implemented !')
+        raise NotImplementedError("Draw not implemented !")
 
     def drawMaps(self):
         if self.map1 != 0:
@@ -78,49 +86,81 @@ class Shape:
 
 class Dot(Shape):
     def create(self):
-        self.shape1, = self.map1.axes[0].plot([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5],
-                                              c=self.color, ls='None', marker='o')
+        (self.shape1,) = self.map1.axes[0].plot(
+            [self.xi + 0.5, self.xf + 0.5],
+            [self.yi + 0.5, self.yf + 0.5],
+            c=self.color,
+            ls="None",
+            marker="o",
+        )
         if self.map2 != 0:
-            self.shape2, = self.map2.axes[0].plot([(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                                                  [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY],
-                                                  c=self.color, ls='None', marker='o')
+            (self.shape2,) = self.map2.axes[0].plot(
+                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
+                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY],
+                c=self.color,
+                ls="None",
+                marker="o",
+            )
         self.drawMaps()
 
     def draw(self):
-        self.shape1.set_data([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5])
+        self.shape1.set_data(
+            [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5]
+        )
         if self.map2 != 0:
-            self.shape2.set_data([(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                                 [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY])
+            self.shape2.set_data(
+                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
+                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY],
+            )
         self.drawMaps()
 
 
 class Line(Shape):
     def create(self):
-        self.shape1, = self.map1.axes[0].plot([self.xi + 0.5, self.xf + 0.5],
-                                              [self.yi + 0.5, self.yf + 0.5], 'k--')
+        (self.shape1,) = self.map1.axes[0].plot(
+            [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5], "k--"
+        )
         if self.map2 != 0:
-            self.shape2, = self.map2.axes[0].plot([(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                                                  [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY], 'k--')
+            (self.shape2,) = self.map2.axes[0].plot(
+                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
+                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY],
+                "k--",
+            )
         self.drawMaps()
 
     def draw(self):
-        self.shape1.set_data([self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5])
+        self.shape1.set_data(
+            [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5]
+        )
         if self.map2 != 0:
-            self.shape2.set_data([(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
-                                 [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY])
+            self.shape2.set_data(
+                [(self.xi + 0.5) * self.ratioX, (self.xf + 0.5) * self.ratioX],
+                [(self.yi + 0.5) * self.ratioY, (self.yf + 0.5) * self.ratioY],
+            )
         self.drawMaps()
 
 
 class Rectangle(Shape):
     def create(self):
-        self.shape1 = self.map1.axes[0].add_patch(patches.Rectangle((self.xi, self.yi),
-                                                                    self.xf - self.xi,
-                                                                    self.yf - self.yi, color=self.color, alpha=0.5))
+        self.shape1 = self.map1.axes[0].add_patch(
+            patches.Rectangle(
+                (self.xi, self.yi),
+                self.xf - self.xi,
+                self.yf - self.yi,
+                color=self.color,
+                alpha=0.5,
+            )
+        )
         if self.map2 != 0:
-            self.shape2 = self.map2.axes[0].add_patch(patches.Rectangle((self.xi * self.ratioX, self.yi * self.ratioY),
-                                                                        (self.xf - self.xi) * self.ratioX,
-                                                                        (self.yf - self.yi) * self.ratioY,
-                                                                        color=self.color, alpha=0.5))
+            self.shape2 = self.map2.axes[0].add_patch(
+                patches.Rectangle(
+                    (self.xi * self.ratioX, self.yi * self.ratioY),
+                    (self.xf - self.xi) * self.ratioX,
+                    (self.yf - self.yi) * self.ratioY,
+                    color=self.color,
+                    alpha=0.5,
+                )
+            )
         self.drawMaps()
 
     def draw(self):

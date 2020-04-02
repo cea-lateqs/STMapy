@@ -8,7 +8,7 @@ from scampy import citswidget
 
 
 def main():
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
     app = QtWidgets.QApplication(sys.argv)
     mw = citswidget.CitsWidget(None)
     mw.show()
