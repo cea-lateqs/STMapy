@@ -1,0 +1,18 @@
+default:
+  image: python:3.5
+
+stages:
+  - style
+
+format_check:
+  stage: style
+  script:
+    - pip install black
+    - black --check .
+
+lint_check:
+  stage: style
+  script:
+    - pip install flake8
+    - flake8 --max-line-length=120 --ignore=E203,E501,W503
+  allow_failure: true
