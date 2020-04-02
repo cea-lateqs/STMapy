@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import os.path
 import numpy as np
 import scipy as sp
@@ -26,7 +27,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(__file__), "ui_citswidget.ui"), self)
         # Set up the user interface from Designer.
-        self.setAutoFillBackground(True)
+        self.setAutoFillBackground(True)        
         # Initiate arrays
         self.m_data = np.ndarray([])
         self.tot_data = np.ndarray([])
@@ -134,12 +135,12 @@ class CitsWidget(QtWidgets.QMainWindow):
         Having several CITS will prompt their averaging
         but they have to be of the same dimensions"""
         n_cits = len(cits_names)
-        print(cits_names)
+        logging.debug("CITS to load: {0}".format(cits_names))
         if n_cits == 0:
             return
         first = True
         for cits in cits_names:
-            print(cits)
+            logging.info("Loading {0}...".format(cits))
             extension = cits.split('.')[-1]
             if extension == "asc":
                 self.clearMap()
@@ -166,7 +167,6 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.dataLoaded = self.loadCitsSm4(cits)
             elif extension == "sm4":
                 self.clearMap()
-                print('sm4')
                 self.mapType = "Sm4"
                 self.topo, self.m_data, self.channelList, self.m_params, average = readCitsSm4Bin(cits)
                 addAverage = True
@@ -174,26 +174,22 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.addChannel(average, "average")
                 self.dataLoaded = True
             else:
-                print("Extension not recognized")
-                self.m_statusBar.showMessage("Extension not recognized")
+                logging.error("Extension {0} not supported ! Only asc, 3ds, txt and mat are valid.".format(extension))
                 return
             # After reading, check if the data was read correctly and update the working directory and the map name
             if self.dataLoaded:
                 self.wdir = os.path.dirname(cits)
                 self.mapName = os.path.basename(cits)
-                print(self.mapName + " read as a " + self.mapType + " map")
+                logging.info(self.mapName + " read as a " + self.mapType + " map")
                 self.m_statusBar.showMessage(self.mapName + " read as a " + self.mapType + " map")
             else:
-                print('Problem while reading ' + cits)
+                logging.error('Problem while reading ' + cits)
                 self.m_statusBar.showMessage('Problem while reading ' + cits)
                 return
             # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo and updating of the widgets
-            print(n_cits)
             if n_cits == 1:
                 self.updateWidgets()
-                print('updated')
                 self.drawTopo()
-                print('drawn')
                 return
             else:  # Else begin the averaging
                 if first:  # If this was the first Cits to average, create the mean_data array to store the avergage
@@ -220,13 +216,13 @@ class CitsWidget(QtWidgets.QMainWindow):
             if os.path.exists(config['working_directory']):
                 self.wdir = config['working_directory']
             else:
-                print("{} is not a valid path ! Check your config file.".format(config['working_directory']))
+                logging.warning("{} is not a valid path ! Check your config file.".format(config['working_directory']))
 
         if 'matplotlib_stylesheet' in config.keys():
             try:
                 matplotlib.pyplot.style.use(config['matplotlib_stylesheet'])
             except IOError:
-                print("{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(config['matplotlib_stylesheet']))
+                logging.warning("{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(config['matplotlib_stylesheet']))
 
         if 'autoload' in config.keys():
             autoload = config['autoload'].lower()
@@ -259,7 +255,6 @@ class CitsWidget(QtWidgets.QMainWindow):
             # If yspec==1, it is a Line Spectro so I need to call the specific
             # method to draw the topo
             if yspec == 1:
-                print('ySpec = 1')
                 self.drawLineTopo()
                 return
         
@@ -270,10 +265,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.topo = levelTopo(self.topo)
             # Set up the figure for the plot
             if self.fig_topo == 0:
-                print('self fig topo = 0')
                 self.fig_topo = pyplot.figure()
             else:
-                print('self fig topo =! 0')
                 self.fig_topo.clear()
             self.ax_topo = self.fig_topo.add_subplot(1, 1, 1, aspect=float(yPx) / xPx)
             self.fig_topo.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
@@ -288,7 +281,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             colormap = "afmhot"  # self.m_colorBarBox.currentText()
 
             if self.m_scaleMetric.isChecked():
-                print('scale metric is checked')
+                logging.debug('Scale metric box is checked')
                 # If the map is an Omicron one, I have to invert the y-axis
                 if self.mapType == "Omicron":
                     self.ax_topo.axis([0, w, h, 0])
@@ -301,7 +294,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     # We plot our spec location points.
                     locations = True
                     if locations:
-                        print('Spectrum Locations will be printed')
+                        logging.debug('Spectrum Locations will be printed')
                         patch = self.m_params['Patch']
                         for m in range(len(patch)): #iterate over the number of locations
                             self.ax_topo.add_patch(patch[m])
@@ -316,9 +309,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 # If the map is an Omicron one, I have to invert the y-axis
                 if self.mapType == "Omicron":
                     self.ax_topo.axis([0, xPx, yPx, 0])
-                    #if self.maptype == "Sm4" : ax.imshow(FImage,extent=[0,fxscale*1e+9,0,fyscale*1e+9], vmin = (imagerms - 5*imagestd) , vmax = (imagerms + 5*imagestd));#
                 else:
-                    print(self.maptype)
                     self.ax_topo.axis([0, xPx, 0, yPx])
                 XYmap = self.ax_topo.pcolormesh(self.topo, cmap=colormap)
             # Colorbar stuff
@@ -359,7 +350,7 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     def handleClosingTopo(self, event):
         """ Called when the topo figure is closed - Put back self.fig_topo to 0 to indicate that no topo figure exists """
-        print('Topo closing')
+        logging.debug('Topo closing')
         self.fig_topo = 0
         return
 
@@ -421,23 +412,19 @@ class CitsWidget(QtWidgets.QMainWindow):
         # self.m_voltageBox.setSingleStep(dV)
         self.m_voltageBox.setMinimum(0)
         self.m_voltageBox.setMaximum(zPt-1)
-        print(zPt-1)
         self.m_voltageBox.setSingleStep(1)
 
     def updateWidgets(self):
         """ Slot called after the reading of the CITS.
         Sets the values combo box (voltage and channels) and draws the map """
         self.updateVoltageBox(self.m_params["vStart"], self.m_params["vEnd"], self.m_params["zPt"])
-        print('done0')
         self.m_channelBox.clear()
         self.m_channelBox.addItems(self.channelList)
-        print('done1!')
         self.drawXYMap(self.m_voltageBox.value())
-        print('done2')
         self.updateAboveValue(self.m_aboveBar.value())
         self.updateBelowValue(self.m_belowBar.value())
         self.m_CitsAvgBox.setMaximum(self.m_params["xPx"])
-        print('done!')
+        logging.debug('Widgets updated !')
 
 # %% Methods related to spectra
     def normalizeSpectrum(self):
@@ -491,7 +478,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             limit_aboveV = self.mapMax - self.m_aboveBar.value() * midpoint2 / 100
             limit_belowV = self.mapMin + self.m_belowBar.value() * midpoint2 / 100
             if limit_aboveV < limit_belowV:
-                print("Above and below spectra intersect !")
+                logging.error("Above and below spectra intersect !")
                 self.m_statusBar.showMessage("Above and below spectra intersect !")
                 return
             N_aboveV = 0
@@ -561,7 +548,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 V = np.arange(vStart, vEnd, dV) + shiftX
                 # Check consistency of V array with the number of points.
                 if len(V) != zPt:
-                    print('Round-off error while computing the voltage array: dV ({}) might be too small. Computing from number of points instead.'.format(dV))
+                    loggging.warning('Round-off error while computing the voltage array: dV ({}) might be too small. Computing from number of points instead.'.format(dV))
                     # If this fails, compute from the number of points to be sure to have the same dim as dataToPlot.
                     V = np.linspace(vStart, vEnd, zPt) + shiftX
                 self.ax_spec.plot(V, shiftY + dataToPlot, label=finalLabel, c=self.getSpectrumColor(self.nSpectraDrawn))
@@ -606,7 +593,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             popt, pcov = sp.optimize.curve_fit(fit_func, X, dataToFit)
             slope = popt[0]
             coef = popt[1]
-            print("Linear fit gives a slope of " + str(slope) + " and a coef of " + str(coef))
+            logging.info("Linear fit gives a slope of " + str(slope) + " and a coef of " + str(coef))
             self.ax_spec.plot(X, slope * X + coef, label="Linear fit of " + self.lastSpectrum[1],
                               color=self.getSpectrumColor(self.nSpectraDrawn - 1), linestyle="--")
             self.ax_spec.legend(loc=0)
@@ -682,7 +669,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         if len(output) != 0:
             # Tranposing the output array to get columns format corresponding to the header
             np.savetxt(output_path, np.transpose(np.array(output)), delimiter=',', header=header)
-            print('Finished exporting csv at {}'.format(output_path))
+            logging.info('Finished exporting csv at {}'.format(output_path))
 
 
 # %% Methods related to the clicks on the map
@@ -699,7 +686,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.currentShape = generateShape(event, self.m_mapWidget.figure, self.fig_topo,
                                               self.getSpectrumColor(self.nSpectraDrawn), ratioX, ratioY)
             self.motionConnection = self.m_mapWidget.mpl_connect('motion_notify_event', self.currentShape.update)
-            print('PRESS')
+            logging.debug('PRESS')
 
     def onReleaseOnMap(self, event):
         """ Slot called when a release event is detected.
@@ -740,7 +727,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                                                  min(self.m_params["yPx"], yf + n))
                 # Add the current Shape to the list of clicked Shapes
                 self.addToShapesClicked(self.currentShape)
-            print('RELEASE')
+            logging.debug('RELEASE')
 
     def addToShapesClicked(self, shape):
         """ Method called when a release was detected on the map.
@@ -977,7 +964,6 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.ax_map.axis([0, xPx, 0, yPx])
             # Set title
             chan = self.m_channelBox.currentText()
-            # print(chan)
             self.ax_map.set_title(self.mapName + " - " + chan + "\n"
                                   + "V=" + str(self.m_params["vStart"] + voltage * self.m_params["dV"]))
             # Colorbar stuff
@@ -1048,7 +1034,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         try:
             newData = np.zeros(shape=(nChannels+1, yPx, xPx, zPt))
         except MemoryError:
-            print("The data is too big ! Or the memory too small...")
+            logging.error("The data is too big ! Or the memory too small... Aborting addChannel !")
             return
         newData[0:nChannels] = self.m_data
         newData[nChannels] = newChannelData
@@ -1071,9 +1057,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             # Try the allocation
             try:
                 new_data = np.zeros(shape=(len(self.channelList), yPx, int(xPx / Navg), zPt))
-                print(np.shape(new_data))
             except MemoryError:
-                print('Not enough memory to do this operation')
+                logging.error('Not enough memory to average spectra !')
                 return
             # Average in X for each channel and Y
             for chan in range(len(self.channelList)):
