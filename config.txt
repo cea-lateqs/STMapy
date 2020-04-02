@@ -1,4 +1,0 @@
-working_directory   /home/florie/Documents/LABO/
-matplotlib_stylesheet   def
-autoload    no
-default_cmap    viridis

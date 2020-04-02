@@ -2,11 +2,80 @@
 # -*- coding: utf-8 -*-
 """ Reading functions. """
 import logging
+import json
 import numpy as np
 import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
+import matplotlib.pyplot as plt
+from scampy import _package_directory
 from scampy.processing import extractSlope, levelTopo, stringify
+
+DEFAULT_CONFIG = {
+    "working_directory": _package_directory,
+    "matplotlib_stylesheet": None,
+    "autoload": False,
+    "default_cmap": "magma_r",
+    "topo_cmap": "afmhot",
+}
+
+
+def readConfig(config_filepath):
+    """ Reads the config and sets defaults for entries not read """
+    config = DEFAULT_CONFIG
+    if not os.path.exists(config_filepath):
+        raise IOError("{} is not a valid path to a configuration file !")
+    with open(config_filepath) as f:
+        read_config = json.load(f)
+
+    # Overwrite defaults with read config
+    config.update(read_config)
+
+    return config
+
+
+def setUpConfig(config_filepath):
+    """ Reads and set up config by doing various matplotlib checks. """
+    config = readConfig(config_filepath)
+
+    if not os.path.exists(config["working_directory"]):
+        logging.warning(
+            "{} is not a valid path ! Check your config file.".format(
+                config["working_directory"]
+            )
+        )
+        config["working_directory"] = DEFAULT_CONFIG["working_directory"]
+
+    if config["matplotlib_stylesheet"] is not None:
+        try:
+            plt.style.use(config["matplotlib_stylesheet"])
+        except IOError:
+            logging.warning(
+                "{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(
+                    config["matplotlib_stylesheet"]
+                )
+            )
+            config["matplotlib_stylesheet"] = DEFAULT_CONFIG["matplotlib_stylesheet"]
+
+    if config["default_cmap"] not in plt.colormaps():
+        default = DEFAULT_CONFIG["default_cmap"]
+        logging.warning(
+            "{} set for default is not a valid colormap name. Setting {} instead.".format(
+                config["default_cmap"], default
+            )
+        )
+        config["default_cmap"] = default
+
+    if config["topo_cmap"] not in plt.colormaps():
+        default = DEFAULT_CONFIG["topo_cmap"]
+        logging.warning(
+            "{} set for topo is not a valid colormap name. Setting {} instead.".format(
+                config["topo_cmap"], default
+            )
+        )
+        config["topo_cmap"] = default
+
+    return config
 
 
 def readCitsAscii(filepath):

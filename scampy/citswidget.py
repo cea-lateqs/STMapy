@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationTo
 from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot
-from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin
+from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
 from .processing import levelTopo, normalizeDOS, linear_fit_function, findPixelsOnLine
 
 # Set explictly the backend to Qt for consistency with pyqt.
@@ -54,24 +54,17 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.m_colorBarBox.addItems(matplotlib.pyplot.colormaps())
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
-        # Read config to set wdir and matplotlib stylesheet
-        self.wdir = ""
-        self.readConfig()
-        # Set default colormap
-        index = self.m_colorBarBox.findText(self.default_cmap)
-        if index >= 0:
-            self.m_colorBarBox.setCurrentIndex(index)
-        else:
-            logging.warning(
-                "{0} is not a valid colormap name. Cannot be set as default.".format(
-                    self.default_cmap
-                )
-            )
+        # Parse config
+        config = setUpConfig(os.path.join(os.path.dirname(__file__), "config.json"))
+        self.wdir = config["working_directory"]
+        self.topo_colormap = config["topo_cmap"]
+        self.m_colorBarBox.setCurrentIndex(
+            self.m_colorBarBox.findText(config["default_cmap"])
+        )
         # Other parameters used after map loading
         self.mapType = ""
         self.fig_topo = 0
         self.topo = []
-        self.topo_colormap = "afmhot"
         # Connect all widgets
         self.connect()
         self.nSpectraDrawn = 0
@@ -87,7 +80,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Check 'Colorbar settings' by default
         self.m_cbarCheckBox.setChecked(True)
         # Calls the loading method at launch
-        if self.autoload:
+        if config["autoload"]:
             self.askCits()
 
     def connect(self):
@@ -245,46 +238,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.m_data = mean_data
         self.updateWidgets()
         return
-
-    def readConfig(self):
-        config = {}
-        with open("config.txt") as f:
-            for line in f:
-                (key, val) = line.split()
-                config[key] = val
-        if "working_directory" in config.keys():
-            if os.path.exists(config["working_directory"]):
-                self.wdir = config["working_directory"]
-            else:
-                logging.warning(
-                    "{} is not a valid path ! Check your config file.".format(
-                        config["working_directory"]
-                    )
-                )
-
-        if "matplotlib_stylesheet" in config.keys():
-            try:
-                matplotlib.pyplot.style.use(config["matplotlib_stylesheet"])
-            except IOError:
-                logging.warning(
-                    "{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(
-                        config["matplotlib_stylesheet"]
-                    )
-                )
-
-        if "autoload" in config.keys():
-            autoload = config["autoload"].lower()
-            if "no" in autoload or "false" in autoload:
-                self.autoload = False
-            else:
-                self.autoload = True
-        else:
-            self.autoload = False
-
-        if "default_cmap" in config.keys():
-            self.default_cmap = config["default_cmap"]
-        else:
-            self.default_cmap = "magma_r"
 
     # %% Reading and loading topo images methods
 
