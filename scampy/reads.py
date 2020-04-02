@@ -160,21 +160,7 @@ def readCitsAscii(filepath):
 
 def readTopo(filepath):
     """ Reads a topography file (in test). Used for txt files. """
-    with open(filepath, "r") as f:
-        topo_data = []
-        width, height = None, None
-        for line in f:
-            # Treat the headers differently
-            if line[0] == "#":
-                if "Width" in line:
-                    width = float(line.split()[-2])
-                if "Height" in line:
-                    height = float(line.split()[-2])
-            else:
-                topo_data.append(line.strip().split())
-    if width is None or height is None:
-        raise IOError("No width/height read in topo file {} !".format(filepath))
-    return np.asfarray(topo_data)
+    return np.genfromtxt(filepath, delimiter="\t", comments="#")
 
 
 def readCits3dsBin(filepath, zSpectro):
