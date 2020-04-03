@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationTo
 from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot
-from .reads import readCitsAscii, readTopo, readCits3dsBin, readCitsSm4Bin
+from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin
 from .processing import levelTopo
 
 # Set explictly the backend to Qt for consistency with pyqt.
@@ -644,7 +644,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 V = np.arange(vStart, vEnd, dV) + shiftX
                 # Check consistency of V array with the number of points.
                 if len(V) != zPt:
-                    loggging.warning(
+                    logging.warning(
                         "Round-off error while computing the voltage array: dV ({}) might be too small. Computing from number of points instead.".format(
                             dV
                         )
@@ -1007,7 +1007,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         dataToPlot = np.ndarray(shape=(zPt, z_plot.size))
         xi = x_plot[0]
         yi = y_plot[0]
-        zi = z_plot[0]
         zf = z_plot[-1]
         # Variables needed to compute the metric distances
         dx = self.m_params["xL"] / self.m_params["xPx"]
@@ -1269,7 +1268,7 @@ class CitsWidget(QtWidgets.QMainWindow):
     def avgSpectrasX(self):
         """ Slot that averages the spectras in the X direction of the loaded
         CITS and replaces the loaded CITS by the result """
-        if self.dataLoaded == True:  # Check if a CITS was loaded
+        if self.dataLoaded:  # Check if a CITS was loaded
             # Get the needed params
             Navg = self.m_CitsAvgBox.value()
             xPx = self.m_params["xPx"]
