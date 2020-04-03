@@ -73,7 +73,9 @@ def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit)
 
 
 def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
-    """ Finds the pixels on the line from (xi, yi) to (xf, yf) included """
+    """ Finds the pixels on the line from (xi, yi) to (xf, yf) included.
+    Returns integer arrays.
+    """
     # First treat the vertical line case
     if xf == xi:
         y_plot = np.arange(min(yi, yf), max(yi, yf) + 1)
@@ -119,7 +121,7 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
         else:
             y_plot = np.arange(min(yi, yf), max(yi, yf) + 1)
             x_plot = (y_plot - c) / k
-    return x_plot, y_plot
+    return x_plot.astype(int), y_plot.astype(int)
 
 
 def stringify(array):

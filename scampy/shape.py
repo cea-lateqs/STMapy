@@ -4,18 +4,25 @@ from matplotlib import patches
 
 def generateShape(event, fig_map, fig_topo, color, ratioX, ratioY):
     if event.button == 0:
-        return Dot(event, fig_map, fig_topo, color, ratioX, ratioY)
+        return Dot(
+            int(event.xdata), int(event.ydata), fig_map, fig_topo, color, ratioX, ratioY
+        )
     elif event.button == 1:
-        return Line(event, fig_map, fig_topo, color, ratioX, ratioY)
+        return Line(
+            int(event.xdata), int(event.ydata), fig_map, fig_topo, color, ratioX, ratioY
+        )
     elif event.button == 3:
-        return Rectangle(event, fig_map, fig_topo, color, ratioX, ratioY)
+        return Rectangle(
+            int(event.xdata), int(event.ydata), fig_map, fig_topo, color, ratioX, ratioY
+        )
     else:
         raise ValueError("Event button not recognized in generateShape !")
 
 
 def changeToDot(shape):
     return Dot(
-        shape.origin_event,
+        shape.xi,
+        shape.yi,
         shape.map1,
         shape.map2,
         shape.color,
@@ -27,12 +34,13 @@ def changeToDot(shape):
 class Shape:
     """ Shape class that is used to draw the shapes when clicking on the map """
 
-    def __init__(self, event, fig_map, fig_topo, color, ratioX, ratioY):
-        self.origin_event = event
-        self.xi = int(event.xdata)
-        self.yi = int(event.ydata)
-        self.xf = int(event.xdata)
-        self.yf = int(event.ydata)
+    def __init__(
+        self, xi, yi, fig_map, fig_topo, color, ratioX, ratioY, xf=None, yf=None
+    ):
+        self.xi = xi
+        self.yi = yi
+        self.xf = xi if xf is None else xf
+        self.yf = yi if yf is None else yf
         self.shape1 = None
         self.shape2 = None
         self.color = color

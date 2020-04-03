@@ -11,7 +11,7 @@ import matplotlib
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
-from .shape import generateShape, changeToDot
+from .shape import generateShape, changeToDot, Dot, Line
 from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
 from .processing import levelTopo, normalizeDOS, linear_fit_function, findPixelsOnLine
 
@@ -829,14 +829,9 @@ class CitsWidget(QtWidgets.QMainWindow):
         voltages = np.arange(zPt)
         chan = self.ui_channelBox.currentIndex()
         z_plot = np.arange(x_plot.size)
-        dataToPlot = np.ndarray(shape=(zPt, z_plot.size))
         xi = x_plot[0]
         yi = y_plot[0]
         zf = z_plot[-1]
-        # Variables needed to compute the metric distances
-        dx = self.cits_params["xL"] / self.cits_params["xPx"]
-        dy = self.cits_params["yL"] / self.cits_params["yPx"]
-        metricDistances = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
         # Bool to keep trace of the selected spectra
         viewSelected = self.ui_viewSelectedBox.isChecked()
         # Matlab convention : Y (v) first then X (z)
@@ -868,42 +863,51 @@ class CitsWidget(QtWidgets.QMainWindow):
                 )
             ax.set_xlim([voltages[0], voltages[-1]])
         else:
-            for z in z_plot:
-                xc = int(x_plot[z])
-                yc = int(y_plot[z])
-                dataToPlot[:, z] = self.cits_data[chan, yc, xc, :]
-                if viewSelected:
-                    self.addToPtsClicked(xc, yc, color="yellow")
-            ax.set_ylabel("Voltage index")
-            fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
-            # Pcolormesh takes vertices as arguments so need to add the last vertex to have the last quad plotted
-            #            voltages=np.append(voltages,voltages[-1]+1)
-            #            metricDistances=np.append(metricDistances,metricDistances[-1]+(metricDistances[1]-metricDistances[0]))
-            #            z_plot=np.append(z_plot,z_plot[-1]+1)
+            dx = self.cits_params["xL"] / self.cits_params["xPx"]
+            dy = self.cits_params["yL"] / self.cits_params["yPx"]
+            dataToPlot = self.cits_data[chan, y_plot, x_plot, :].T
+            if viewSelected:
+                for z in z_plot:
+                    self.addToShapesClicked(
+                        Dot(
+                            x_plot[z],
+                            y_plot[z],
+                            self.fig_map,
+                            self.fig_topo,
+                            "yellow",
+                            dx,
+                            dy,
+                        )
+                    )
             # Change the scales if needed
             if self.ui_scaleVoltage.isChecked():
                 voltages = (
                     self.cits_params["vStart"] + voltages * self.cits_params["dV"]
                 )
                 ax.set_ylabel("Bias (V)")
+            else:
+                ax.set_ylabel("Voltage index")
+
             if self.ui_scaleMetric.isChecked():
+                metricDistances = np.sqrt(
+                    (dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2
+                )
                 mapData = pyplot.pcolormesh(
                     metricDistances,
                     voltages,
                     dataToPlot,
                     cmap=self.ui_colorBarBox.currentText(),
                 )
-                ax.axis(
-                    [metricDistances[0], metricDistances[-1], voltages[0], voltages[-1]]
-                )
+                ax.set_xlim([metricDistances[0], metricDistances[-1]])
                 ax.set_xlabel("Distance (nm)")
             else:
                 mapData = pyplot.pcolormesh(
                     z_plot, voltages, dataToPlot, cmap=self.ui_colorBarBox.currentText()
                 )
-                ax.axis([z_plot[0], z_plot[-1], voltages[0], voltages[-1]])
+                ax.set_xlim([z_plot[0], z_plot[-1]])
                 ax.set_xlabel("Pixels")
             # Colorbar set up
+            fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             cbar = fig.colorbar(mapData, shrink=0.9, pad=0.05, aspect=15)
             cbar.ax.yaxis.set_ticks_position("both")
             cbar.ax.tick_params(axis="y", direction="in")
@@ -915,39 +919,33 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 mapData.set_clim(0)
         fig.show()
-        return metricDistances, voltages, dataToPlot
 
     def launchBigCut(self):
         """ Launches a cut in the big diagonal """
         if self.dataLoaded:
+            self.cutAlongLine(
+                0, self.cits_params["xPx"] - 1, 0, self.cits_params["yPx"] - 1
+            )
+            # Draw the line
             if self.ui_scaleMetric.isChecked():
                 ratioX = self.cits_params["xL"] / self.cits_params["xPx"]
                 ratioY = self.cits_params["yL"] / self.cits_params["yPx"]
             else:
                 ratioX = 1
                 ratioY = 1
-            # Simulates a left-click press at (0,0) and a release at xPx-1,yPx-1
-            simEvent = matplotlib.backend_bases.MouseEvent(
-                "button_press_event", self.ui_mapWidget.figure.canvas, 0, 0, button=1
-            )
-            simEvent.xdata = 0
-            simEvent.ydata = 0
-            self.currentShape = generateShape(
-                simEvent,
+            self.currentShape = Line(
+                0,
+                0,
                 self.ui_mapWidget.figure,
                 self.fig_topo,
                 self.getSpectrumColor(self.nSpectraDrawn),
                 ratioX,
                 ratioY,
+                xf=self.cits_params["xPx"] - 1,
+                yf=self.cits_params["yPx"] - 1,
             )
-            simEvent.xdata = self.cits_params["xPx"] - 1
-            simEvent.ydata = self.cits_params["yPx"] - 1
-            self.currentShape.update(simEvent)
-            X, Y, Z = self.cutAlongLine(
-                0, self.cits_params["xPx"] - 1, 0, self.cits_params["yPx"] - 1
-            )
+            self.currentShape.draw()
             self.ui_mapWidget.draw()
-            return X, Y, Z
 
     # %% Methods related to the map
     def clearMap(self):
