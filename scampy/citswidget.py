@@ -14,6 +14,7 @@ from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot, Dot, Line
 from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
 from .processing import levelTopo, normalizeDOS, linear_fit_function, findPixelsOnLine
+from .plotting import waterfallPlot
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
@@ -819,6 +820,24 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
         )
         x_plot, y_plot = findPixelsOnLine(xi, xf, yi, yf)
+        if self.ui_viewSelectedBox.isChecked():
+            if self.ui_scaleMetric.isChecked():
+                dx = self.cits_params["xL"] / self.cits_params["xPx"]
+                dy = self.cits_params["yL"] / self.cits_params["yPx"]
+            else:
+                dx, dy = 1, 1
+            for i in range(len(x_plot)):
+                self.addToShapesClicked(
+                    Dot(
+                        x_plot[i],
+                        y_plot[i],
+                        self.ui_mapWidget.figure,
+                        self.fig_topo,
+                        "yellow",
+                        dx,
+                        dy,
+                    )
+                )
         return self.cutPlot(x_plot, y_plot)
 
     def cutPlot(self, x_plot, y_plot):
@@ -826,86 +845,56 @@ class CitsWidget(QtWidgets.QMainWindow):
         Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) """
         # Build the data to plot with v as Y and z (number of pixels gone through) as X
         zPt = self.cits_params["zPt"]
-        voltages = np.arange(zPt)
+        voltage_indices = np.arange(zPt)
         chan = self.ui_channelBox.currentIndex()
-        z_plot = np.arange(x_plot.size)
         xi = x_plot[0]
         yi = y_plot[0]
-        zf = z_plot[-1]
-        # Bool to keep trace of the selected spectra
-        viewSelected = self.ui_viewSelectedBox.isChecked()
         # Matlab convention : Y (v) first then X (z)
         # Plot the built map in a new figure
         fig = pyplot.figure()
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title(self.mapName.split(".")[0] + " - Cut " + str(fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
-        # TODO: The waterfall and the 2D should be put in seperate functions.
+
+        voltage_array = (
+            self.cits_params["vStart"] + voltage_indices * self.cits_params["dV"]
+            if self.ui_scaleVoltage.isChecked()
+            else voltage_indices
+        )
+
         if self.ui_waterfallButton.isChecked():
-            if self.ui_scaleVoltage.isChecked():
-                voltages = (
-                    self.cits_params["vStart"] + voltages * self.cits_params["dV"]
-                )
-            for z in z_plot:
-                xc = int(x_plot[z])
-                yc = int(y_plot[z])
-                spectrum = self.cits_data[chan, yc, xc]
-                offset = (zf - z) * float(self.ui_shiftYBox.text())
-                ax.plot(voltages, spectrum + offset, "k", zorder=(z + 1) * 2)
-                # White filling under the curves
-                ax.fill_between(
-                    voltages,
-                    spectrum + offset,
-                    offset,
-                    facecolor="w",
-                    lw=0,
-                    zorder=(z + 1) * 2 - 1,
-                )
-            ax.set_xlim([voltages[0], voltages[-1]])
+            waterfallPlot(
+                ax,
+                voltage_array,
+                self.cits_data[chan, y_plot, x_plot],
+                offset=float(self.ui_shiftYBox.text()),
+            )
         else:
-            dx = self.cits_params["xL"] / self.cits_params["xPx"]
-            dy = self.cits_params["yL"] / self.cits_params["yPx"]
-            dataToPlot = self.cits_data[chan, y_plot, x_plot, :].T
-            if viewSelected:
-                for z in z_plot:
-                    self.addToShapesClicked(
-                        Dot(
-                            x_plot[z],
-                            y_plot[z],
-                            self.fig_map,
-                            self.fig_topo,
-                            "yellow",
-                            dx,
-                            dy,
-                        )
-                    )
             # Change the scales if needed
             if self.ui_scaleVoltage.isChecked():
-                voltages = (
-                    self.cits_params["vStart"] + voltages * self.cits_params["dV"]
-                )
                 ax.set_ylabel("Bias (V)")
             else:
                 ax.set_ylabel("Voltage index")
+            ax.set_ylim([voltage_array[0], voltage_array[-1]])
 
             if self.ui_scaleMetric.isChecked():
-                metricDistances = np.sqrt(
-                    (dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2
-                )
-                mapData = pyplot.pcolormesh(
-                    metricDistances,
-                    voltages,
-                    dataToPlot,
-                    cmap=self.ui_colorBarBox.currentText(),
-                )
-                ax.set_xlim([metricDistances[0], metricDistances[-1]])
+                dx = self.cits_params["xL"] / self.cits_params["xPx"]
+                dy = self.cits_params["yL"] / self.cits_params["yPx"]
+                x_array = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
                 ax.set_xlabel("Distance (nm)")
             else:
-                mapData = pyplot.pcolormesh(
-                    z_plot, voltages, dataToPlot, cmap=self.ui_colorBarBox.currentText()
-                )
-                ax.set_xlim([z_plot[0], z_plot[-1]])
+                dx, dy = 1, 1
+                x_array = np.arange(len(x_plot))
                 ax.set_xlabel("Pixels")
+            ax.set_xlim([x_array[0], x_array[-1]])
+
+            mapData = pyplot.pcolormesh(
+                np.arange(len(x_plot)),
+                voltage_array,
+                self.cits_data[chan, y_plot, x_plot, :].T,
+                cmap=self.ui_colorBarBox.currentText(),
+            )
+
             # Colorbar set up
             fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             cbar = fig.colorbar(mapData, shrink=0.9, pad=0.05, aspect=15)
