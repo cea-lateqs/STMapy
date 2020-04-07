@@ -434,16 +434,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         logging.debug("Widgets updated !")
 
     # %% Methods related to spectra
-    def normalizeSpectrum(self):
-        """ Normalizes the spectra of displayed index """
-        chan = self.ui_channelBox.currentIndex()
-        # TODO: can be vectorised
-        for y in range(self.cits_params["xPx"]):
-            for x in range(self.cits_params["yPx"]):
-                self.cits_data[chan, y, x] = normalizeDOS(
-                    self.cits_data[chan, y, x], self.cits_params["zPt"]
-                )
-
     def averageSpectrum(self, xi, xf, yi, yf):
         """ Averages the spectra contained in the rectangle drawn
         by the points (xi,yi);(xf,yi);(xf,yf) and (xi,yf) """
@@ -1097,13 +1087,10 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.addChannel(FFTData, "FFT of " + self.channelList[numChanToFFT])
 
     def normalizeCurrentChannel(self):
+        """ Adds the normalized current data as a new channel """
         if self.dataLoaded:
-            yPx = self.cits_params["yPx"]
-            xPx = self.cits_params["xPx"]
-            zPt = self.cits_params["zPt"]
             chan = self.ui_channelBox.currentIndex()
-            normData = np.zeros(shape=(yPx, xPx, zPt))
-            for y in range(yPx):
-                for x in range(xPx):
-                    normData[y][x] = normalizeDOS(self.cits_data[chan][y][x], 10)
-            self.addChannel(normData, "Normalized " + self.channelList[chan])
+            self.addChannel(
+                normalizeDOS(self.cits_data[chan]),
+                "Normalized " + self.channelList[chan],
+            )

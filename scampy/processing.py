@@ -28,11 +28,13 @@ def directionAverageCITS(cits_data, nb_to_avg, direction):
     return new_data
 
 
-def normalizeDOS(dos, dos_length):
-    mean_l = np.mean(dos[: dos_length // 4])
-    mean_r = np.mean(dos[3 * dos_length // 4 :])
+def normalizeDOS(dos, dos_length=None):
+    if dos_length is None:
+        dos_length = dos.shape[-1]
+    mean_l = np.mean(dos[..., : dos_length // 4], axis=-1)
+    mean_r = np.mean(dos[..., 3 * dos_length // 4 :], axis=-1)
     mean = (mean_l + mean_r) / 2
-    return dos / mean
+    return dos / mean[..., np.newaxis]
 
 
 def linearFitFunction(x, a, b):
