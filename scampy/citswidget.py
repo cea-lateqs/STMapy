@@ -134,7 +134,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self,
             "Choose a CITS file to read or several to average",
             self.wdir,
-            " RHK file (*.sm4);;Matlab file (*.mat);;3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)",
+            " RHK file (*.sm4);;3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)",
         )
         # getOpenFilesNames retunrs a tuple with Cits_names as first element
         # and extension as second. We just need the names.
@@ -185,10 +185,6 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.dataLoaded = True
             elif extension == "txt":
                 self.readTopo(cits)
-            elif extension == "" or extension == "mat":
-                self.clearMap()
-                self.mapType = "Sm4 to .mat"
-                self.dataLoaded = self.loadCitsSm4(cits)
             elif extension == "sm4":
                 self.clearMap()
                 self.mapType = "Sm4"
@@ -293,15 +289,6 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.topo,
                     cmap=colormap,
                 )
-            elif self.mapType == "Sm4 to .mat":
-                XYmap = self.ax_topo.imshow(self.topo, extent=[0, max_x, 0, max_y])
-                # We plot our spec location points.
-                locations = True
-                if locations:
-                    logging.debug("Spectrum Locations will be printed")
-                    patch = self.cits_params["Patch"]
-                    for m in range(len(patch)):  # iterate over the number of locations
-                        self.ax_topo.add_patch(patch[m])
             else:
                 self.ax_topo.axis([0, max_x, 0, max_y])
                 # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED
