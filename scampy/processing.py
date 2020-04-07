@@ -8,25 +8,24 @@ import scipy.interpolate
 import scipy.optimize
 
 
-def directionAverageCITS(cits_data, Navg, direction):
+def directionAverageCITS(cits_data, nb_to_avg, direction):
     """ Averages the CITS in one direction. """
-    nChannels, yPx, xPx, zPt = cits_data.shape
+    nb_channels, yPx, xPx, zPt = cits_data.shape
 
     if direction == "y":
-        new_data = np.zeros(shape=(nChannels, yPx // Navg, xPx, zPt))
-        for y in range(0, yPx, Navg):
-            new_data[:, y // Navg, :, :] = cits_data[:, y : y + Navg, :, :].mean(axis=1)
+        new_data = np.zeros(shape=(nb_channels, yPx // nb_to_avg, xPx, zPt))
+        for y in range(0, yPx, nb_to_avg):
+            new_data[:, y // nb_to_avg, :, :] = cits_data[
+                :, y : y + nb_to_avg, :, :
+            ].mean(axis=1)
     else:
-        new_data = np.zeros(shape=(nChannels, yPx, xPx // Navg, zPt))
-        for x in range(0, xPx, Navg):
-            new_data[:, :, x // Navg, :] = cits_data[:, :, x : x + Navg, :].mean(axis=2)
+        new_data = np.zeros(shape=(nb_channels, yPx, xPx // nb_to_avg, zPt))
+        for x in range(0, xPx, nb_to_avg):
+            new_data[:, :, x // nb_to_avg, :] = cits_data[
+                :, :, x : x + nb_to_avg, :
+            ].mean(axis=2)
 
     return new_data
-
-
-def computeAngle(self, Dmoire):
-    """ Computes twist angle of a given graphene moiré of period Dmoire. """
-    return 2 * np.arcsin(0.246 / (2 * Dmoire)) * 180 / np.pi
 
 
 def normalizeDOS(dos, dos_length):
@@ -44,42 +43,44 @@ def linearFitFunction(x, a, b):
 def levelTopo(topo):
     yPx, xPx = topo.shape
     # Numpy array to save the leveled topo
-    topo_leveled = np.zeros(shape=(yPx, xPx))
-    fitX = np.arange(xPx)
+    topo_leveled = np.zeros_like(topo)
+    fit_x = np.arange(xPx)
 
+    # TODO: Can be vectorized ?
     for y in range(yPx):
-        fitY = topo[y]
-        f = sp.interpolate.InterpolatedUnivariateSpline(fitX, fitY, k=1)
-        popt, pcov = sp.optimize.curve_fit(linearFitFunction, fitX, f(fitX))
-        topo_leveled[y] = fitY - (popt[0] * fitX + popt[1])
+        fit_y = topo[y]
+        f = sp.interpolate.InterpolatedUnivariateSpline(fit_x, fit_y, k=1)
+        popt, pcov = sp.optimize.curve_fit(linearFitFunction, fit_x, f(fit_y))
+        topo_leveled[y] = fit_y - (popt[0] * fit_x + popt[1])
     # Return the leveled topo
     return topo_leveled
 
 
-def extractSlope(topo, dataToFit, dZ, cutOffValue):
+def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
     """ Do a linear fit of the data and returns the slope and the coef found.
     Called for zSpectros.
     """
-    yPx, xPx, zPt = dataToFit.shape
-    zg = np.zeros(shape=(yPx, xPx, zPt))
-    slopeData = np.zeros(shape=(yPx, xPx, zPt))
-    coefData = np.zeros(shape=(yPx, xPx, zPt))
-    xArray = np.arange(zPt) * dZ
+    yPx, xPx, zPt = data_to_fit.shape
+
+    slope_data = np.zeros(shape=(yPx, xPx, zPt))
+    coef_data = np.zeros(shape=(yPx, xPx, zPt))
+    altitudes = np.arange(zPt) * delta_z
+
+    cut_off_filter = data_to_fit > cut_off_value
+    filtered_data = data_to_fit[:, :, cut_off_filter]
+    filtered_altitudes = altitudes[cut_off_filter]
+    # TODO: Can be vectorized ?
     for y in range(yPx):
         for x in range(xPx):
-            rawData = dataToFit[y, x]
-            mask = rawData > cutOffValue
-            xArrayFiltered = xArray[mask]
-            dataFiltered = np.log(rawData[mask])
             popt, pcov = sp.optimize.curve_fit(
-                linearFitFunction, xArrayFiltered, dataFiltered
+                linearFitFunction, filtered_altitudes, filtered_data[y, x]
             )
-            zg[y, x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y, x]
-            slopeData[y, x, :] = popt[0]
-            coefData[y, x, :] = popt[1]
+            slope_data[y, x, :] = popt[0]
+            coef_data[y, x, :] = popt[1]
+    zg = 1 / 20.5 * np.log(data_to_fit) + altitudes + topo[y, x, np.newaxis]
 
     # return data to be added by "addchannel" protocol in citswidget
-    return slopeData, coefData, zg
+    return slope_data, coef_data, zg
 
 
 def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
