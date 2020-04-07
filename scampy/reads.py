@@ -751,13 +751,14 @@ def readCitsSm4Bin(filepath):
 
     topo = FImage
 
-    # create average Data :
-    average = np.zeros(shape=(ySpec, xSpec, zPt))
-    for y in range(ySpec):  # len(SpectralData_y[:,0])):
-        for x in range(xSpec):
-            for r in range(repetitions):
-                average[y][x] += (
-                    SpectralData_y[:, (xSpec * y + x) * repetitions + r] / repetitions
-                )
+    # create average Data on repetitions :
+    average = np.mean(m_data, axis=0)
+    # average = np.zeros(shape=(ySpec, xSpec, zPt))
+    # for y in range(ySpec):  # len(SpectralData_y[:,0])):
+    #     for x in range(xSpec):
+    #         for r in range(repetitions):
+    #             average[y][x] += (
+    #                 SpectralData_y[:, (xSpec * y + x) * repetitions + r] / repetitions
+    #             )
 
     return topo, m_data, channelList, m_params, average
