@@ -1018,26 +1018,19 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.voltageLine = 0
 
     # Post-processing methods
-    def addChannel(self, newChannelData, channelName):
+    def addChannel(self, new_channel_data, channel_name):
         """ Adds a channel to the whole data array """
-        # Gets parameters for reshaping
-        nChannels = len(self.channelList)
-        xPx = self.cits_params["xPx"]
-        yPx = self.cits_params["yPx"]
-        zPt = self.cits_params["zPt"]
         try:
-            newData = np.zeros(shape=(nChannels + 1, yPx, xPx, zPt))
+            self.cits_data = np.concatenate(
+                (self.cits_data, new_channel_data[np.newaxis, ...]), axis=0
+            )
         except MemoryError:
             logging.error(
                 "The data is too big ! Or the memory too small... Aborting addChannel !"
             )
             return
-        newData[0:nChannels] = self.cits_data
-        newData[nChannels] = newChannelData
-        self.cits_data = newData
-        del newData
         # Updates the channel list
-        self.channelList.append(channelName)
+        self.channelList.append(channel_name)
         self.ui_channelBox.clear()
         self.ui_channelBox.addItems(self.channelList)
 
@@ -1078,6 +1071,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.addChannel(
                 derivData, "Derivative of " + self.channelList[numChanToDeriv]
             )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def extractFFT(self, numChanToFFT, axisOfFFT):
         """ Extracts the FFT of a channel and adds it to the data """
@@ -1085,6 +1079,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             FFTData = np.fft.fft(self.cits_data[numChanToFFT], axis=axisOfFFT)
             # Add the channel to the data
             self.addChannel(FFTData, "FFT of " + self.channelList[numChanToFFT])
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def normalizeCurrentChannel(self):
         """ Adds the normalized current data as a new channel """
@@ -1094,3 +1089,4 @@ class CitsWidget(QtWidgets.QMainWindow):
                 normalizeDOS(self.cits_data[chan]),
                 "Normalized " + self.channelList[chan],
             )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
