@@ -56,36 +56,30 @@ def levelTopo(topo):
     return topo_leveled
 
 
-def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit):
-    """ Do a linear fit of the data in the asked channel and add the slope and the coef found as channels.
+def extractSlope(topo, dataToFit, dZ, cutOffValue):
+    """ Do a linear fit of the data and returns the slope and the coef found.
     Called for zSpectros.
-     """
-    yPx = m_params["yPx"]
-    xPx = m_params["xPx"]
-    zPt = m_params["zPt"]
-    dZ = m_params["dV"]
+    """
+    yPx, xPx, zPt = dataToFit.shape
     zg = np.zeros(shape=(yPx, xPx, zPt))
     slopeData = np.zeros(shape=(yPx, xPx, zPt))
     coefData = np.zeros(shape=(yPx, xPx, zPt))
     xArray = np.arange(zPt) * dZ
     for y in range(yPx):
         for x in range(xPx):
-            rawData = m_data[numChanToFit][y][x]
+            rawData = dataToFit[y, x]
             mask = rawData > cutOffValue
             xArrayFiltered = xArray[mask]
             dataFiltered = np.log(rawData[mask])
             popt, pcov = sp.optimize.curve_fit(
                 linearFitFunction, xArrayFiltered, dataFiltered
             )
-            zg[y][x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y][x]
+            zg[y, x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y, x]
             slopeData[y, x, :] = popt[0]
             coefData[y, x, :] = popt[1]
-    # Add the created channel to the data
-    slopeDataName = "Slope by linear fit of " + channelList[numChanToFit]
-    coefDataName = "Coef by linear fit of " + channelList[numChanToFit]
 
     # return data to be added by "addchannel" protocol in citswidget
-    return slopeData, slopeDataName, coefData, coefDataName, zg
+    return slopeData, coefData, zg
 
 
 def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):

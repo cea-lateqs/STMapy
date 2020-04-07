@@ -165,30 +165,23 @@ class CitsWidget(QtWidgets.QMainWindow):
             elif extension == "3ds":
                 self.clearMap()
                 self.mapType = "Nanonis"
-                # The zSpectro bool has to be checked in readCits3dsBin
-                zSpectro = False
-                if zSpectro:
-                    (
-                        self.topo,
-                        self.cits_data,
-                        self.channelList,
-                        self.cits_params,
-                        slopeData,
-                        slopeDataName,
-                        coefData,
-                        coefDataName,
-                        zg,
-                    ) = readCits3dsBin(cits, zSpectro)
-                    self.addChannel(slopeData, slopeDataName)
-                    self.addChannel(coefData, coefDataName)
-                    self.addChannel(zg, "Zg")
-                else:
-                    (
-                        self.topo,
-                        self.cits_data,
-                        self.channelList,
-                        self.cits_params,
-                    ) = readCits3dsBin(cits, zSpectro)
+                (
+                    self.topo,
+                    self.cits_data,
+                    self.channelList,
+                    self.cits_params,
+                    zSpectroData,
+                ) = readCits3dsBin(cits)
+                if zSpectroData is not None:
+                    self.addChannel(
+                        zSpectroData["slopeData"],
+                        "Slope by linear fit of {}".format(zSpectroData["zChannel"]),
+                    )
+                    self.addChannel(
+                        zSpectroData["coefData"],
+                        "Coef by linear fit of {}".format(zSpectroData["zChannel"]),
+                    )
+                    self.addChannel(zSpectroData["Zg"], "Zg")
                 self.dataLoaded = True
             elif extension == "txt":
                 self.readTopo(cits)

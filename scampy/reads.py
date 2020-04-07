@@ -163,11 +163,13 @@ def readTopo(filepath):
     return np.genfromtxt(filepath, delimiter="\t", comments="#")
 
 
-def readCits3dsBin(filepath, zSpectro):
+def readCits3dsBin(filepath):
     # The divider is already taken into account by Nanonis during the experiment so no need to process it again*
     half = False
     # Read the header of the map until its end ("HEADER_END")
     header_end_not_found = True
+    # Assume regular CITS unless a Sweep Signal of Z is found
+    zSpectro = False
     with open(filepath, "rb") as f:
         for line in f:
             # Header lines can be treated as regular strings
@@ -238,7 +240,7 @@ def readCits3dsBin(filepath, zSpectro):
         if half:
             try:
                 topo = np.zeros(shape=(yPx, xPx))
-                m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
+                m_data = np.zeros(shape=(nChannels // 2, yPx, xPx, zPt))
             except MemoryError:
                 logging.error(
                     "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n"
@@ -307,37 +309,34 @@ def readCits3dsBin(filepath, zSpectro):
         "dV": dV,
     }
 
-    # self.m_statusBar.showMessage(self.m_params)
     # Convert currents in nA
     for i in range(len(channelList)):
         chan = channelList[i]
         if "(A)" in chan:
             m_data[i] = np.abs(m_data[i]) * 10 ** 9
             channelList[i] = chan.replace("(A)", "(nA)")
-    # Convert topo in nm
-    topo = topo * 10 ** 9
-    # Level topo
-    topo = levelTopo(topo)
-    # Test
+    # Convert topo in nm and level topo
+    topo = levelTopo(topo * 10 ** 9)
+    # Extract supplementary data for zSpectro
     if zSpectro:
-        slopeData, slopeDataName, coefData, coefDataName, zg = extractSlope(
-            topo, m_data, m_params, channelList, 0.01, 0
-        )
+        zSpectroData = {"zChannel": channelList[0]}
+        (
+            zSpectroData["slopeData"],
+            zSpectroData["coefData"],
+            zSpectroData["Zg"],
+        ) = extractSlope(topo, m_data[0], dZ=dV, cutOffValue=0.01)
+
         # return data and data to be added by addchannel
         return (
             topo,
             m_data,
             channelList,
             m_params,
-            slopeData,
-            slopeDataName,
-            coefData,
-            coefDataName,
-            zg,
+            zSpectroData,
         )
 
     else:
-        return topo, m_data, channelList, m_params
+        return topo, m_data, channelList, m_params, None
 
 
 def sm4readFileHeader(f, ObjectIDCode):
