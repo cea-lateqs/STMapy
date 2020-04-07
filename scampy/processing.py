@@ -8,6 +8,22 @@ import scipy.interpolate
 import scipy.optimize
 
 
+def directionAverageCITS(cits_data, Navg, direction):
+    """ Averages the CITS in one direction. """
+    nChannels, yPx, xPx, zPt = cits_data.shape
+
+    if direction == "y":
+        new_data = np.zeros(shape=(nChannels, yPx // Navg, xPx, zPt))
+        for y in range(0, yPx, Navg):
+            new_data[:, y // Navg, :, :] = cits_data[:, y : y + Navg, :, :].mean(axis=1)
+    else:
+        new_data = np.zeros(shape=(nChannels, yPx, xPx // Navg, zPt))
+        for x in range(0, xPx, Navg):
+            new_data[:, :, x // Navg, :] = cits_data[:, :, x : x + Navg, :].mean(axis=2)
+
+    return new_data
+
+
 def computeAngle(self, Dmoire):
     """ Computes twist angle of a given graphene moiré of period Dmoire. """
     return 2 * np.arcsin(0.246 / (2 * Dmoire)) * 180 / np.pi
@@ -20,7 +36,7 @@ def normalizeDOS(dos, dos_length):
     return dos / mean
 
 
-def linear_fit_function(x, a, b):
+def linearFitFunction(x, a, b):
     """ Basic function for linear fitting. """
     return a * x + b
 
@@ -34,7 +50,7 @@ def levelTopo(topo):
     for y in range(yPx):
         fitY = topo[y]
         f = sp.interpolate.InterpolatedUnivariateSpline(fitX, fitY, k=1)
-        popt, pcov = sp.optimize.curve_fit(linear_fit_function, fitX, f(fitX))
+        popt, pcov = sp.optimize.curve_fit(linearFitFunction, fitX, f(fitX))
         topo_leveled[y] = fitY - (popt[0] * fitX + popt[1])
     # Return the leveled topo
     return topo_leveled
@@ -59,7 +75,7 @@ def extractSlope(topo, m_data, m_params, channelList, cutOffValue, numChanToFit)
             xArrayFiltered = xArray[mask]
             dataFiltered = np.log(rawData[mask])
             popt, pcov = sp.optimize.curve_fit(
-                linear_fit_function, xArrayFiltered, dataFiltered
+                linearFitFunction, xArrayFiltered, dataFiltered
             )
             zg[y][x] = 1 / 20.5 * np.log(rawData) + np.arange(zPt * dZ, dZ) + topo[y][x]
             slopeData[y, x, :] = popt[0]

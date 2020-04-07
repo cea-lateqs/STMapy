@@ -13,7 +13,13 @@ from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot, Dot, Line
 from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
-from .processing import levelTopo, normalizeDOS, linear_fit_function, findPixelsOnLine
+from .processing import (
+    levelTopo,
+    normalizeDOS,
+    linearFitFunction,
+    findPixelsOnLine,
+    directionAverageCITS,
+)
 from .plotting import waterfallPlot
 
 # Set explictly the backend to Qt for consistency with pyqt.
@@ -98,7 +104,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_saveCsvButton.clicked.connect(self.saveSpectra)
         self.ui_clearSpec.clicked.connect(self.clearSpectrum)
         self.ui_scaleVoltage.toggled.connect(self.clearSpectrum)
-        self.ui_averageCitsButton.clicked.connect(self.avgSpectrasX)
+        self.ui_averageCitsButton.clicked.connect(self.averageCITSOnAxis)
         self.ui_wholeLengthCutButton.clicked.connect(self.launchBigCut)
         self.ui_normButton.clicked.connect(self.normalizeCurrentChannel)
         self.ui_avgSpec.clicked.connect(self.launchAvgSpectrum)
@@ -617,7 +623,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 vEnd = self.cits_params["vEnd"]
                 dataToFit = self.lastSpectrum[0]
             X = np.arange(vStart, vEnd, dV)
-            popt, pcov = sp.optimize.curve_fit(linear_fit_function, X, dataToFit)
+            popt, pcov = sp.optimize.curve_fit(linearFitFunction, X, dataToFit)
             slope = popt[0]
             coef = popt[1]
             logging.info(
@@ -1065,48 +1071,26 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_channelBox.clear()
         self.ui_channelBox.addItems(self.channelList)
 
-    def avgSpectrasX(self):
-        """ Slot that averages the spectras in the X direction of the loaded
+    def averageCITSOnAxis(self, direction="x"):
+        """ Slot that averages the spectras in one direction of the loaded
         CITS and replaces the loaded CITS by the result """
         if self.dataLoaded:  # Check if a CITS was loaded
             # Get the needed params
             Navg = int(self.ui_CitsAvgBox.value())
-            xPx = self.cits_params["xPx"]
-            yPx = self.cits_params["yPx"]
-            zPt = self.cits_params["zPt"]
-            # Try the allocation
             try:
-                new_data = np.zeros(
-                    shape=(len(self.channelList), yPx, xPx // Navg, zPt)
-                )
+                new_data = directionAverageCITS(self.cits_data, Navg, direction)
             except MemoryError:
                 logging.error("Not enough memory to average spectra !")
                 return
-            # Average in X for each channel and Y
-            for i_chan in range(len(self.channelList)):
-                for y in range(yPx):
-                    # To average, for each x, add every spectrum between x and x+Navg divided by Navg.
-                    for x in range(0, xPx, Navg):
-                        # If the averaging window is not contained in the CITS data, stop averaging.
-                        # The last spectra of this window will then will dismissed.
-                        if x + Navg > xPx:
-                            break
-                        # Else, average by adding the spectra of the avergaging window and dividing by Navg
-                        else:
-                            spectra = np.zeros(zPt)
-                            for i in range(int(Navg)):
-                                spectra = (
-                                    spectra + self.cits_data[i_chan, y, x + i] / Navg
-                                )
-                                # Store the result in new_data
-                                new_data[i_chan, y, x // Navg] = spectra
+
             # If eveything went well, clear the current map and replace it by
-            # the created data and change xPx
+            # the created data.
             self.clearMap()
-            self.mapName = "Average_" + str(Navg)
-            self.cits_params["xPx"] = xPx / Navg
+            self.mapName = "Average_on_{}_every_{}_spectra".format(direction, Navg)
             self.dataLoaded = True
             self.cits_data = new_data
+            self.cits_params["yPx"] = new_data.shape[1]
+            self.cits_params["xPx"] = new_data.shape[2]
             self.updateWidgets()
 
     def extractDerivative(self, numChanToDeriv):
