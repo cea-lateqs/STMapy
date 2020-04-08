@@ -92,9 +92,9 @@ class Shape:
         raise NotImplementedError("Draw not implemented !")
 
     def drawMaps(self):
-        if self.map1 != 0:
+        if self.map1 is not None:
             self.map1.canvas.draw()
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.map2.canvas.draw()
 
     def updateMaps(self, fig_map, fig_topo):
@@ -104,7 +104,7 @@ class Shape:
     def remove(self):
         self.shape1.remove()
         del self.shape1
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.shape2.remove()
             del self.shape2
         self.drawMaps()
@@ -119,7 +119,7 @@ class Dot(Shape):
             ls="None",
             marker="o",
         )
-        if self.map2 != 0:
+        if self.map2 is not None:
             (self.shape2,) = self.map2.axes[0].plot(
                 [(self.xi + 0.5) * self.ratio_x, (self.xf + 0.5) * self.ratio_x],
                 [(self.yi + 0.5) * self.ratio_y, (self.yf + 0.5) * self.ratio_y],
@@ -133,7 +133,7 @@ class Dot(Shape):
         self.shape1.set_data(
             [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5]
         )
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.shape2.set_data(
                 [(self.xi + 0.5) * self.ratio_x, (self.xf + 0.5) * self.ratio_x],
                 [(self.yi + 0.5) * self.ratio_y, (self.yf + 0.5) * self.ratio_y],
@@ -146,7 +146,7 @@ class Line(Shape):
         (self.shape1,) = self.map1.axes[0].plot(
             [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5], "k--"
         )
-        if self.map2 != 0:
+        if self.map2 is not None:
             (self.shape2,) = self.map2.axes[0].plot(
                 [(self.xi + 0.5) * self.ratio_x, (self.xf + 0.5) * self.ratio_x],
                 [(self.yi + 0.5) * self.ratio_y, (self.yf + 0.5) * self.ratio_y],
@@ -158,7 +158,7 @@ class Line(Shape):
         self.shape1.set_data(
             [self.xi + 0.5, self.xf + 0.5], [self.yi + 0.5, self.yf + 0.5]
         )
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.shape2.set_data(
                 [(self.xi + 0.5) * self.ratio_x, (self.xf + 0.5) * self.ratio_x],
                 [(self.yi + 0.5) * self.ratio_y, (self.yf + 0.5) * self.ratio_y],
@@ -177,7 +177,7 @@ class Rectangle(Shape):
                 alpha=0.5,
             )
         )
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.shape2 = self.map2.axes[0].add_patch(
                 patches.Rectangle(
                     (self.xi * self.ratio_x, self.yi * self.ratio_y),
@@ -193,7 +193,7 @@ class Rectangle(Shape):
         self.shape1.set_xy([self.xi, self.yi])
         self.shape1.set_width(self.xf - self.xi)
         self.shape1.set_height(self.yf - self.yi)
-        if self.map2 != 0:
+        if self.map2 is not None:
             self.shape2.set_xy([self.xi * self.ratio_x, self.yi * self.ratio_y])
             self.shape2.set_width(self.xf * self.ratio_x - self.xi * self.ratio_x)
             self.shape2.set_height(self.yf * self.ratio_y - self.yi * self.ratio_y)

@@ -45,9 +45,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Set up figures
         self.toolbar_map = NavigationToolbar(self.ui_mapWidget, self)
         self.toolbar_spec = NavigationToolbar(self.ui_specWidget, self)
-        self.ui_saveCsvButton = QtWidgets.QPushButton(
-            "Save as CSV"
-        )  # Add csv save button
+        # Add csv save button
+        self.ui_saveCsvButton = QtWidgets.QPushButton("Save as CSV")
         self.toolbar_spec.addWidget(self.ui_saveCsvButton)
         self.map_layout.insertWidget(0, self.toolbar_map)
         self.spec_layout.insertWidget(0, self.toolbar_spec)
@@ -56,7 +55,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.fig_spec.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
         # Variables linked to clicks on map
         self.shapes_clicked = []
-        self.voltageLine = 0
+        self.voltageLine = None
         # Colormaps
         self.ui_colorBarBox.addItems(matplotlib.pyplot.colormaps())
         # Boolean that is True if a map is loaded
@@ -70,7 +69,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         )
         # Other parameters used after map loading
         self.mapType = ""
-        self.fig_topo = 0
+        self.fig_topo = None
         self.topo = []
         # Connect all widgets
         self.connect()
@@ -257,7 +256,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 figtitle = "Raw topo data"
             # Set up the figure for the plot
-            if self.fig_topo == 0:
+            if self.fig_topo is None:
                 self.fig_topo = pyplot.figure()
             else:
                 self.fig_topo.clear()
@@ -343,8 +342,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         Put back self.fig_topo to 0 to indicate that no topo figure exists.
         """
         logging.debug("Topo closing")
-        self.fig_topo = 0
-        return
+        self.fig_topo = None
 
     # %% Updating methods. Usually called by signals
     def updateAvgVariables(self):
@@ -494,7 +492,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Clears the spectrum window """
         self.ax_spec.clear()
         self.nSpectraDrawn = 0
-        self.voltageLine = 0
+        self.voltageLine = None
         self.clearShapesClicked()
         # self.drawTopo()
         self.ui_specWidget.draw()
@@ -1012,10 +1010,10 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     def clearVoltageLine(self):
         """ Removes the vertical voltage line """
-        if self.voltageLine:
+        if self.voltageLine is not None:
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
             self.ui_specWidget.draw()
-        self.voltageLine = 0
+            self.voltageLine = None
 
     # Post-processing methods
     def addChannel(self, new_channel_data, channel_name):
