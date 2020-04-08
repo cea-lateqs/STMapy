@@ -339,7 +339,7 @@ def readCits3dsBin(filepath):
         return topo, m_data, channelList, m_params, None
 
 
-def sm4readFileHeader(f, ObjectIDCode):
+def readSm4FileHeader(f, ObjectIDCode):
 
     Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
     Signature = stringify(np.fromfile(f, dtype=np.uint16, count=18))
@@ -397,7 +397,7 @@ def sm4readFileHeader(f, ObjectIDCode):
     return PageIndexHeader_PageCount, PageIndex
 
 
-def sm4readpageHeader(
+def readSm4PageHeader(
     f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j
 ):
     # f.seek(nbytes,0 = a partir du début) va au byte n + 1
@@ -557,7 +557,7 @@ def readCitsSm4Bin(filepath):
         # f = open(filepath, "rb")
 
         # Get main info from File Header
-        PageIndexHeader_PageCount, PageIndex = sm4readFileHeader(f, ObjectIDCode)
+        PageIndexHeader_PageCount, PageIndex = readSm4FileHeader(f, ObjectIDCode)
 
         # Read and record each Pages Headers and Data
         PageHeader = []
@@ -571,7 +571,7 @@ def readCitsSm4Bin(filepath):
 
         for j in range(PageIndexHeader_PageCount):
 
-            PageHeader, TextStrings = sm4readpageHeader(
+            PageHeader, TextStrings = readSm4PageHeader(
                 f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j
             )
 
