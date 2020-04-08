@@ -475,6 +475,13 @@ class CitsWidget(QtWidgets.QMainWindow):
                         limit_aboveV, N_aboveV
                     ),
                 )
+                if viewSelected:
+                    pixel_pos = np.argwhere(isAbove).T + 0.5
+                    color = self.getSpectrumColor(self.nSpectraDrawn - 1)
+                    self.ax_map.plot(
+                        pixel_pos[0], pixel_pos[1], c=color, marker="o", ls="None",
+                    )
+                    self.ui_mapWidget.draw()
             N_belowV = len(belowValues)
             if N_belowV != 0:
                 self.drawSpectrum(
@@ -483,10 +490,13 @@ class CitsWidget(QtWidgets.QMainWindow):
                         limit_belowV, N_belowV
                     ),
                 )
-            if viewSelected:
-                # TODO: to reimplement with np.indices or np.where
-                # self.ax_map.plot(xPts, yPts, c=cPts, marker="o", ls="None")
-                pass
+                if viewSelected:
+                    pixel_pos = np.argwhere(isBelow).T + 0.5
+                    color = self.getSpectrumColor(self.nSpectraDrawn - 1)
+                    self.ax_map.plot(
+                        pixel_pos[0], pixel_pos[1], c=color, marker="o", ls="None",
+                    )
+                    self.ui_mapWidget.draw()
 
     def clearSpectrum(self):
         """ Clears the spectrum window """
