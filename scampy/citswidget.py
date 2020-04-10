@@ -823,6 +823,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title(self.mapName.split(".")[0] + " - Cut " + str(fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
+        self.ui_mapWidget.draw()
 
         voltage_array = (
             self.cits_params["vStart"] + voltage_indices * self.cits_params["dV"]
@@ -857,7 +858,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             ax.set_xlim([x_array[0], x_array[-1]])
 
             mapData = pyplot.pcolormesh(
-                np.arange(len(x_plot)),
+                x_array,
                 voltage_array,
                 self.cits_data[chan, y_plot, x_plot, :].T,
                 cmap=self.ui_colorBarBox.currentText(),
