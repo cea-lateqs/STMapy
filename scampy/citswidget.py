@@ -35,24 +35,26 @@ class CitsWidget(QtWidgets.QMainWindow):
         uic.loadUi(os.path.join(os.path.dirname(__file__), "ui_citswidget.ui"), self)
         # Set up the user interface from Designer.
         self.setAutoFillBackground(True)
-        # Initiate arrays
+        # TODO: CITS should be a dedicated object
         self.cits_data = np.ndarray([])
-        self.summed_spectra = np.ndarray([])
-        self.nb_summed_spectra = 0
         self.cits_params = {}
         self.channelList = []
-        self.mapName = ""
-        # Set up figures
+        self.cits_name = ""
+        self.summed_spectra = np.ndarray([])
+        self.nb_summed_spectra = 0
+        # Set up map figure
         self.toolbar_map = NavigationToolbar(self.ui_mapWidget, self)
+        # Set up spectrum figure
+        self.ax_spec = self.ui_specWidget.figure.add_subplot(111)
+        self.ui_specWidget.figure.subplots_adjust(
+            left=0.125, right=0.95, bottom=0.15, top=0.92
+        )
         self.toolbar_spec = NavigationToolbar(self.ui_specWidget, self)
         # Add csv save button
         self.ui_saveCsvButton = QtWidgets.QPushButton("Save as CSV")
         self.toolbar_spec.addWidget(self.ui_saveCsvButton)
         self.map_layout.insertWidget(0, self.toolbar_map)
         self.spec_layout.insertWidget(0, self.toolbar_spec)
-        self.fig_spec = self.ui_specWidget.figure
-        self.ax_spec = self.fig_spec.add_subplot(111)
-        self.fig_spec.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
         # Variables linked to clicks on map
         self.shapes_clicked = []
         self.voltageLine = None
@@ -124,6 +126,20 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitLowerBox.setVisible)
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitUpperLabel.setVisible)
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitLowerLabel.setVisible)
+
+    @property
+    def metric_ratios(self):
+        ratioX = 1
+        ratioY = 1
+        if self.ui_scaleMetric.isChecked():
+            try:
+                ratioX = self.cits_params["xL"] / self.cits_params["xPx"]
+                ratioY = self.cits_params["yL"] / self.cits_params["yPx"]
+            except KeyError:
+                logging.warning(
+                    "Metric ratios could not be computed. Is the CITS loaded with all parameters ?"
+                )
+        return {"x": ratioX, "y": ratioY}
 
     # %% Reading and loading CITS methods
     def askCits(self):
@@ -208,8 +224,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             # After reading, check if the data was read correctly and update the working directory and the map name
             if self.dataLoaded:
                 self.wdir = os.path.dirname(cits)
-                self.mapName = os.path.basename(cits)
-                logging.info(self.mapName + " read as a " + self.mapType + " map")
+                self.cits_name = os.path.basename(cits)
+                logging.info(self.cits_name + " read as a " + self.mapType + " map")
             else:
                 logging.error("Problem while reading " + cits)
                 return
@@ -228,7 +244,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     mean_data += self.cits_data / n_cits
         # If everthing went well and if there was several CITS chosen,
         # clear the map and set the data to mean_data.
-        self.mapName = "Average of {0} CITS".format(n_cits)
+        self.cits_name = "Average of {0} CITS".format(n_cits)
         self.clearMap()
         self.dataLoaded = True
         self.cits_data = mean_data
@@ -696,20 +712,13 @@ class CitsWidget(QtWidgets.QMainWindow):
         if (event.xdata is not None and event.ydata is not None) and (
             self.dataLoaded and self.toolbar_map._active is None
         ):
-            # TODO: the ratio could be put in attributes
-            if self.ui_scaleMetric.isChecked():
-                ratioX = self.cits_params["xL"] / self.cits_params["xPx"]
-                ratioY = self.cits_params["yL"] / self.cits_params["yPx"]
-            else:
-                ratioX = 1
-                ratioY = 1
             self.currentShape = generateShape(
                 event,
                 self.ui_mapWidget.figure,
                 self.fig_topo,
                 self.getSpectrumColor(self.nSpectraDrawn),
-                ratioX,
-                ratioY,
+                self.metric_ratios["x"],
+                self.metric_ratios["y"],
             )
             self.motionConnection = self.ui_mapWidget.mpl_connect(
                 "motion_notify_event", self.currentShape.update
@@ -821,7 +830,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Plot the built map in a new figure
         fig = pyplot.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ax.set_title(self.mapName.split(".")[0] + " - Cut " + str(fig.number))
+        ax.set_title(self.cits_name.split(".")[0] + " - Cut " + str(fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
         self.ui_mapWidget.draw()
 
@@ -885,20 +894,14 @@ class CitsWidget(QtWidgets.QMainWindow):
                 0, self.cits_params["xPx"] - 1, 0, self.cits_params["yPx"] - 1
             )
             # Draw the line
-            if self.ui_scaleMetric.isChecked():
-                ratioX = self.cits_params["xL"] / self.cits_params["xPx"]
-                ratioY = self.cits_params["yL"] / self.cits_params["yPx"]
-            else:
-                ratioX = 1
-                ratioY = 1
             self.currentShape = Line(
                 0,
                 0,
                 self.ui_mapWidget.figure,
                 self.fig_topo,
                 self.getSpectrumColor(self.nSpectraDrawn),
-                ratioX,
-                ratioY,
+                self.metric_ratios["x"],
+                self.metric_ratios["y"],
                 xf=self.cits_params["xPx"] - 1,
                 yf=self.cits_params["yPx"] - 1,
             )
@@ -950,7 +953,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.ax_map.axis([0, xPx, 0, yPx])
         # Set title
         self.ax_map.set_title(
-            self.mapName
+            self.cits_name
             + " - "
             + self.ui_channelBox.currentText()
             + "\n"
@@ -1044,7 +1047,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             # If eveything went well, clear the current map and replace it by
             # the created data.
             self.clearMap()
-            self.mapName = "Average_on_{}_every_{}_spectra".format(direction, Navg)
+            self.cits_name = "Average_on_{}_every_{}_spectra".format(direction, Navg)
             self.dataLoaded = True
             self.cits_data = new_data
             self.cits_params["yPx"] = new_data.shape[1]
