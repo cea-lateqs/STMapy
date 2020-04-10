@@ -69,13 +69,13 @@ def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
     altitudes = np.arange(zPt) * delta_z
 
     cut_off_filter = data_to_fit > cut_off_value
-    filtered_data = data_to_fit[:, :, cut_off_filter]
-    filtered_altitudes = altitudes[cut_off_filter]
     # TODO: Can be vectorized ?
     for y in range(yPx):
         for x in range(xPx):
+            filtered_altitudes = altitudes[cut_off_filter[y][x]]
+            filtered_data = data_to_fit[y, x, cut_off_filter[y][x]]
             popt, pcov = sp.optimize.curve_fit(
-                linearFitFunction, filtered_altitudes, filtered_data[y, x]
+                linearFitFunction, filtered_altitudes, filtered_data
             )
             slope_data[y, x, :] = popt[0]
             coef_data[y, x, :] = popt[1]
