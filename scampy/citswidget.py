@@ -37,8 +37,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.setAutoFillBackground(True)
         # Initiate arrays
         self.cits_data = np.ndarray([])
-        self.tot_data = np.ndarray([])
-        self.nAvgSpectra = 0
+        self.summed_spectra = np.ndarray([])
+        self.nb_summed_spectra = 0
         self.cits_params = {}
         self.channelList = []
         self.mapName = ""
@@ -220,9 +220,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.drawTopo()
                 return
             else:  # Else begin the averaging
-                if (
-                    first
-                ):  # If this was the first Cits to average, create the mean_data array to store the avergage
+                # If this was the first Cits to average, create the mean_data array to store the average
+                if first:
                     mean_data = self.cits_data / n_cits
                     first = False
                 else:  # Else, continue adding to the mean_data
@@ -238,7 +237,7 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Reading and loading topo images methods
 
-    def drawTopo(self, lineFit=True):
+    def drawTopo(self, line_fit=True):
         """ Draws the topography read while opening the CITS."""
         if self.topo.ndim == 2:
             # Get parameters
@@ -250,7 +249,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 return
 
             # Line fitting if necessary
-            if lineFit:
+            if line_fit:
                 self.topo = levelTopo(self.topo)
                 figtitle = "Leveled topo (line fit)"
             else:
@@ -352,15 +351,15 @@ class CitsWidget(QtWidgets.QMainWindow):
         if self.dataLoaded:
             # If toggled on, put everything to zero to be ready to store data
             if self.ui_avgBox.isChecked():
-                self.tot_data = np.zeros(shape=self.cits_params["zPt"])
-                self.nAvgSpectra = 0
+                self.summed_spectra = np.zeros(shape=self.cits_params["zPt"])
+                self.nb_summed_spectra = 0
             # If toggled off, plot the data stored
             else:
-                if self.nAvgSpectra == 0:
+                if self.nb_summed_spectra == 0:
                     return
-                dataToPlot = self.tot_data / self.nAvgSpectra
                 self.drawSpectrum(
-                    dataToPlot, str(self.nAvgSpectra) + " spectra averaged"
+                    self.summed_spectra / self.nb_summed_spectra,
+                    str(self.nb_summed_spectra) + " spectra averaged",
                 )
 
     def updateAboveValue(self, value):
@@ -408,7 +407,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_indexBox.setValue(pointedIndex)
             # The map updates itself because the change of value of the voltage box calls the drawXYMap method
 
-    def updateIndexBox(self, Vmin, Vmax, zPt):
+    def updateIndexBox(self, zPt):
         """ Method called by updateWidgets.
         Sets the values of the index box """
         self.ui_indexBox.setMinimum(0)
@@ -418,11 +417,7 @@ class CitsWidget(QtWidgets.QMainWindow):
     def updateWidgets(self):
         """ Slot called after the reading of the CITS.
         Sets the values combo box (voltage and channels) and draws the map """
-        self.updateIndexBox(
-            self.cits_params["vStart"],
-            self.cits_params["vEnd"],
-            self.cits_params["zPt"],
-        )
+        self.updateIndexBox(self.cits_params["zPt"])
         self.ui_channelBox.clear()
         self.ui_channelBox.addItems(self.channelList)
         self.drawXYMap(self.ui_indexBox.value())
@@ -593,17 +588,15 @@ class CitsWidget(QtWidgets.QMainWindow):
                 zPt = self.cits_params["zPt"]
                 voltages = np.arange(zPt) * dV + self.cits_params["vStart"]
                 # Take the portion to fit
-                mask1 = voltages > vStart
-                mask2 = voltages < vEnd
-                dataToFit = self.lastSpectrum[0][np.logical_and(mask1, mask2)]
+                range_mask = np.logical_and(voltages > vStart, voltages < vEnd)
+                dataToFit = self.lastSpectrum[0][range_mask]
             else:
                 vStart = self.cits_params["vStart"]
                 vEnd = self.cits_params["vEnd"]
                 dataToFit = self.lastSpectrum[0]
             X = np.arange(vStart, vEnd, dV)
             popt, pcov = sp.optimize.curve_fit(linearFitFunction, X, dataToFit)
-            slope = popt[0]
-            coef = popt[1]
+            slope, coef = popt
             logging.info(
                 "Linear fit gives a slope of {} and a coef of {}".format(slope, coef)
             )
@@ -621,22 +614,19 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Returns the color corresponding to a spectrum of given index
         according to spectrumColor """
         # TODO: this should be removed in favour of matplotlib color_cycle or an iterator
-        i = n % len(self.spectrumColor)
-        return self.spectrumColor[i]
+        return self.spectrumColor[n % len(self.spectrumColor)]
 
     def launchAvgSpectrum(self):
         """ Slot called to average the spectra of the whole map """
         if self.dataLoaded:
-            xPx = self.cits_params["xPx"]
-            yPx = self.cits_params["yPx"]
-            self.averageSpectrum(0, xPx, 0, yPx)
+            self.averageSpectrum(0, self.cits_params["xPx"], 0, self.cits_params["yPx"])
 
     def pickSpectrum(self, event):
         """ Method called when a press-and-release event is done
         at the same location of the map. If the average box is checked,
         it will keep the data in storage to average it later.
         Otherwise it plots the spectrum in the corresponding widget """
-        if event.xdata is not None and event.ydata is not None and self.dataLoaded:
+        if self.dataLoaded and event.xdata is not None and event.ydata is not None:
             PixelX = int(event.xdata)
             PixelY = int(event.ydata)
             chan = self.ui_channelBox.currentIndex()
@@ -658,8 +648,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.ui_mapWidget.draw()
                 # Add data to the total data to average if in average mod
                 if self.ui_avgBox.isChecked():
-                    self.tot_data += self.cits_data[chan, PixelY, PixelX]
-                    self.nAvgSpectra += 1
+                    self.summed_spectra += self.cits_data[chan, PixelY, PixelX]
+                    self.nb_summed_spectra += 1
                 # Plot the data with the desired scale (Volts or index) if in normal mode
                 else:
                     self.drawSpectrum(
@@ -810,16 +800,10 @@ class CitsWidget(QtWidgets.QMainWindow):
                 dy = self.cits_params["yL"] / self.cits_params["yPx"]
             else:
                 dx, dy = 1, 1
-            for i in range(len(x_plot)):
+            for x, y in zip(x_plot, y_plot):
                 self.addToShapesClicked(
                     Dot(
-                        x_plot[i],
-                        y_plot[i],
-                        self.ui_mapWidget.figure,
-                        self.fig_topo,
-                        "yellow",
-                        dx,
-                        dy,
+                        x, y, self.ui_mapWidget.figure, self.fig_topo, "yellow", dx, dy,
                     )
                 )
         return self.cutPlot(x_plot, y_plot)
@@ -930,72 +914,74 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.mapType = ""
         self.dataLoaded = False
 
-    def drawXYMap(self, voltage):
+    def createXYMap(self, voltage):
         """ Calls the getMapData function and draws the result
-        in the map window with the approriate formatting.
+        in the map window with the approriate formatting. """
+        fig_map = self.ui_mapWidget.figure
+        xPx = self.cits_params["xPx"]
+        yPx = self.cits_params["yPx"]
+        if xPx == yPx:
+            self.ax_map = fig_map.add_subplot(1, 1, 1, aspect="equal")
+        else:
+            self.ax_map = fig_map.add_subplot(1, 1, 1)
+        fig_map.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
+        # Get the data of the map and draw it
+        mapData, self.mapMin, self.mapMax = self.getMapData(voltage)
+        # Use metric dimensions if the corresponding box is checked (work in progress)
+        if self.ui_scaleMetric.isChecked() and False:
+            xL = self.cits_params["xL"]
+            yL = self.cits_params["yL"]
+            x_m = np.linspace(0, xL, xPx)
+            y_m = np.linspace(0, yL, yPx)
+            XYmap = self.ax_map.pcolormesh(
+                x_m, y_m, mapData, cmap=self.ui_colorBarBox.currentText()
+            )
+            self.ax_map.axis([0, xL, 0, yL])
+        # Else, use pixels
+        else:
+            XYmap = self.ax_map.pcolormesh(
+                mapData, cmap=self.ui_colorBarBox.currentText()
+            )
+            # If the map is an Omicron one, I have to invert the y-axis
+            if self.mapType == "Omicron":
+                self.ax_map.axis([0, xPx, yPx, 0])
+            else:
+                self.ax_map.axis([0, xPx, 0, yPx])
+        # Set title
+        self.ax_map.set_title(
+            self.mapName
+            + " - "
+            + self.ui_channelBox.currentText()
+            + "\n"
+            + "V="
+            + str(self.cits_params["vStart"] + voltage * self.cits_params["dV"])
+        )
+        # Colorbar stuff
+        cbar = self.ui_mapWidget.figure.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
+        cbar.ax.yaxis.set_ticks_position("both")
+        cbar.ax.tick_params(axis="y", direction="in")
+        # Image color scale is adjusted to the data:
+        if self.ui_cbarCustomCheckbox.isChecked():
+            XYmap.set_clim(
+                float(self.ui_cbarLowerBox.text()), float(self.ui_cbarUpperBox.text()),
+            )
+        else:
+            XYmap.set_clim(self.mapMin, self.mapMax)
+        # Recreate the shapes points saved in shapes_clicked
+        self.drawShapesClicked(fig_map, self.fig_topo, True)
+        self.ui_mapWidget.draw()
+        return XYmap
+
+    def drawXYMap(self, voltage):
+        """ Redraws the XYMap
         Called at each change of voltage """
         # Start everything anew
-        fig_map = self.ui_mapWidget.figure
-        fig_map.clear()
+        self.ui_mapWidget.figure.clear()
         if self.dataLoaded:
-            xPx = self.cits_params["xPx"]
-            yPx = self.cits_params["yPx"]
-            if xPx == yPx:
-                self.ax_map = fig_map.add_subplot(1, 1, 1, aspect="equal")
-            else:
-                self.ax_map = fig_map.add_subplot(1, 1, 1)
-            # self.ax_map.hold(True)
-            fig_map.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
-            # Get the data of the map and draw it
-            mapData, self.mapMin, self.mapMax = self.getMapData(voltage)
-            # Use metric dimensions if the corresponding box is checked (work in progress)
-            if self.ui_scaleMetric.isChecked() and False:
-                xL = self.cits_params["xL"]
-                yL = self.cits_params["yL"]
-                x_m = np.linspace(0, xL, xPx)
-                y_m = np.linspace(0, yL, yPx)
-                XYmap = self.ax_map.pcolormesh(
-                    x_m, y_m, mapData, cmap=self.ui_colorBarBox.currentText()
-                )
-                self.ax_map.axis([0, xL, 0, yL])
-            # Else, use pixels
-            else:
-                XYmap = self.ax_map.pcolormesh(
-                    mapData, cmap=self.ui_colorBarBox.currentText()
-                )
-                # If the map is an Omicron one, I have to invert the y-axis
-                if self.mapType == "Omicron":
-                    self.ax_map.axis([0, xPx, yPx, 0])
-                else:
-                    self.ax_map.axis([0, xPx, 0, yPx])
-            # Set title
-            chan = self.ui_channelBox.currentText()
-            self.ax_map.set_title(
-                self.mapName
-                + " - "
-                + chan
-                + "\n"
-                + "V="
-                + str(self.cits_params["vStart"] + voltage * self.cits_params["dV"])
-            )
-            # Colorbar stuff
-            cbar = fig_map.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
-            cbar.ax.yaxis.set_ticks_position("both")
-            cbar.ax.tick_params(axis="y", direction="in")
-            # Image color scale is adjusted to the data:
-            if self.ui_cbarCustomCheckbox.isChecked():
-                XYmap.set_clim(
-                    float(self.ui_cbarLowerBox.text()),
-                    float(self.ui_cbarUpperBox.text()),
-                )
-            else:
-                XYmap.set_clim(self.mapMin, self.mapMax)
+            self.createXYMap(voltage)
             # Plot a dashed line at X=voltage if asked
             if self.ui_vLineBox.isChecked():
                 self.drawVoltageLine(voltage)
-            # Recreate the shapes points saved in shapes_clicked
-            self.drawShapesClicked(fig_map, self.fig_topo, True)
-            self.ui_mapWidget.draw()
 
     def getMapData(self, v):
         """ Returns an array built from the data loaded that can be used to
