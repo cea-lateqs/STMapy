@@ -91,7 +91,10 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
     """
     # First treat the vertical line case
     if xf == xi:
-        y_plot = np.arange(min(yi, yf), max(yi, yf) + 1)
+        if yi < yf:
+            y_plot = np.arange(yi, yf + 1)
+        else:
+            y_plot = np.arange(yf, yi + 1)[::-1]
         x_plot = np.full(shape=y_plot.size, fill_value=xi)
     elif use_bresenham:  # Bresenham algo for non-vertical lines
         x_plot_p = []
@@ -129,10 +132,16 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
         c = yi - k * xi
         # Check if there is more y or more x to have to most precise arrangment
         if abs(xf - xi) > abs(yf - yi):
-            x_plot = np.arange(min(xi, xf), max(xi, xf) + 1)
+            if xi < xf:
+                x_plot = np.arange(xi, xf + 1)
+            else:
+                x_plot = np.arange(xf, xi + 1)[::-1]
             y_plot = k * x_plot + c
         else:
-            y_plot = np.arange(min(yi, yf), max(yi, yf) + 1)
+            if yi < yf:
+                y_plot = np.arange(yi, yf + 1)
+            else:
+                y_plot = np.arange(yf, yi + 1)[::-1]
             x_plot = (y_plot - c) / k
     return x_plot.astype(int), y_plot.astype(int)
 
