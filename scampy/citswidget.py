@@ -25,6 +25,8 @@ from .plotting import waterfallPlot
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
 
+SUBPLOTS_DIMS = {"left": 0.125, "right": 0.95, "bottom": 0.15, "top": 0.92}
+
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow):
@@ -43,12 +45,12 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.summed_spectra = np.ndarray([])
         self.nb_summed_spectra = 0
         # Set up map figure
+        self.xy_map = None
         self.toolbar_map = NavigationToolbar(self.ui_mapWidget, self)
         # Set up spectrum figure
         self.ax_spec = self.ui_specWidget.figure.add_subplot(111)
-        self.ui_specWidget.figure.subplots_adjust(
-            left=0.125, right=0.95, bottom=0.15, top=0.92
-        )
+        self.ui_specWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
+        self.voltageLine = None
         self.toolbar_spec = NavigationToolbar(self.ui_specWidget, self)
         # Add csv save button
         self.ui_saveCsvButton = QtWidgets.QPushButton("Save as CSV")
@@ -57,7 +59,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.spec_layout.insertWidget(0, self.toolbar_spec)
         # Variables linked to clicks on map
         self.shapes_clicked = []
-        self.voltageLine = None
         # Colormaps
         self.ui_colorBarBox.addItems(matplotlib.pyplot.colormaps())
         # Boolean that is True if a map is loaded
@@ -918,19 +919,15 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.mapType = ""
         self.dataLoaded = False
 
-    def createXYMap(self, voltage):
+    def createXYMap(self, map_data):
         """ Calls the getMapData function and draws the result
         in the map window with the approriate formatting. """
         fig_map = self.ui_mapWidget.figure
         xPx = self.cits_params["xPx"]
         yPx = self.cits_params["yPx"]
-        if xPx == yPx:
-            self.ax_map = fig_map.add_subplot(1, 1, 1, aspect="equal")
-        else:
-            self.ax_map = fig_map.add_subplot(1, 1, 1)
-        fig_map.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
-        # Get the data of the map and draw it
-        mapData, self.mapMin, self.mapMax = self.getMapData(voltage)
+        self.ax_map = self.ui_mapWidget.figure.add_subplot(111)
+        self.ui_mapWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
+        self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
         # Use metric dimensions if the corresponding box is checked (work in progress)
         if self.ui_scaleMetric.isChecked() and False:
             xL = self.cits_params["xL"]
@@ -938,54 +935,63 @@ class CitsWidget(QtWidgets.QMainWindow):
             x_m = np.linspace(0, xL, xPx)
             y_m = np.linspace(0, yL, yPx)
             XYmap = self.ax_map.pcolormesh(
-                x_m, y_m, mapData, cmap=self.ui_colorBarBox.currentText()
+                x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText()
             )
             self.ax_map.axis([0, xL, 0, yL])
         # Else, use pixels
         else:
             XYmap = self.ax_map.pcolormesh(
-                mapData, cmap=self.ui_colorBarBox.currentText()
+                map_data, cmap=self.ui_colorBarBox.currentText()
             )
             # If the map is an Omicron one, I have to invert the y-axis
             if self.mapType == "Omicron":
                 self.ax_map.axis([0, xPx, yPx, 0])
             else:
                 self.ax_map.axis([0, xPx, 0, yPx])
-        # Set title
-        self.ax_map.set_title(
-            self.cits_name
-            + " - "
-            + self.ui_channelBox.currentText()
-            + "\n"
-            + "V="
-            + str(self.cits_params["vStart"] + voltage * self.cits_params["dV"])
-        )
         # Colorbar stuff
-        cbar = self.ui_mapWidget.figure.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
+        cbar = fig_map.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
         cbar.ax.yaxis.set_ticks_position("both")
         cbar.ax.tick_params(axis="y", direction="in")
-        # Image color scale is adjusted to the data:
-        if self.ui_cbarCustomCheckbox.isChecked():
-            XYmap.set_clim(
-                float(self.ui_cbarLowerBox.text()), float(self.ui_cbarUpperBox.text()),
-            )
-        else:
-            XYmap.set_clim(self.mapMin, self.mapMax)
         # Recreate the shapes points saved in shapes_clicked
         self.drawShapesClicked(fig_map, self.fig_topo, True)
-        self.ui_mapWidget.draw()
         return XYmap
 
-    def drawXYMap(self, voltage):
+    def drawXYMap(self, voltage_index):
         """ Redraws the XYMap
         Called at each change of voltage """
         # Start everything anew
-        self.ui_mapWidget.figure.clear()
         if self.dataLoaded:
-            self.createXYMap(voltage)
+            # Get the data of the map and draw it
+            mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
+            if self.xy_map is None:
+                self.ui_mapWidget.figure.clear()
+                self.xy_map = self.createXYMap(mapData)
+            else:
+                mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
+                self.xy_map.set_array(mapData.flatten())
+                # Set title
+            self.ax_map.set_title(
+                self.cits_name
+                + " - "
+                + self.ui_channelBox.currentText()
+                + "\n"
+                + "V="
+                + str(
+                    self.cits_params["vStart"] + voltage_index * self.cits_params["dV"]
+                )
+            )
+            # Image color scale is adjusted to the data:
+            if self.ui_cbarCustomCheckbox.isChecked():
+                self.xy_map.set_clim(
+                    float(self.ui_cbarLowerBox.text()),
+                    float(self.ui_cbarUpperBox.text()),
+                )
+            else:
+                self.xy_map.set_clim(self.mapMin, self.mapMax)
+            self.ui_mapWidget.draw()
             # Plot a dashed line at X=voltage if asked
             if self.ui_vLineBox.isChecked():
-                self.drawVoltageLine(voltage)
+                self.drawVoltageLine(voltage_index)
 
     def getMapData(self, v):
         """ Returns an array built from the data loaded that can be used to
