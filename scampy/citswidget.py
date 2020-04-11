@@ -111,7 +111,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_normButton.clicked.connect(self.normalizeCurrentChannel)
         self.ui_avgSpec.clicked.connect(self.launchAvgSpectrum)
         self.ui_avgBox.toggled.connect(self.updateAvgVariables)
-        self.ui_vLineBox.toggled.connect(self.clearVoltageLine)
+        self.ui_vLineBox.toggled.connect(self.toggleVoltageLine)
         self.ui_avgVButton.clicked.connect(self.averageSpectrumWithValues)
         # Averaging with respect to values
         self.ui_avgCheckBox.toggled.connect(self.ui_avgWidget.setVisible)
@@ -152,7 +152,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.wdir,
             " RHK file (*.sm4);;3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)",
         )
-        # getOpenFilesNames retunrs a tuple with Cits_names as first element
+        # getOpenFilesNames returns a tuple with Cits_names as first element
         # and extension as second. We just need the names.
         self.loadCits(cits_names_and_ext[0])
 
@@ -1001,25 +1001,41 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Methods related to the voltage guide line in the spectra window
 
-    def drawVoltageLine(self, voltage):
-        """ Draws the vertical line at the given voltage """
-        self.clearVoltageLine()
+    def toggleVoltageLine(self, checked):
+        """ Slot attached to the toggle of the voltageLine checkbox. """
+        if checked:
+            self.drawVoltageLine(self.ui_indexBox.value())
+        else:
+            self.clearVoltageLine()
+
+    def createVoltageLine(self, voltage):
+        """ Creates the voltage line. Called in drawVoltageLine. """
+        # Plot the dashed line
+        self.voltageLine = self.ax_spec.axvline(voltage, color="k", linestyle="--")
+
+    def drawVoltageLine(self, voltage_index):
+        """ Draws the vertical line at the given voltage index. Takes care of the creation if needed. """
+        # self.clearVoltageLine()
         if self.dataLoaded:
             # Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
             if self.ui_scaleVoltage.isChecked:
-                currentV = self.cits_params["vStart"] + voltage * self.cits_params["dV"]
+                voltage = (
+                    self.cits_params["vStart"] + voltage_index * self.cits_params["dV"]
+                )
             else:
-                currentV = voltage
-            # Plot the dashed line
-            self.voltageLine = self.ax_spec.axvline(currentV, color="k", linestyle="--")
+                voltage = voltage_index
+            if self.voltageLine is None:
+                self.createVoltageLine(voltage)
+            else:
+                self.voltageLine.set_xdata((voltage, voltage))
             self.ui_specWidget.draw()
 
     def clearVoltageLine(self):
-        """ Removes the vertical voltage line """
+        """ Removes the vertical voltage line. """
         if self.voltageLine is not None:
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
-            self.ui_specWidget.draw()
             self.voltageLine = None
+            self.ui_specWidget.draw()
 
     # Post-processing methods
     def addChannel(self, new_channel_data, channel_name):
