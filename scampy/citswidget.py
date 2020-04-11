@@ -97,7 +97,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_openButton.clicked.connect(self.askCits)
         self.ui_topoButton.clicked.connect(self.drawTopo)
         self.ui_channelBox.currentIndexChanged.connect(self.updateMap)
-        self.ui_colorBarBox.currentIndexChanged.connect(self.updateMap)
+        self.ui_colorBarBox.currentTextChanged.connect(self.setColorMap)
         self.ui_indexBox.valueChanged.connect(self.drawXYMap)
         self.ui_derivBox.stateChanged.connect(self.ui_derivNBox.setEnabled)
         self.ui_mapWidget.mpl_connect("button_press_event", self.onPressOnMap)
@@ -119,8 +119,11 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_belowBox.valueChanged.connect(self.updateBelowValue)
         # Cbar custom limits
         self.ui_cbarCheckBox.toggled.connect(self.ui_cbarWidget.setVisible)
-        self.ui_cbarCustomCheckbox.stateChanged.connect(self.ui_cbarUpperBox.setEnabled)
-        self.ui_cbarCustomCheckbox.stateChanged.connect(self.ui_cbarLowerBox.setEnabled)
+        self.ui_cbarCustomCheckbox.toggled.connect(self.setColorMapLims)
+        self.ui_cbarCustomCheckbox.toggled.connect(self.ui_cbarUpperBox.setEnabled)
+        self.ui_cbarCustomCheckbox.toggled.connect(self.ui_cbarLowerBox.setEnabled)
+        self.ui_cbarUpperBox.textChanged.connect(self.setColorMapMax)
+        self.ui_cbarLowerBox.textChanged.connect(self.setColorMapMin)
         # Fit spectrum widget
         self.ui_fitSpec.clicked.connect(self.fitSpectrum)
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitUpperBox.setVisible)
@@ -961,7 +964,6 @@ class CitsWidget(QtWidgets.QMainWindow):
     def drawXYMap(self, voltage_index):
         """ Redraws the XYMap
         Called at each change of voltage """
-        # Start everything anew
         if self.dataLoaded:
             # Get the data of the map and draw it
             mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
@@ -982,14 +984,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.cits_params["vStart"] + voltage_index * self.cits_params["dV"]
                 )
             )
-            # Image color scale is adjusted to the data:
-            if self.ui_cbarCustomCheckbox.isChecked():
-                self.xy_map.set_clim(
-                    float(self.ui_cbarLowerBox.text()),
-                    float(self.ui_cbarUpperBox.text()),
-                )
-            else:
-                self.xy_map.set_clim(self.mapMin, self.mapMax)
+            self.setColorMapLims()
             self.ui_mapWidget.draw()
             # Plot a dashed line at X=voltage if asked
             if self.ui_vLineBox.isChecked():
@@ -1000,6 +995,37 @@ class CitsWidget(QtWidgets.QMainWindow):
         display a map at fixed voltage """
         mapData = self.cits_data[self.ui_channelBox.currentIndex(), :, :, v]
         return mapData, np.min(mapData), np.max(mapData)
+
+    def setColorMap(self, color_map):
+        if self.xy_map is not None:
+            self.xy_map.set_cmap(color_map)
+            self.ui_mapWidget.draw()
+
+    def setColorMapMin(self, min_value_text):
+        if self.xy_map is not None:
+            min_value = self.mapMin
+            if self.ui_cbarCustomCheckbox.isChecked():
+                try:
+                    min_value = float(min_value_text)
+                except ValueError:
+                    pass
+            self.xy_map.set_clim(vmin=min_value)
+            self.ui_mapWidget.draw()
+
+    def setColorMapMax(self, max_value_text):
+        if self.xy_map is not None:
+            max_value = self.mapMax
+            if self.ui_cbarCustomCheckbox.isChecked():
+                try:
+                    max_value = float(max_value_text)
+                except ValueError:
+                    pass
+            self.xy_map.set_clim(vmax=max_value)
+            self.ui_mapWidget.draw()
+
+    def setColorMapLims(self):
+        self.setColorMapMin(self.ui_cbarLowerBox.text())
+        self.setColorMapMax(self.ui_cbarUpperBox.text())
 
     # %% Methods related to the voltage guide line in the spectra window
 
