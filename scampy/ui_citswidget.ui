@@ -23,7 +23,7 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QPushButton" name="m_openButton">
+         <widget class="QPushButton" name="ui_openButton">
           <property name="text">
            <string>Open CITS</string>
           </property>
@@ -43,7 +43,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="m_topoButton">
+         <widget class="QPushButton" name="ui_topoButton">
           <property name="text">
            <string>Draw topo</string>
           </property>
@@ -76,14 +76,14 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="m_normButton">
+            <widget class="QPushButton" name="ui_normButton">
              <property name="text">
               <string>Normalize current channel</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="m_channelBox"/>
+            <widget class="QComboBox" name="ui_channelBox"/>
            </item>
           </layout>
          </item>
@@ -97,7 +97,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="m_voltageBox">
+            <widget class="QSpinBox" name="ui_indexBox">
              <property name="maximum">
               <number>100</number>
              </property>
@@ -145,7 +145,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="m_avgBox">
+          <widget class="QCheckBox" name="ui_avgBox">
            <property name="text">
             <string>Select spectra with left-click (uncheck to get the result)</string>
            </property>
@@ -161,7 +161,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="m_rcAvgBox">
+            <widget class="QSpinBox" name="ui_rcAvgBox">
              <property name="maximum">
               <number>100</number>
              </property>
@@ -200,7 +200,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="m_avgSpec">
+          <widget class="QPushButton" name="ui_avgSpec">
            <property name="text">
             <string>Plot average spectrum</string>
            </property>
@@ -219,7 +219,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="m_CitsAvgBox">
+            <widget class="QSpinBox" name="ui_CitsAvgBox">
              <property name="minimum">
               <number>1</number>
              </property>
@@ -229,7 +229,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="m_averageCitsButton">
+            <widget class="QPushButton" name="ui_averageCitsButton">
              <property name="text">
               <string>Average CITS</string>
              </property>
@@ -238,24 +238,24 @@
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="m_avgCheckBox">
+          <widget class="QCheckBox" name="ui_avgCheckBox">
            <property name="text">
             <string>Average with respect to values</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="m_avgWidget" native="true">
+          <widget class="QWidget" name="ui_avgWidget" native="true">
            <layout class="QGridLayout" name="gridLayout_3">
             <item row="3" column="0">
-             <widget class="QLineEdit" name="m_belowLine">
+             <widget class="QLineEdit" name="ui_belowLine">
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item row="4" column="2">
-             <widget class="QPushButton" name="m_avgVButton">
+             <widget class="QPushButton" name="ui_avgVButton">
               <property name="text">
                <string>Start the averaging</string>
               </property>
@@ -269,7 +269,7 @@
              </widget>
             </item>
             <item row="2" column="2">
-             <widget class="QProgressBar" name="m_aboveBar">
+             <widget class="QProgressBar" name="ui_aboveBar">
               <property name="value">
                <number>50</number>
               </property>
@@ -285,7 +285,7 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QProgressBar" name="m_belowBar">
+             <widget class="QProgressBar" name="ui_belowBar">
               <property name="value">
                <number>50</number>
               </property>
@@ -312,7 +312,7 @@
              </widget>
             </item>
             <item row="1" column="2">
-             <widget class="QSpinBox" name="m_aboveBox">
+             <widget class="QSpinBox" name="ui_aboveBox">
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
@@ -332,7 +332,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QSpinBox" name="m_belowBox">
+             <widget class="QSpinBox" name="ui_belowBox">
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
@@ -345,7 +345,7 @@
              </widget>
             </item>
             <item row="3" column="2">
-             <widget class="QLineEdit" name="m_aboveLine">
+             <widget class="QLineEdit" name="ui_aboveLine">
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -379,7 +379,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_6">
            <item>
-            <widget class="QRadioButton" name="m_waterfallButton">
+            <widget class="QRadioButton" name="ui_waterfallButton">
              <property name="text">
               <string>Waterfall</string>
              </property>
@@ -389,7 +389,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QRadioButton" name="m_plot2DButton">
+            <widget class="QRadioButton" name="ui_plot2DButton">
              <property name="text">
               <string>2D plot</string>
              </property>
@@ -401,14 +401,14 @@
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="m_viewSelectedBox">
+          <widget class="QCheckBox" name="ui_viewSelectedBox">
            <property name="text">
             <string>View selected spectra</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="m_wholeLengthCutButton">
+          <widget class="QPushButton" name="ui_wholeLengthCutButton">
            <property name="text">
             <string>Whole length cut</string>
            </property>
@@ -430,7 +430,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
-          <widget class="QPushButton" name="m_clearSpec">
+          <widget class="QPushButton" name="ui_clearSpec">
            <property name="text">
             <string>Clear spectra</string>
            </property>
@@ -446,7 +446,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="m_shiftXBox">
+            <widget class="QLineEdit" name="ui_shiftXBox">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -466,7 +466,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="m_shiftYBox">
+            <widget class="QLineEdit" name="ui_shiftYBox">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -481,7 +481,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="m_logBox">
+          <widget class="QCheckBox" name="ui_logBox">
            <property name="text">
             <string>Plot log of the spectrum</string>
            </property>
@@ -490,14 +490,14 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_11">
            <item>
-            <widget class="QCheckBox" name="m_derivBox">
+            <widget class="QCheckBox" name="ui_derivBox">
              <property name="text">
               <string>Plot derivative</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QWidget" name="m_derivWindowWidget" native="true">
+            <widget class="QWidget" name="ui_derivWindowWidget" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_12">
               <item>
                <widget class="QLabel" name="label_15">
@@ -507,7 +507,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QSpinBox" name="m_derivNBox">
+               <widget class="QSpinBox" name="ui_derivNBox">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -531,10 +531,10 @@
           </layout>
          </item>
          <item>
-          <widget class="QWidget" name="m_fitWidget" native="true">
+          <widget class="QWidget" name="ui_fitWidget" native="true">
            <layout class="QGridLayout" name="gridLayout_4">
             <item row="3" column="0">
-             <widget class="QLineEdit" name="m_fitLowerBox">
+             <widget class="QLineEdit" name="ui_fitLowerBox">
               <property name="enabled">
                <bool>true</bool>
               </property>
@@ -544,7 +544,7 @@
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QLineEdit" name="m_fitUpperBox">
+             <widget class="QLineEdit" name="ui_fitUpperBox">
               <property name="enabled">
                <bool>true</bool>
               </property>
@@ -554,28 +554,28 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QLabel" name="m_fitLowerLabel">
+             <widget class="QLabel" name="ui_fitLowerLabel">
               <property name="text">
                <string>Lower limit</string>
               </property>
              </widget>
             </item>
             <item row="2" column="1">
-             <widget class="QLabel" name="m_fitUpperLabel">
+             <widget class="QLabel" name="ui_fitUpperLabel">
               <property name="text">
                <string>Upper limit</string>
               </property>
              </widget>
             </item>
             <item row="0" column="0">
-             <widget class="QPushButton" name="m_fitSpec">
+             <widget class="QPushButton" name="ui_fitSpec">
               <property name="text">
                <string>Fit spectra</string>
               </property>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QCheckBox" name="m_fitCustomCheckbox">
+             <widget class="QCheckBox" name="ui_fitCustomCheckbox">
               <property name="text">
                <string>Use a custom range</string>
               </property>
@@ -602,7 +602,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
-            <widget class="QCheckBox" name="m_scaleVoltage">
+            <widget class="QCheckBox" name="ui_scaleVoltage">
              <property name="text">
               <string>Scale in Volts</string>
              </property>
@@ -612,7 +612,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="m_scaleMetric">
+            <widget class="QCheckBox" name="ui_scaleMetric">
              <property name="text">
               <string>Scale in metric units</string>
              </property>
@@ -632,14 +632,14 @@
             <enum>QLayout::SetFixedSize</enum>
            </property>
            <item>
-            <widget class="QCheckBox" name="m_vLineBox">
+            <widget class="QCheckBox" name="ui_vLineBox">
              <property name="text">
               <string>Voltage index guideline</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="m_legendBox">
+            <widget class="QCheckBox" name="ui_legendBox">
              <property name="text">
               <string>Deactivate legend</string>
              </property>
@@ -648,17 +648,17 @@
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="m_cbarCheckBox">
+          <widget class="QCheckBox" name="ui_cbarCheckBox">
            <property name="text">
             <string>Colorbar settings</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="m_cbarWidget" native="true">
+          <widget class="QWidget" name="ui_cbarWidget" native="true">
            <layout class="QGridLayout" name="gridLayout">
             <item row="0" column="1">
-             <widget class="QComboBox" name="m_colorBarBox"/>
+             <widget class="QComboBox" name="ui_colorBarBox"/>
             </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label_10">
@@ -668,7 +668,7 @@
              </widget>
             </item>
             <item row="3" column="0">
-             <widget class="QLineEdit" name="m_cbarLowerBox">
+             <widget class="QLineEdit" name="ui_cbarLowerBox">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -678,7 +678,7 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QCheckBox" name="m_cbarCustomCheckbox">
+             <widget class="QCheckBox" name="ui_cbarCustomCheckbox">
               <property name="text">
                <string>Use custom limits</string>
               </property>
@@ -692,7 +692,7 @@
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QLineEdit" name="m_cbarUpperBox">
+             <widget class="QLineEdit" name="ui_cbarUpperBox">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -734,7 +734,7 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="MatplotlibWidget" name="m_mapWidget" native="true">
+       <widget class="MatplotlibWidget" name="ui_mapWidget" native="true">
         <property name="minimumSize">
          <size>
           <width>440</width>
@@ -754,13 +754,13 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="MatplotlibWidget" name="m_specWidget" native="true"/>
+       <widget class="MatplotlibWidget" name="ui_specWidget" native="true"/>
       </item>
      </layout>
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="m_menuBar">
+  <widget class="QMenuBar" name="ui_menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -770,7 +770,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QStatusBar" name="m_statusBar"/>
+  <widget class="QStatusBar" name="ui_statusBar"/>
  </widget>
  <customwidgets>
   <customwidget>

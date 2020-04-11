@@ -2,11 +2,80 @@
 # -*- coding: utf-8 -*-
 """ Reading functions. """
 import logging
+import json
 import numpy as np
 import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
+import matplotlib.pyplot as plt
+from scampy import _package_directory
 from scampy.processing import extractSlope, levelTopo, stringify
+
+DEFAULT_CONFIG = {
+    "working_directory": _package_directory,
+    "matplotlib_stylesheet": None,
+    "autoload": False,
+    "default_cmap": "magma_r",
+    "topo_cmap": "afmhot",
+}
+
+
+def readConfig(config_filepath):
+    """ Reads the config and sets defaults for entries not read """
+    config = DEFAULT_CONFIG
+    if not os.path.exists(config_filepath):
+        raise IOError("{} is not a valid path to a configuration file !")
+    with open(config_filepath) as f:
+        read_config = json.load(f)
+
+    # Overwrite defaults with read config
+    config.update(read_config)
+
+    return config
+
+
+def setUpConfig(config_filepath):
+    """ Reads and set up config by doing various matplotlib checks. """
+    config = readConfig(config_filepath)
+
+    if not os.path.exists(config["working_directory"]):
+        logging.warning(
+            "{} is not a valid path ! Check your config file.".format(
+                config["working_directory"]
+            )
+        )
+        config["working_directory"] = DEFAULT_CONFIG["working_directory"]
+
+    if config["matplotlib_stylesheet"] is not None:
+        try:
+            plt.style.use(config["matplotlib_stylesheet"])
+        except IOError:
+            logging.warning(
+                "{} was not found in the .matplotlib folder. Using default parameters for matplotlib...".format(
+                    config["matplotlib_stylesheet"]
+                )
+            )
+            config["matplotlib_stylesheet"] = DEFAULT_CONFIG["matplotlib_stylesheet"]
+
+    if config["default_cmap"] not in plt.colormaps():
+        default = DEFAULT_CONFIG["default_cmap"]
+        logging.warning(
+            "{} set for default is not a valid colormap name. Setting {} instead.".format(
+                config["default_cmap"], default
+            )
+        )
+        config["default_cmap"] = default
+
+    if config["topo_cmap"] not in plt.colormaps():
+        default = DEFAULT_CONFIG["topo_cmap"]
+        logging.warning(
+            "{} set for topo is not a valid colormap name. Setting {} instead.".format(
+                config["topo_cmap"], default
+            )
+        )
+        config["topo_cmap"] = default
+
+    return config
 
 
 def readCitsAscii(filepath):
@@ -91,28 +160,16 @@ def readCitsAscii(filepath):
 
 def readTopo(filepath):
     """ Reads a topography file (in test). Used for txt files. """
-    with open(filepath, "r") as f:
-        topo_data = []
-        width, height = None, None
-        for line in f:
-            # Treat the headers differently
-            if line[0] == "#":
-                if "Width" in line:
-                    width = float(line.split()[-2])
-                if "Height" in line:
-                    height = float(line.split()[-2])
-            else:
-                topo_data.append(line.strip().split())
-    if width is None or height is None:
-        raise IOError("No width/height read in topo file {} !".format(filepath))
-    return np.asfarray(topo_data)
+    return np.genfromtxt(filepath, delimiter="\t", comments="#")
 
 
-def readCits3dsBin(filepath, zSpectro):
+def readCits3dsBin(filepath):
     # The divider is already taken into account by Nanonis during the experiment so no need to process it again*
     half = False
     # Read the header of the map until its end ("HEADER_END")
     header_end_not_found = True
+    # Assume regular CITS unless a Sweep Signal of Z is found
+    zSpectro = False
     with open(filepath, "rb") as f:
         for line in f:
             # Header lines can be treated as regular strings
@@ -183,7 +240,7 @@ def readCits3dsBin(filepath, zSpectro):
         if half:
             try:
                 topo = np.zeros(shape=(yPx, xPx))
-                m_data = np.zeros(shape=(nChannels / 2, yPx, xPx, zPt))
+                m_data = np.zeros(shape=(nChannels // 2, yPx, xPx, zPt))
             except MemoryError:
                 logging.error(
                     "The data is REALLY too big ! Or the memory REALLY too small...\nI give up...\n"
@@ -252,40 +309,37 @@ def readCits3dsBin(filepath, zSpectro):
         "dV": dV,
     }
 
-    # self.m_statusBar.showMessage(self.m_params)
     # Convert currents in nA
     for i in range(len(channelList)):
         chan = channelList[i]
         if "(A)" in chan:
             m_data[i] = np.abs(m_data[i]) * 10 ** 9
             channelList[i] = chan.replace("(A)", "(nA)")
-    # Convert topo in nm
-    topo = topo * 10 ** 9
-    # Level topo
-    topo = levelTopo(topo)
-    # Test
+    # Convert topo in nm and level topo
+    topo = levelTopo(topo * 10 ** 9)
+    # Extract supplementary data for zSpectro
     if zSpectro:
-        slopeData, slopeDataName, coefData, coefDataName, zg = extractSlope(
-            topo, m_data, m_params, channelList, 0.01, 0
-        )
+        zSpectroData = {"zChannel": channelList[0]}
+        (
+            zSpectroData["slopeData"],
+            zSpectroData["coefData"],
+            zSpectroData["Zg"],
+        ) = extractSlope(topo, m_data[0], dZ=dV, cutOffValue=0.01)
+
         # return data and data to be added by addchannel
         return (
             topo,
             m_data,
             channelList,
             m_params,
-            slopeData,
-            slopeDataName,
-            coefData,
-            coefDataName,
-            zg,
+            zSpectroData,
         )
 
     else:
-        return topo, m_data, channelList, m_params
+        return topo, m_data, channelList, m_params, None
 
 
-def sm4readFileHeader(f, ObjectIDCode):
+def readSm4FileHeader(f, ObjectIDCode):
 
     Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
     Signature = stringify(np.fromfile(f, dtype=np.uint16, count=18))
@@ -343,7 +397,7 @@ def sm4readFileHeader(f, ObjectIDCode):
     return PageIndexHeader_PageCount, PageIndex
 
 
-def sm4readpageHeader(
+def readSm4PageHeader(
     f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j
 ):
     # f.seek(nbytes,0 = a partir du début) va au byte n + 1
@@ -503,7 +557,7 @@ def readCitsSm4Bin(filepath):
         # f = open(filepath, "rb")
 
         # Get main info from File Header
-        PageIndexHeader_PageCount, PageIndex = sm4readFileHeader(f, ObjectIDCode)
+        PageIndexHeader_PageCount, PageIndex = readSm4FileHeader(f, ObjectIDCode)
 
         # Read and record each Pages Headers and Data
         PageHeader = []
@@ -517,7 +571,7 @@ def readCitsSm4Bin(filepath):
 
         for j in range(PageIndexHeader_PageCount):
 
-            PageHeader, TextStrings = sm4readpageHeader(
+            PageHeader, TextStrings = readSm4PageHeader(
                 f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j
             )
 
@@ -696,13 +750,14 @@ def readCitsSm4Bin(filepath):
 
     topo = FImage
 
-    # create average Data :
-    average = np.zeros(shape=(ySpec, xSpec, zPt))
-    for y in range(ySpec):  # len(SpectralData_y[:,0])):
-        for x in range(xSpec):
-            for r in range(repetitions):
-                average[y][x] += (
-                    SpectralData_y[:, (xSpec * y + x) * repetitions + r] / repetitions
-                )
+    # create average Data on repetitions :
+    average = np.mean(m_data, axis=0)
+    # average = np.zeros(shape=(ySpec, xSpec, zPt))
+    # for y in range(ySpec):  # len(SpectralData_y[:,0])):
+    #     for x in range(xSpec):
+    #         for r in range(repetitions):
+    #             average[y][x] += (
+    #                 SpectralData_y[:, (xSpec * y + x) * repetitions + r] / repetitions
+    #             )
 
     return topo, m_data, channelList, m_params, average

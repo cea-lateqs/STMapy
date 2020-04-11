@@ -30,8 +30,8 @@ class TestCITSReads(unittest.TestCase):
     def test_reading_3ds(self):
         """ Tests that reading a 3ds CITS works. """
         file_path = os.path.join(DATA_DIR, "CITS.3ds")
-        topo, m_data, channelList, m_params = reads.readCits3dsBin(
-            file_path, zSpectro=False
+        topo, m_data, channelList, m_params, zSpectroData = reads.readCits3dsBin(
+            file_path
         )
         self.assertCloseToBenchmark(m_data, "3ds")
 

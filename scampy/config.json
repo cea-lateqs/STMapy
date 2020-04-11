@@ -1,0 +1,7 @@
+{
+  "working_directory": "/home/florie/Documents/LABO/",
+  "matplotlib_stylesheet": "def",
+  "autoload": false,
+  "default_cmap": "viridis",
+  "topo_cmap": "afmhot"
+}
