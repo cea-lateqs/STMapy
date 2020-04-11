@@ -833,7 +833,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Plot the built map in a new figure
         fig = pyplot.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ax.set_title(self.cits_name.split(".")[0] + " - Cut " + str(fig.number))
+        ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
         self.ui_mapWidget.draw()
 
