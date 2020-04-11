@@ -277,7 +277,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 self.fig_topo.clear()
             self.ax_topo = self.fig_topo.add_subplot(1, 1, 1, aspect=yPx / xPx)
-            self.fig_topo.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
+            self.fig_topo.subplots_adjust(**SUBPLOTS_DIMS)
             # Connect the close handling
             self.fig_topo.canvas.mpl_connect("close_event", self.handleClosingTopo)
             # Put the appropriate title
@@ -424,17 +424,17 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_indexBox.setValue(pointedIndex)
             # The map updates itself because the change of value of the voltage box calls the drawXYMap method
 
-    def updateIndexBox(self, zPt):
+    def updateIndexBox(self):
         """ Method called by updateWidgets.
         Sets the values of the index box """
         self.ui_indexBox.setMinimum(0)
-        self.ui_indexBox.setMaximum(zPt - 1)
+        self.ui_indexBox.setMaximum(self.cits_params["zPt"] - 1)
         self.ui_indexBox.setSingleStep(1)
 
     def updateWidgets(self):
         """ Slot called after the reading of the CITS.
         Sets the values combo box (voltage and channels) and draws the map """
-        self.updateIndexBox(self.cits_params["zPt"])
+        self.updateIndexBox()
         self.ui_channelBox.clear()
         self.ui_channelBox.addItems(self.channelList)
         self.drawXYMap(self.ui_indexBox.value())
@@ -464,7 +464,7 @@ class CitsWidget(QtWidgets.QMainWindow):
     def averageSpectrumWithValues(self):
         """ Averages spectra according their values at a certain voltage """
         if self.dataLoaded:
-            voltage = self.ui_indexBox.value()
+            voltage_index = self.ui_indexBox.value()
             chan = self.ui_channelBox.currentIndex()
             viewSelected = self.ui_viewSelectedBox.isChecked()
             # midpoint=(self.mapMax+self.mapMin)/2
@@ -474,8 +474,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             if limit_aboveV < limit_belowV:
                 logging.error("Above and below spectra intersect !")
                 return
-            isAbove = self.cits_data[chan, :, :, voltage] > limit_aboveV
-            isBelow = self.cits_data[chan, :, :, voltage] < limit_belowV
+            isAbove = self.cits_data[chan, :, :, voltage_index] > limit_aboveV
+            isBelow = self.cits_data[chan, :, :, voltage_index] < limit_belowV
             aboveValues = self.cits_data[chan, :, :, :][isAbove]
             belowValues = self.cits_data[chan, :, :, :][isBelow]
 
@@ -519,7 +519,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # self.drawTopo()
         self.ui_specWidget.draw()
 
-    def drawSpectrum(self, dataToPlot, label, x=-1, y=-1):
+    def drawSpectrum(self, spectrum_data, label, x=-1, y=-1):
         """ Method called each time a spectrum needs to be plotted.
         Takes care of the derivative and different scales stuff and updates the window.
         """
@@ -529,13 +529,15 @@ class CitsWidget(QtWidgets.QMainWindow):
         else:
             shiftX = float(shiftX)
         shiftY = self.nSpectraDrawn * float(self.ui_shiftYBox.text())
-        if self.dataLoaded and dataToPlot.size != 0:
+        if self.dataLoaded and spectrum_data.size != 0:
             if self.ui_logBox.isChecked():
-                dataToPlot = np.log(dataToPlot)
+                data_to_plot = np.log(spectrum_data)
+            else:
+                data_to_plot = spectrum_data
 
             finalLabel = "{0} - {1}".format(label, self.ui_channelBox.currentText())
             # TODO: remove lastSpectrum with a ref to lines plotted in the spectrum widget
-            self.lastSpectrum = [dataToPlot, finalLabel]
+            self.lastSpectrum = [data_to_plot, finalLabel]
             if self.ui_scaleVoltage.isChecked():
                 dV = self.cits_params["dV"]
                 vStart = self.cits_params["vStart"]
@@ -548,17 +550,17 @@ class CitsWidget(QtWidgets.QMainWindow):
                         "Round-off error while computing the voltage array: dV ({}) might be too small."
                         "Computing from number of points instead.".format(dV)
                     )
-                    # If this fails, compute from the number of points to be sure to have the same dim as dataToPlot.
+                    # If this fails, compute from the number of points to be sure to have the same dim as data_to_plot.
                     voltages = np.linspace(vStart, vEnd, zPt) + shiftX
                 self.ax_spec.plot(
                     voltages,
-                    shiftY + dataToPlot,
+                    shiftY + data_to_plot,
                     label=finalLabel,
                     c=self.getSpectrumColor(self.nSpectraDrawn),
                 )
                 if self.ui_derivBox.isChecked():
                     deriv = sp.signal.savgol_filter(
-                        dataToPlot, self.ui_derivNBox.value(), 3, deriv=1, delta=dV
+                        data_to_plot, self.ui_derivNBox.value(), 3, deriv=1, delta=dV
                     )
                     self.ax_spec.plot(
                         voltages,
@@ -571,13 +573,13 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.nSpectraDrawn = self.nSpectraDrawn + 1
             else:
                 self.ax_spec.plot(
-                    shiftY + dataToPlot,
+                    shiftY + data_to_plot,
                     label=finalLabel,
                     c=self.getSpectrumColor(self.nSpectraDrawn),
                 )
                 if self.ui_derivBox.isChecked():
                     deriv = sp.signal.savgol_filter(
-                        dataToPlot, self.ui_derivNBox.value(), 3, deriv=1, delta=dV
+                        data_to_plot, self.ui_derivNBox.value(), 3, deriv=1, delta=dV
                     )
                     self.ax_spec.plot(
                         shiftY + deriv,
@@ -1076,11 +1078,11 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.cits_params["xPx"] = new_data.shape[2]
             self.updateWidgets()
 
-    def extractDerivative(self, numChanToDeriv):
+    def extractDerivative(self, chan_index_to_deriv):
         """ Extracts the derivative of a channel and adds it to the data """
         if self.dataLoaded:
             derivData = sp.signal.savgol_filter(
-                self.cits_data[numChanToDeriv],
+                self.cits_data[chan_index_to_deriv],
                 9,
                 2,
                 deriv=1,
@@ -1089,16 +1091,16 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
             # Add the channel to the data
             self.addChannel(
-                derivData, "Derivative of " + self.channelList[numChanToDeriv]
+                derivData, "Derivative of " + self.channelList[chan_index_to_deriv]
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
-    def extractFFT(self, numChanToFFT, axisOfFFT):
+    def extractFFT(self, chan_index_to_fft, axis_to_fft):
         """ Extracts the FFT of a channel and adds it to the data """
         if self.dataLoaded:
-            FFTData = np.fft.fft(self.cits_data[numChanToFFT], axis=axisOfFFT)
+            FFTData = np.fft.fft(self.cits_data[chan_index_to_fft], axis=axis_to_fft)
             # Add the channel to the data
-            self.addChannel(FFTData, "FFT of " + self.channelList[numChanToFFT])
+            self.addChannel(FFTData, "FFT of " + self.channelList[chan_index_to_fft])
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def normalizeCurrentChannel(self):
