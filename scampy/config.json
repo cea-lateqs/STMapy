@@ -1,5 +1,5 @@
 {
-  "working_directory": "/home/florie/Documents/LABO/",
+  "working_directory": "~/Documents/LABO/",
   "matplotlib_stylesheet": "def",
   "autoload": false,
   "default_cmap": "viridis",

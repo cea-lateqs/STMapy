@@ -8,11 +8,10 @@ import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
-from scampy import _package_directory
 from scampy.processing import extractSlope, levelTopo, stringify
 
 DEFAULT_CONFIG = {
-    "working_directory": _package_directory,
+    "working_directory": "~",
     "matplotlib_stylesheet": None,
     "autoload": False,
     "default_cmap": "magma_r",
@@ -31,6 +30,9 @@ def readConfig(config_filepath):
     # Overwrite defaults with read config
     config.update(read_config)
 
+    # Expand '~' to $HOME
+    config["working_directory"] = os.path.expanduser(config["working_directory"])
+
     return config
 
 
@@ -44,7 +46,9 @@ def setUpConfig(config_filepath):
                 config["working_directory"]
             )
         )
-        config["working_directory"] = DEFAULT_CONFIG["working_directory"]
+        config["working_directory"] = os.path.expanduser(
+            DEFAULT_CONFIG["working_directory"]
+        )
 
     if config["matplotlib_stylesheet"] is not None:
         try:
