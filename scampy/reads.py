@@ -16,6 +16,7 @@ DEFAULT_CONFIG = {
     "autoload": False,
     "default_cmap": "magma_r",
     "topo_cmap": "afmhot",
+    "topo_line_fit": True,
 }
 
 

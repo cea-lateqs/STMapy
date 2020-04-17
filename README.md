@@ -145,6 +145,7 @@ It is possible to set various parameters in the `config.json` file located in th
 - `autoload`: Boolean to trigger the loading of a CITS at launch. _Default: false_.
 - `default_cmap`: Name of the [colormap](https://matplotlib.org/api/pyplot_summary.html?highlight=colormaps#matplotlib.pyplot.colormaps) to use for the CITS map. Note that this is only at launch as the colormap can be changed afterwards in scampy. _Default: magma_r_.
 - `topo_cmap`: Name of the colormap to use for the topography. This colormap cannot be changed after launch. _Default: afm_hot_.
+- `topo_line_fit`: Boolean to tell if a line fitting of the topography must be made before plotting. _Default: true_.
 
 Any missing entry in `config.json` will be set to its default value.
 

@@ -3,5 +3,6 @@
   "matplotlib_stylesheet": "def",
   "autoload": false,
   "default_cmap": "viridis",
-  "topo_cmap": "afmhot"
+  "topo_cmap": "afmhot",
+  "topo_line_fit": true
 }

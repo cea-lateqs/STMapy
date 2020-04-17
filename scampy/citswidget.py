@@ -63,11 +63,12 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
         # Parse config
-        config = setUpConfig(os.path.join(os.path.dirname(__file__), "config.json"))
-        self.wdir = config["working_directory"]
-        self.topo_colormap = config["topo_cmap"]
+        self.config = setUpConfig(
+            os.path.join(os.path.dirname(__file__), "config.json")
+        )
+        self.wdir = self.config["working_directory"]
         self.ui_colorBarBox.setCurrentIndex(
-            self.ui_colorBarBox.findText(config["default_cmap"])
+            self.ui_colorBarBox.findText(self.config["default_cmap"])
         )
         # Other parameters used after map loading
         self.mapType = ""
@@ -88,7 +89,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Check 'Colorbar settings' by default
         self.ui_cbarCheckBox.setChecked(True)
         # Calls the loading method at launch
-        if config["autoload"]:
+        if self.config["autoload"]:
             self.askCits()
 
     def connect(self):
@@ -256,10 +257,11 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Reading and loading topo images methods
 
-    def drawTopo(self, line_fit=True):
+    def drawTopo(self):
         """ Draws the topography read while opening the CITS."""
         assert self.topo.ndim == 2
         yPx, xPx = self.topo.shape
+        line_fit = self.config["topo_line_fit"]
 
         # Set up the figure for the plot
         if self.fig_topo is None:
@@ -288,7 +290,12 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ax_topo.set_ylabel("Z (nm)")
         else:
             self.ax_topo = plotting.imageTopoPlot(
-                self.fig_topo, max_x, max_y, self.topo, self.topo_colormap, line_fit
+                self.fig_topo,
+                max_x,
+                max_y,
+                self.topo,
+                self.config["topo_cmap"],
+                line_fit,
             )
             if self.mapType == "Omicron":
                 self.ax_topo.axis([0, max_x, max_y, 0])
