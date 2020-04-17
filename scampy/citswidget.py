@@ -14,13 +14,12 @@ from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot, Dot, Line
 from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
 from .processing import (
-    levelTopo,
     normalizeDOS,
     linearFitFunction,
     findPixelsOnLine,
     directionAverageCITS,
 )
-from .plotting import waterfallPlot
+from . import plotting
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
@@ -259,101 +258,47 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     def drawTopo(self, line_fit=True):
         """ Draws the topography read while opening the CITS."""
-        if self.topo.ndim == 2:
-            # Get parameters
-            xPx, yPx = self.topo.shape
-            # If cits_params["yPx"] == 1, it is a Line Spectro so I need to call the specific
-            # method to draw the topo
-            if self.cits_params["yPx"] == 1:
-                self.drawLineTopo()
-                return
+        assert self.topo.ndim == 2
+        yPx, xPx = self.topo.shape
 
-            # Line fitting if necessary
-            if line_fit:
-                self.topo = levelTopo(self.topo)
-                figtitle = "Leveled topo (line fit)"
-            else:
-                figtitle = "Raw topo data"
-            # Set up the figure for the plot
-            if self.fig_topo is None:
-                self.fig_topo = pyplot.figure()
-            else:
-                self.fig_topo.clear()
-            self.ax_topo = self.fig_topo.add_subplot(1, 1, 1, aspect=yPx / xPx)
-            self.fig_topo.subplots_adjust(**SUBPLOTS_DIMS)
-            # Connect the close handling
+        # Set up the figure for the plot
+        if self.fig_topo is None:
+            self.fig_topo = pyplot.figure()
             self.fig_topo.canvas.mpl_connect("close_event", self.handleClosingTopo)
-            # Put the appropriate title
-            self.fig_topo.suptitle(figtitle)
-            # Choose the colormap
-            colormap = self.topo_colormap
+        else:
+            self.fig_topo.clear()
 
-            if self.ui_scaleMetric.isChecked():
-                logging.debug("Scale metric box is checked")
-                max_x = self.cits_params["xL"]
-                max_y = self.cits_params["yL"]
-            else:
-                max_x = xPx
-                max_y = yPx
-                logging.debug("Scale metric box is checked")
-            # If the map is an Omicron one, I have to invert the y-axis
-            if self.mapType == "Omicron":
-                self.ax_topo.axis([0, max_x, max_y, 0])
-                # pcolormesh takes *vertices* in arguments
-                # so the X (Y) array need to be from 0 to W (H) INCLUDED
-                XYmap = self.ax_topo.pcolormesh(
-                    np.linspace(0, max_x, xPx + 1),
-                    np.linspace(0, max_y, yPx + 1),
-                    self.topo,
-                    cmap=colormap,
-                )
-            else:
-                self.ax_topo.axis([0, max_x, 0, max_y])
-                # pcolormesh takes *vertices* in arguments so the X (Y) array need to be from 0 to W (H) INCLUDED
-                XYmap = self.ax_topo.pcolormesh(
-                    np.linspace(0, max_x, xPx + 1),
-                    np.linspace(0, max_y, yPx + 1),
-                    self.topo,
-                    cmap=colormap,
-                )
-
-            # Colorbar stuff
-            cbar = self.fig_topo.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
-            cbar.ax.yaxis.set_ticks_position("both")
-            cbar.ax.tick_params(axis="y", direction="in")
-            self.fig_topo.canvas.draw()
-            self.fig_topo.show()
-
-    def drawLineTopo(self):
-        """ Draws the topography read while opening a Line Spectro """
-        xPx = self.cits_params["xPx"]
-        # yPx is 1 (line spectro)
-
-        # Set up figure
-        fig = pyplot.figure()
-        self.ax_topo = fig.add_subplot(1, 1, 1)
-        self.fig_topo = fig
-        # Connect the close handling
-        self.fig_topo.canvas.mpl_connect("close_event", self.handleClosingTopo)
+        # Put the appropriate title
+        self.fig_topo.suptitle(
+            "Leveled topo (line fit)" if line_fit else "Raw topo data"
+        )
 
         if self.ui_scaleMetric.isChecked():
+            logging.debug("Scale metric box is checked")
             max_x = self.cits_params["xL"]
-            x_label = "Distance (nm)"
+            max_y = self.cits_params["yL"]
+            ax_label = "Distance (nm)"
         else:
-            max_x = xPx
-            x_label = ""
-        self.ax_topo.plot(
-            np.linspace(0, max_x, xPx), self.topo[0], label="Without line leveling"
-        )
-        self.ax_topo.plot(
-            np.linspace(0, max_x, xPx),
-            levelTopo(self.topo)[0],
-            label="With line leveling",
-        )
-        self.ax_topo.set_xlim(0, max_x)
-        self.ax_topo.set_xlabel(x_label)
-        self.ax_topo.set_ylabel("Z (nm)")
-        self.ax_topo.legend(loc=0)
+            max_y, max_x = yPx, xPx
+            logging.debug("Scale metric box is checked")
+            ax_label = "Pixels"
+
+        if yPx == 1:
+            self.ax_topo = plotting.lineTopoPlot(self.fig_topo, max_x, self.topo)
+            self.ax_topo.set_ylabel("Z (nm)")
+        else:
+            self.ax_topo = plotting.imageTopoPlot(
+                self.fig_topo, max_x, max_y, self.topo, self.topo_colormap, line_fit
+            )
+            if self.mapType == "Omicron":
+                self.ax_topo.axis([0, max_x, max_y, 0])
+            else:
+                self.ax_topo.axis([0, max_x, 0, max_y])
+            self.ax_topo.set_ylabel(ax_label)
+        self.ax_topo.set_xlabel(ax_label)
+
+        self.fig_topo.subplots_adjust(**SUBPLOTS_DIMS)
+        self.fig_topo.canvas.draw()
         self.fig_topo.show()
 
     def handleClosingTopo(self, event):
@@ -519,7 +464,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.nSpectraDrawn = 0
         self.voltageLine = None
         self.clearShapesClicked()
-        # self.drawTopo()
         self.ui_specWidget.draw()
 
     def drawSpectrum(self, spectrum_data, label, x=-1, y=-1):
@@ -847,7 +791,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         )
 
         if self.ui_waterfallButton.isChecked():
-            waterfallPlot(
+            plotting.waterfallPlot(
                 ax,
                 voltage_array,
                 self.cits_data[chan, y_plot, x_plot],
