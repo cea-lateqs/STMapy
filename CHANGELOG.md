@@ -1,3 +1,14 @@
+## 0.2.1
+
+### New features
+
+- Line fitting of the topography can be enabled/disabled in the config.
+
+### Fixes
+
+- Fixed crash when plotting the topo of CITS of unequal aspect ratio.
+- Fixed waterfall plots not displaying correctly.
+
 ## 0.2.0
 
 ### New features
