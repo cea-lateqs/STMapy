@@ -320,8 +320,8 @@ def readCits3dsBin(filepath):
         if "(A)" in chan:
             m_data[i] = np.abs(m_data[i]) * 10 ** 9
             channelList[i] = chan.replace("(A)", "(nA)")
-    # Convert topo in nm and level topo
-    topo = levelTopo(topo * 10 ** 9)
+    # Convert topo in nm
+    topo = topo * 10 ** 9
     # Extract supplementary data for zSpectro
     if zSpectro:
         zSpectroData = {"zChannel": channelList[0]}
