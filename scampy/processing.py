@@ -57,7 +57,7 @@ def levelTopo(topo):
     # Return the leveled topo
     return topo_leveled
 
-
+def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
     """ Do a linear fit of the data and returns the slope and the coef found.
     Called for zSpectros.
     """
