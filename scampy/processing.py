@@ -52,13 +52,12 @@ def levelTopo(topo):
     for y in range(yPx):
         fit_y = topo[y]
         f = sp.interpolate.InterpolatedUnivariateSpline(fit_x, fit_y, k=1)
-        popt, pcov = sp.optimize.curve_fit(linearFitFunction, fit_x, f(fit_y))
+        popt, pcov = sp.optimize.curve_fit(linearFitFunction, fit_x, f(fit_x))
         topo_leveled[y] = fit_y - (popt[0] * fit_x + popt[1])
     # Return the leveled topo
     return topo_leveled
 
 
-def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
     """ Do a linear fit of the data and returns the slope and the coef found.
     Called for zSpectros.
     """

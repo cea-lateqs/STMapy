@@ -30,7 +30,7 @@ def imageTopoPlot(fig, max_x, max_y, topo, colormap, line_fit):
     # Get parameters
     yPx, xPx = topo.shape
 
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(1,1,1,aspect=float(max_y)/max_x)
 
     # pcolormesh takes *vertices* in arguments
     # so the X (Y) array need to be from 0 to W (H) INCLUDED
