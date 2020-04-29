@@ -1,5 +1,5 @@
 import numpy as np
-from .processing import levelTopo
+from .processing import levelTopoLine, levelTopoPlane
 
 
 def waterfallPlot(ax, x_indices, yz_data, offset):
@@ -19,14 +19,24 @@ def lineTopoPlot(fig, max_x, topo):
     x_data = np.linspace(0, max_x, xPx)
 
     ax.plot(x_data, topo[0], label="Without line leveling")
-    ax.plot(x_data, levelTopo(topo)[0], label="With line leveling")
+    ax.plot(x_data, levelTopoLine(topo)[0], label="With line leveling")
     ax.set_xlim([x_data[0], x_data[-1]])
     ax.legend(loc=0)
     return ax
 
 
-def imageTopoPlot(fig, max_x, max_y, topo, colormap, line_fit):
+def imageTopoPlot(fig, max_x, max_y, topo, colormap, level_algo):
     """ Draws the topography read while opening a 2D CITS."""
+    if level_algo == "line":
+        topoToPlot = levelTopoLine(topo)
+        fig.suptitle("Leveled topo (line fit)")
+    elif level_algo == "plane":
+        topoToPlot = levelTopoPlane(topo)
+        fig.suptitle("Leveled topo (plane fit)")
+    else:
+        topoToPlot = topo
+        fig.suptitle("Raw topo data")
+
     # Get parameters
     yPx, xPx = topo.shape
 
@@ -37,7 +47,7 @@ def imageTopoPlot(fig, max_x, max_y, topo, colormap, line_fit):
     XYmap = ax.pcolormesh(
         np.linspace(0, max_x, xPx + 1),
         np.linspace(0, max_y, yPx + 1),
-        levelTopo(topo) if line_fit else topo,
+        topoToPlot,
         cmap=colormap,
     )
 

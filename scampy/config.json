@@ -4,5 +4,5 @@
   "autoload": false,
   "default_cmap": "viridis",
   "topo_cmap": "afmhot",
-  "topo_line_fit": true
+  "level_topo": "plane"
 }

@@ -15,6 +15,18 @@ class TestProcessing(unittest.TestCase):
     def gen_dummy_topo(self):
         return np.random.random((YPX, XPX))
 
+    def gen_real_topo(self):
+        Y, X = np.meshgrid(np.arange(YPX), np.arange(XPX))
+        # For now: assume 0 topography
+        true_topo = (np.cos(10 * XPX * X) + np.sin(5 * YPX * Y)) * 0.0
+
+        a, b = np.random.random(2)
+        line_background = a * X + b
+
+        raw_topo = true_topo + line_background
+
+        return raw_topo, true_topo, line_background
+
     def test_directionAverageCITS(self):
         """ Tests that the direction average returns the approriate shape. """
         cits_data = self.gen_dummy_cits_data()
@@ -47,12 +59,22 @@ class TestProcessing(unittest.TestCase):
         norm_cits = processing.normalizeDOS(cits_data)
         self.assertEqual(norm_cits.shape, cits_data.shape)
 
-    def test_levelTopo(self):
-        topo = self.gen_dummy_topo()
-        leveled_topo = processing.levelTopo(topo)
-        self.assertEqual(leveled_topo.shape, topo.shape)
+    def test_levelTopoLine(self):
+        """ Tests that levelTopoLine allows to remove line backgrounds. """
+        raw_topo, true_topo, line_background = self.gen_real_topo()
+        leveled_topo = processing.levelTopoLine(raw_topo)
+
+        np.testing.assert_almost_equal(true_topo, leveled_topo)
+
+    def test_levelTopoPlane(self):
+        """ Tests that levelTopoPlane allows to remove line backgrounds. """
+        raw_topo, true_topo, line_background = self.gen_real_topo()
+        leveled_topo = processing.levelTopoPlane(raw_topo)
+
+        np.testing.assert_almost_equal(true_topo, leveled_topo)
 
     def test_extractSlope(self):
+        """ Tests that extractSlope returns the approriate shapes. """
         dummy_channel = self.gen_dummy_cits_data()[0]
         dummy_topo = self.gen_dummy_topo()
         slope_data, coef_data, zg = processing.extractSlope(

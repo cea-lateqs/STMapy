@@ -261,7 +261,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Draws the topography read while opening the CITS."""
         assert self.topo.ndim == 2
         yPx, xPx = self.topo.shape
-        line_fit = self.config["topo_line_fit"]
+        level_algo = self.config["level_topo"]
 
         # Set up the figure for the plot
         if self.fig_topo is None:
@@ -269,11 +269,6 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.fig_topo.canvas.mpl_connect("close_event", self.handleClosingTopo)
         else:
             self.fig_topo.clear()
-
-        # Put the appropriate title
-        self.fig_topo.suptitle(
-            "Leveled topo (line fit)" if line_fit else "Raw topo data"
-        )
 
         if self.ui_scaleMetric.isChecked():
             logging.debug("Scale metric box is checked")
@@ -295,7 +290,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 max_y,
                 self.topo,
                 self.config["topo_cmap"],
-                line_fit,
+                level_algo,
             )
             if self.mapType == "Omicron":
                 self.ax_topo.axis([0, max_x, max_y, 0])

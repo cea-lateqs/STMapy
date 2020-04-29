@@ -8,7 +8,7 @@ import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
-from scampy.processing import extractSlope, levelTopo, stringify
+from scampy.processing import extractSlope, stringify
 
 DEFAULT_CONFIG = {
     "working_directory": "~",
@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     "autoload": False,
     "default_cmap": "magma_r",
     "topo_cmap": "afmhot",
-    "topo_line_fit": True,
+    "level_topo": "no",
 }
 
 
@@ -79,6 +79,15 @@ def setUpConfig(config_filepath):
             )
         )
         config["topo_cmap"] = default
+
+    if config["level_topo"].lower() not in ["line", "plane", "no"]:
+        default = DEFAULT_CONFIG["level_topo"]
+        logging.warning(
+            "{} set for level_topo is not supported ('plane', 'line' or 'no' are valid values.). Setting {} instead.".format(
+                config["level_topo"], default
+            )
+        )
+        config["level_topo"] = default
 
     return config
 

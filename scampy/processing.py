@@ -42,20 +42,34 @@ def linearFitFunction(x, a, b):
     return a * x + b
 
 
-def levelTopo(topo):
+def planeFitFunction(yx, a, b, c):
+    """ Basic function for plane fitting. """
+    y, x = yx
+    return a * x + b * y + c
+
+
+def levelTopoLine(topo):
+    """ Fit and substract a line background for each line of the topo. """
     yPx, xPx = topo.shape
-    # Numpy array to save the leveled topo
     topo_leveled = np.zeros_like(topo)
     fit_x = np.arange(xPx)
 
-    # TODO: Can be vectorized ?
     for y in range(yPx):
         fit_y = topo[y]
         f = sp.interpolate.InterpolatedUnivariateSpline(fit_x, fit_y, k=1)
         popt, pcov = sp.optimize.curve_fit(linearFitFunction, fit_x, f(fit_x))
-        topo_leveled[y] = fit_y - (popt[0] * fit_x + popt[1])
-    # Return the leveled topo
+        topo_leveled[y] = fit_y - linearFitFunction(fit_x, popt[0], popt[1])
+
     return topo_leveled
+
+
+def levelTopoPlane(topo):
+    """ Fit and substract by a plane the topo. """
+    Y, X = np.indices(topo.shape)
+    fit_yx = np.vstack((Y.ravel(), X.ravel()))
+    popt, pcov = sp.optimize.curve_fit(planeFitFunction, fit_yx, topo.ravel())
+    return topo - planeFitFunction(fit_yx, *popt).reshape(topo.shape)
+
 
 def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
     """ Do a linear fit of the data and returns the slope and the coef found.
