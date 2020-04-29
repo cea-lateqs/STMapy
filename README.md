@@ -52,7 +52,7 @@ scampy
 
 It should display the following interface.
 
-<img src="scampy.svg" alt="Scampy GUI">
+<img src="scampy.png" alt="Scampy GUI">
 
 If it is not working, run directly the `main.py` file from scampy sources:
 
