@@ -1,3 +1,13 @@
+## 0.3.0
+
+### New features
+
+- Added plane fitting of the topography. The type of fitting can be chosen in the config.
+
+### Fixes
+
+- Fixed line fitting of the topography.
+
 ## 0.2.1
 
 ### New features
