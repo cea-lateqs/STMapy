@@ -28,11 +28,16 @@ def directionAverageCITS(cits_data, nb_to_avg, direction):
     return new_data
 
 
-def normalizeDOS(dos, dos_length=None):
-    if dos_length is None:
-        dos_length = dos.shape[-1]
-    mean_l = np.mean(dos[..., : dos_length // 4], axis=-1)
-    mean_r = np.mean(dos[..., 3 * dos_length // 4 :], axis=-1)
+def normalizeDOS(dos, norm_length=None):
+    """
+    Normalize a DOS by dividing the dos by a mean of left-side DOS
+    and right-side DOS of length norm_length along the last axis.
+    Default: norm_length = dos.shape[-1] // 4.
+    """
+    if norm_length is None:
+        norm_length = dos.shape[-1] // 4
+    mean_l = np.mean(dos[..., :norm_length], axis=-1)
+    mean_r = np.mean(dos[..., -norm_length:], axis=-1)
     mean = (mean_l + mean_r) / 2
     return dos / mean[..., np.newaxis]
 

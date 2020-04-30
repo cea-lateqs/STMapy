@@ -756,15 +756,16 @@ class CitsWidget(QtWidgets.QMainWindow):
         )
         x_plot, y_plot = findPixelsOnLine(xi, xf, yi, yf)
         if self.ui_viewSelectedBox.isChecked():
-            if self.ui_scaleMetric.isChecked():
-                dx = self.cits_params["xL"] / self.cits_params["xPx"]
-                dy = self.cits_params["yL"] / self.cits_params["yPx"]
-            else:
-                dx, dy = 1, 1
             for x, y in zip(x_plot, y_plot):
                 self.addToShapesClicked(
                     Dot(
-                        x, y, self.ui_mapWidget.figure, self.fig_topo, "yellow", dx, dy,
+                        x,
+                        y,
+                        self.ui_mapWidget.figure,
+                        self.fig_topo,
+                        "yellow",
+                        self.metric_ratios["x"],
+                        self.metric_ratios["y"],
                     )
                 )
         return self.cutPlot(x_plot, y_plot)
