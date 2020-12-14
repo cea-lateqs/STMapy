@@ -152,6 +152,10 @@ def readCitsAscii(filepath):
                 # No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
                 # Backward data
                 m_data[1][y][x] = np.float64(data_list[zPt : 2 * zPt]) * unit
+    if vStart>0 :  # If start bias is positive, ascii is saved in reverse order
+        V2 = vStart
+        vStart = vEnd
+        vEnd = V2
     # Store the parameters in a dictonnary to use them later
     m_params = {
         "xPx": xPx,
