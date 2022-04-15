@@ -166,3 +166,6 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
 
 def stringify(array):
     return "".join([chr(x) for x in array])
+
+def FeenstraNormalization(data, params):
+    return data

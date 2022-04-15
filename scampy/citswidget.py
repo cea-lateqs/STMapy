@@ -18,6 +18,7 @@ from .processing import (
     linearFitFunction,
     findPixelsOnLine,
     directionAverageCITS,
+    FeenstraNormalization,
 )
 from . import plotting
 
@@ -38,6 +39,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.setAutoFillBackground(True)
         # TODO: CITS should be a dedicated object
         self.cits_data = np.ndarray([])
+        self.cits_add_data = np.ndarray([])
         self.cits_params = {}
         self.channelList = []
         self.cits_name = ""
@@ -62,6 +64,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_colorBarBox.addItems(matplotlib.pyplot.colormaps())
         # Boolean that is True if a map is loaded
         self.dataLoaded = False
+        # Boolean that is True if a map is loaded
+        self.dataAdded = False
         # Parse config
         self.config = setUpConfig(
             os.path.join(os.path.dirname(__file__), "config.json")
@@ -96,6 +100,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Connects all the signals. Only called in the constructor """
         self.ui_openButton.clicked.connect(self.askCits)
         self.ui_topoButton.clicked.connect(self.drawTopo)
+        self.ui_add_CITS.clicked.connect(self.addCits)
+        self.ui_FeenstraBox.clicked.connect(self.FeenstraCits)
         self.ui_channelBox.currentIndexChanged.connect(self.updateMap)
         self.ui_colorBarBox.currentTextChanged.connect(self.setColorMap)
         self.ui_indexBox.valueChanged.connect(self.drawXYMap)
@@ -233,8 +239,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 logging.error("Problem while reading " + cits)
                 return
-            # If only one Cits was selected, there is no need to run the averaging code so return after drawing the topo
-            # and updating of the widgets
+            # If only one Cits was selected, there is no need to run the averaging code
+            # so return after drawing the topo and updating of the widgets
             if n_cits == 1:
                 self.updateWidgets()
                 self.drawTopo()
@@ -253,6 +259,36 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.dataLoaded = True
         self.cits_data = mean_data
         self.updateWidgets()
+        return
+    
+    def addCits(self):
+        """ Slot that launches the reading of the I(V) CITS 
+        that corresponds to the preniously opened single dIdV CITS.
+        TODO : Only implemented for ascii files"""  
+        if self.dataLoaded :
+            IVpath = QtWidgets.QFileDialog.getOpenFileNames(
+                self,
+                "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
+                self.wdir,
+                "Ascii file (*.asc)",
+            )
+            # getOpenFilesNames returns a tuple with Cits_names as first element
+            # and extension as second. We just need the names.
+            (
+                topo,
+                cits_add_data,
+                IV_channelList,
+                cits_params,
+            ) = readCitsAscii(IVpath[0][0])
+            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
+            self.dataAdded = True
+            IV_channelList = ['IV_'+x for x in IV_channelList]
+            self.channelList = np.concatenate((self.channelList, IV_channelList))
+            self.ui_channelBox.addItems(IV_channelList)
+        else:
+            logging.error(
+                "Please first load single dIdV CITS"
+                )
         return
 
     # %% Reading and loading topo images methods
@@ -1085,3 +1121,24 @@ class CitsWidget(QtWidgets.QMainWindow):
                 "Normalized " + self.channelList[chan],
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
+    #%% Feenstra methods
+        
+    def FeenstraCits(self):
+          """ Slot that launches the calculation of Feenstra CITS 
+          corresponding to the preniously opened single dIdV and I(V) CITS.
+          TODO : Only implemented for ascii files"""  
+          if self.dataLoaded and self.dataAdded :
+              self.cits_params["LIsensi"] = self.ui_LIBox.value()
+              self.cits_params["LIsensi"] = self.ui_LIBox.value()
+              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params)
+              Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
+              self.channelList = np.concatenate((self.channelList, Feenstra_channelList))
+              self.ui_channelBox.addItems(Feenstra_channelList)
+              self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis = 0)
+          else:
+              logging.error(
+                  "Please first load single dIdV CITS and its corresponding I(V) CITS"
+                  )
+          return
+  
