@@ -2,7 +2,7 @@
   "working_directory": "~/Documents/LABO/",
   "matplotlib_stylesheet": "def",
   "autoload": false,
-  "default_cmap": "viridis",
+  "default_cmap": "cividis",
   "topo_cmap": "afmhot",
   "level_topo": "plane"
 }
