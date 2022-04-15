@@ -152,3 +152,10 @@ Any missing entry in `config.json` will be set to its default value.
 ## Further information
 
 The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analysis). Bugs can be reported as Issues on the repository.
+
+## Known issues
+
+Some issues on linux install have been reported.
+- **Spip install issues** : you can try to run the `main.py` directly
+- **`Scampy not found` issues** : you have to change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
+- **`toolbar_map` issue**: _active is not recognised by python : try to remove this condition from onpressOnmap and  onreleaseOnmap functions.
