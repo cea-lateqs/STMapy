@@ -598,7 +598,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QSpinBox" name="ui_Gainbox">
+              <widget class="QSpinBox" name="ui_GainBox">
                <property name="minimum">
                 <number>7</number>
                </property>

@@ -95,7 +95,7 @@ def setUpConfig(config_filepath):
 def readCitsAscii(filepath):
     """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
     with open(filepath, "r") as f:
-        divider = 1
+        divider = 10
         unit = 1
         header_end_not_found = True
         for line in f:

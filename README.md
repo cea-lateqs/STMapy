@@ -99,6 +99,11 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 - **Displayed channel** (_dropdown_): selects the working channel. It will be displayed in the 2D plot and all operations will be used on this channel.
 - **Normalize current channel** (_button_): normalises the current channel. The result of this normalisation will be added as a new channel named 'Normalised' followed by the channel name.
 - **V/Z index** (_spinbox_): changes the index of the voltage/altitude at which the 2D plot is displayed. The corresponding value is shown in the header of the 2D plot.
+- **Open I(V) CITS channel** (_button_): Open I(V) data from folder. The data is added in a new channel. Only works for ascii files, and if a dIdV CITS has already been oppened. 
+
+#### Calculate Feenstra normalisation
+
+- **Calculate dIdV*V/I** (_button_): Calculates the Feenstra renormalisation. The result of will be added as a new channels named. Only works for ascii files, and if a dIdV and I(V )CITS have already been oppened. 
 
 #### Averaging
 
@@ -153,9 +158,9 @@ Any missing entry in `config.json` will be set to its default value.
 
 The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analysis). Bugs can be reported as Issues on the repository.
 
-## Known issues
+## Trouble shooting
 
-Some issues on linux install have been reported.
-- **Spip install issues** : you can try to run the `main.py` directly
-- **`Scampy not found` issues** : you have to change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
-- **`toolbar_map` issue**: _active is not recognised by python : try to remove this condition from onpressOnmap and  onreleaseOnmap functions.
+Some issues have been reported.
+- **Spip install issues** : try to run the `main.py`.
+- **`Scampy not found` issues** : change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
+- **`toolbar_map'' issue**: 'active' does not work with python 3.9 / matplotlib 3.5.1 : Downgrade matplotlib. The averything woks fine with python 3.7.13 / matplotlib 3.1.6. You can also try to remove the  '_toolbar_map_active' condition from onpressOnmap and  onreleaseOnmap functions. This will cause minor bugs such as : a line cut is drawn when zooming the CITS.

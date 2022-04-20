@@ -168,4 +168,45 @@ def stringify(array):
     return "".join([chr(x) for x in array])
 
 def FeenstraNormalization(data, params):
-    return data
+    '''
+    Performs conductance normalization as described in 
+    R. M. Feenstra et al., Surface Science 181, (1986)
+    https://www.sciencedirect.com/science/article/pii/0039602887901701
+    '''
+    dIdVFwd = data[0,:,:,:]
+    dIdVBwd = data[1,:,:,:]
+    IVFwd = data[2,:,:,:]+10*10**(-3) # unit : nA from matrix files
+    IVBwd = data[3,:,:,:]+10*10**(-3)
+    print(IVFwd[0,0,0], IVFwd[-1,-1,-1])
+    print(IVBwd[0,0,0], IVBwd[-1,-1,-1])
+    print(params["vStart"])
+    Vbias = np.array([params["vStart"] + i * params["dV"] for i in range(len(dIdVFwd))])
+    Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-1], axis=0)
+    Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-2], axis=0)
+    print(np.shape(Vbias),np.shape(dIdVFwd))
+    Vbias = np.reshape(Vbias, np.shape(dIdVFwd))
+    Norm_conductanceFwd = dIdVFwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVFwd)
+    Norm_conductanceBwd = dIdVBwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVBwd)
+    Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
+    print(np.shape(Norm_conductance))
+    return Norm_conductance
+
+def FeenstraNormalization_2(data, params):
+    '''
+    Performs conductance normalization as described in 
+    R. M. Feenstra et al., Surface Science 181, (1986)
+    https://www.sciencedirect.com/science/article/pii/0039602887901701
+    '''
+    IVFwd = data[2,:,:,:]*10**(-9) # unit : nA from matrix files
+    IVBwd = data[3,:,:,:]*10**(-9)
+    Vbias = np.array([params["vStart"] + i * params["dV"] for i in range(len(IVFwd))])
+    # Vbias = np.array([params["vStart"] + i * params["dV"] if not (("vStart"] + i * params["dV"]) == 0) else for i in range(len(IVFwd))])
+    Vbias = np.concatenate([Vbias]*np.shape(IVFwd)[-1], axis=0)
+    Vbias = np.concatenate([Vbias]*np.shape(IVFwd)[-2], axis=0)
+    print(np.shape(Vbias),np.shape(IVFwd))
+    Vbias = np.reshape(Vbias, np.shape(IVFwd))
+    Norm_conductanceFwd = np.ln(IVFwd)/np.ln(Vbias)
+    Norm_conductanceBwd = np.ln(IVBwd)/np.ln(Vbias)
+    Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
+    print(np.shape(Norm_conductance))
+    return Norm_conductance

@@ -159,7 +159,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self,
             "Choose a CITS file to read or several to average",
             self.wdir,
-            " RHK file (*.sm4);;3D binary file (*.3ds);;Ascii file (*.asc);;Text file (*.txt)",
+            "Ascii file (*.asc);;RHK file (*.sm4);;3D binary file (*.3ds);;Text file (*.txt);;All files (*)",
         )
         # getOpenFilesNames returns a tuple with Cits_names as first element
         # and extension as second. We just need the names.
@@ -950,13 +950,10 @@ class CitsWidget(QtWidgets.QMainWindow):
         if self.dataLoaded:
             # Get the data of the map and draw it
             mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
-            if self.xy_map is None:
-                self.ui_mapWidget.figure.clear()
-                self.xy_map = self.createXYMap(mapData)
-            else:
-                mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
-                self.xy_map.set_array(mapData.flatten())
-                # Set title
+            # if self.xy_map is None:
+            self.ui_mapWidget.figure.clear()
+            self.xy_map = self.createXYMap(mapData)
+            # Set title
             self.ax_map.set_title(
                 self.cits_name
                 + " - "
@@ -1130,7 +1127,8 @@ class CitsWidget(QtWidgets.QMainWindow):
           TODO : Only implemented for ascii files"""  
           if self.dataLoaded and self.dataAdded :
               self.cits_params["LIsensi"] = self.ui_LIBox.value()
-              self.cits_params["LIsensi"] = self.ui_LIBox.value()
+              self.cits_params["AmpMod"] = self.ui_AmpBox.value()
+              self.cits_params["Gain"] = self.ui_GainBox.value()
               cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params)
               Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
               self.channelList = np.concatenate((self.channelList, Feenstra_channelList))
