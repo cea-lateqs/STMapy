@@ -19,6 +19,7 @@ from .processing import (
     findPixelsOnLine,
     directionAverageCITS,
     FeenstraNormalization,
+    FeenstraNormalization_log,
 )
 from . import plotting
 
@@ -1130,6 +1131,7 @@ class CitsWidget(QtWidgets.QMainWindow):
               self.cits_params["AmpMod"] = self.ui_AmpBox.value()
               self.cits_params["Gain"] = self.ui_GainBox.value()
               cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params)
+              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params)
               Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
               self.channelList = np.concatenate((self.channelList, Feenstra_channelList))
               self.ui_channelBox.addItems(Feenstra_channelList)
