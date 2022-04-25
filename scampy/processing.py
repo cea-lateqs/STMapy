@@ -173,6 +173,7 @@ def FeenstraNormalization(data, params):
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
     '''
+    #TODO : index should be found from from channel list names
     dIdVFwd = data[0,:,:,:]
     dIdVBwd = data[1,:,:,:]
     IVFwd = abs(data[2,:,:,:])+50*10**(-3) # unit : nA from matrix files
@@ -205,6 +206,7 @@ def FeenstraNormalization_log(data, params):
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
     '''
+    #TODO : index should be found from from channel list names
     IVFwd = abs(data[2,:,:,:])
     IVBwd = abs(data[3,:,:,:])
     lnIVFwd = np.array(np.log(IVFwd+5*10**(-3))) # unit : nA from matrix files

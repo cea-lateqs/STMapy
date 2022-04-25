@@ -102,6 +102,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_openButton.clicked.connect(self.askCits)
         self.ui_topoButton.clicked.connect(self.drawTopo)
         self.ui_add_CITS.clicked.connect(self.addCits)
+        self.ui_add_FFT.clicked.connect(self.calculateFFT)
         self.ui_FeenstraBox.clicked.connect(self.FeenstraCits)
         self.ui_channelBox.currentIndexChanged.connect(self.updateMap)
         self.ui_colorBarBox.currentTextChanged.connect(self.setColorMap)
@@ -1110,6 +1111,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.addChannel(FFTData, "FFT of " + self.channelList[chan_index_to_fft])
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
+#%% Adding channels
+
     def normalizeCurrentChannel(self):
         """ Adds the normalized current data as a new channel """
         if self.dataLoaded:
@@ -1120,8 +1123,16 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
-    #%% Feenstra methods
-        
+    def calculateFFT(self):
+        """ Adds the FFT data as a new channel """
+        if self.dataLoaded:
+            chan = self.ui_channelBox.currentIndex()
+            self.addChannel(
+                (np.abs(np.fft.fftshift(np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2))))),
+                "FFT " + self.channelList[chan],
+            )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
     def FeenstraCits(self):
           """ Slot that launches the calculation of Feenstra CITS 
           corresponding to the preniously opened single dIdV and I(V) CITS.

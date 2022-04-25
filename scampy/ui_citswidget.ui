@@ -508,6 +508,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QPushButton" name="ui_add_FFT">
+                 <property name="text">
+                  <string>FFT(CITS)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QPushButton" name="ui_add_CITS">
                  <property name="text">
                   <string>Open I(V) CITS channel</string>
