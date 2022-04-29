@@ -501,27 +501,6 @@
                 <enum>QLayout::SetDefaultConstraint</enum>
                </property>
                <item>
-                <widget class="QLabel" name="label_7">
-                 <property name="text">
-                  <string>Displayed channel</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="ui_add_FFT">
-                 <property name="text">
-                  <string>FFT(CITS)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="ui_add_CITS">
-                 <property name="text">
-                  <string>Open I(V) CITS channel</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QPushButton" name="ui_normButton">
                  <property name="text">
                   <string>Normalize current channel</string>
@@ -529,12 +508,40 @@
                 </widget>
                </item>
                <item>
-                <widget class="QComboBox" name="ui_channelBox"/>
+                <widget class="QPushButton" name="ui_FFTButton">
+                 <property name="text">
+                  <string>FFT(CITS)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="ui_addCITSButton">
+                 <property name="text">
+                  <string>Open I(V) CITS channel</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="ui_derivateButton">
+                 <property name="text">
+                  <string>Derivative</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_4">
+               <item>
+                <widget class="QLabel" name="label_7">
+                 <property name="text">
+                  <string>Displayed channel</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="ui_channelBox"/>
+               </item>
                <item>
                 <widget class="QLabel" name="label">
                  <property name="text">

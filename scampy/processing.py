@@ -167,24 +167,20 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
 def stringify(array):
     return "".join([chr(x) for x in array])
 
-def FeenstraNormalization(data, params):
+def FeenstraNormalization(data, params, channelList):
     '''
     Performs conductance normalization as described in 
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
     '''
-    #TODO : index should be found from from channel list names
-    dIdVFwd = data[0,:,:,:]
-    dIdVBwd = data[1,:,:,:]
-    IVFwd = abs(data[2,:,:,:])+50*10**(-3) # unit : nA from matrix files
-    IVBwd = abs(data[3,:,:,:])+50*10**(-3)
-    # IVFwd = abs(data[2,:,:,:]) # unit : nA from matrix files
-    # IVBwd = abs(data[3,:,:,:])
+    dIdVindex = channelList.index("Data [Fwd]")
+    dIdVFwd = data[dIdVindex,:,:,:]
+    dIdVBwd = data[dIdVindex+1,:,:,:]
+    IVindex = channelList.index("IV_Data [Fwd]")
+    IVFwd = abs(data[IVindex,:,:,:])#+50*10**(-3) # unit : nA from matrix files
+    IVBwd = abs(data[IVindex+1,:,:,:])#+50*10**(-3) # unit : nA from matrix files
     # IVFwd = np.where(IVFwd<0.00001,1,IVFwd)
     # IVBwd = np.where(IVBwd<0.00001,1,IVBwd)
-    print(IVFwd[0,0,0], IVFwd[-1,-1,-1])
-    print(IVBwd[0,0,0], IVBwd[-1,-1,-1])
-    print(params["vStart"])
     # Vbias = np.array([np.log(abs(params["vStart"] + i * params["dV"]))
     #                     if not(abs(params["vStart"] + i * params["dV"])==0)
     #                     else 1 for i in range(np.shape(IVFwd)[-1])])
@@ -192,48 +188,71 @@ def FeenstraNormalization(data, params):
                       for i in range(np.shape(IVFwd)[-1])])
     Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-2], axis=0)
     Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-3], axis=0)
-    print(np.shape(Vbias),np.shape(dIdVFwd))
     Vbias = np.reshape(Vbias, np.shape(dIdVFwd))
     Norm_conductanceFwd = dIdVFwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVFwd)
     Norm_conductanceBwd = dIdVBwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVBwd)
     Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
-    print(np.shape(Norm_conductance))
     return Norm_conductance
 
-def FeenstraNormalization_log(data, params):
+def savgolderivative(data,window,polyorder,shape,dV,deriv=0,):
+    d = [sp.signal.savgol_filter(
+            data[i,j,:], window_length=window, polyorder=polyorder,deriv=deriv, delta=dV) 
+            for i in range(shape[0]) for j in range(shape[1]) ]
+    return np.reshape(d, np.shape(data))
+
+def diffderivative(data,shape):
+     d = [np.hstack((data[i,j,0], data[i,j,:],data[i,j,-1]))[ 2:]
+          - np.hstack((data[i,j,0],data[i,j,:],data[i,j,-1]))[:-2]
+          for i in range(shape[0]) for j in range(shape[1])]
+     # d = np.reshape(d, (np.shape(data)[0], np.shape(data)[1], np.shape(data)[2]-2))
+     d = np.reshape(d, np.shape(data))
+     return d
+
+def FeenstraNormalization_log(data, params, channelList):
     '''
     Performs conductance normalization as described in 
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
     '''
-    #TODO : index should be found from from channel list names
-    IVFwd = abs(data[2,:,:,:])
-    IVBwd = abs(data[3,:,:,:])
+    savgolfilter=1
+    IVindex = channelList.index("IV_Data [Fwd]")
+    IVFwd = abs(data[IVindex,:,:,:])
+    IVBwd = abs(data[IVindex+1,:,:,:])
     lnIVFwd = np.array(np.log(IVFwd+5*10**(-3))) # unit : nA from matrix files
     lnIVBwd = np.array(np.log(IVBwd+5*10**(-3)))
     lnVbias = np.array([np.log(abs(params["vStart"] + i * params["dV"]))
                         if not(abs(params["vStart"] + i * params["dV"])==0)
                         else 1 for i in range(np.shape(lnIVFwd)[-1])])
-    print(len(lnIVFwd), np.shape(lnIVFwd))
     # Vbias = np.array([params["vStart"] + i * params["dV"] if not (("vStart"] + i * params["dV"]) == 0) else for i in range(len(IVFwd))])
     lnVbias = np.concatenate([lnVbias]*np.shape(lnIVFwd)[-2], axis=0)
     lnVbias = np.concatenate([lnVbias]*np.shape(lnIVFwd)[-3], axis=0)
-    print(np.shape(lnVbias),np.shape(lnIVFwd),np.shape(lnIVFwd[1,1,:]))
     lnVbias = np.reshape(lnVbias, np.shape(lnIVFwd))
-    dlnIVFwd = [sp.signal.savgol_filter(
-        lnIVFwd[i,j,:], window_length=11, polyorder=4,deriv=1) 
-        for i in range(np.shape(lnIVFwd)[-3]) for j in range(np.shape(lnIVFwd)[-2]) ]
-    dlnIVBwd = [sp.signal.savgol_filter(
-        lnIVBwd[i,j,:], window_length=11, polyorder=4,deriv=1) 
-        for i in range(np.shape(lnIVFwd)[-3]) for j in range(np.shape(lnIVFwd)[-2]) ]
-    dlnVbias = [sp.signal.savgol_filter(
-        lnVbias[i,j,:], window_length=11, polyorder=4,deriv=1) 
-        for i in range(np.shape(lnIVFwd)[-3]) for j in range(np.shape(lnIVFwd)[-2]) ]
-    dlnIVFwd = np.reshape(dlnIVFwd, np.shape(lnIVFwd))
-    dlnIVBwd = np.reshape(dlnIVBwd, np.shape(lnIVFwd))
-    dlnVbias = np.reshape(dlnVbias, np.shape(lnIVFwd))
+    if savgolfilter:
+        dlnIVFwd = savgolderivative(lnIVFwd,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
+        dlnIVBwd = savgolderivative(lnIVBwd,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
+        dlnVbias = savgolderivative(lnVbias,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
+    else:
+        dlnIVFwd = diffderivative(lnIVFwd, np.shape(lnIVFwd[:,:,0]))
+        dlnIVBwd = diffderivative(lnIVBwd, np.shape(lnIVFwd[:,:,0]))
+        dlnVbias = diffderivative(lnVbias, np.shape(lnIVFwd[:,:,0]))
     Norm_conductanceFwd = dlnIVFwd/dlnVbias
     Norm_conductanceBwd = dlnIVBwd/dlnVbias
     Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
-    print(np.shape(Norm_conductance))
     return Norm_conductance
+
+def derivate_IV(IVdata, dV):
+    '''
+    Calculates derivative of IVdata
+    Using either savgol derivative or savgol filtering and by hand derivative
+    '''
+    savgolfilter = 1
+    if savgolfilter:
+        dIVdata = -savgolderivative(IVdata, 11, 2, np.shape(IVdata[:,:,0]), dV, deriv=1)
+        # dIVdata = savgolderivative(IVdata, 81, 2, np.shape(IVdata[:,:,0]))
+    else:
+        dIVdata = -diffderivative(
+            savgolderivative(IVdata, 31, 2, np.shape(IVdata[:,:,0])), 
+            np.shape(IVdata[:,:,0])
+                                 )/dV
+    
+    return dIVdata

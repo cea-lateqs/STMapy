@@ -20,6 +20,7 @@ from .processing import (
     directionAverageCITS,
     FeenstraNormalization,
     FeenstraNormalization_log,
+    derivate_IV,
 )
 from . import plotting
 
@@ -101,8 +102,9 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Connects all the signals. Only called in the constructor """
         self.ui_openButton.clicked.connect(self.askCits)
         self.ui_topoButton.clicked.connect(self.drawTopo)
-        self.ui_add_CITS.clicked.connect(self.addCits)
-        self.ui_add_FFT.clicked.connect(self.calculateFFT)
+        self.ui_addCITSButton.clicked.connect(self.addCits)
+        self.ui_FFTButton.clicked.connect(self.calculateFFT)
+        self.ui_derivateButton.clicked.connect(self.derivateCurrentChannel)
         self.ui_FeenstraBox.clicked.connect(self.FeenstraCits)
         self.ui_channelBox.currentIndexChanged.connect(self.updateMap)
         self.ui_colorBarBox.currentTextChanged.connect(self.setColorMap)
@@ -263,36 +265,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.updateWidgets()
         return
     
-    def addCits(self):
-        """ Slot that launches the reading of the I(V) CITS 
-        that corresponds to the preniously opened single dIdV CITS.
-        TODO : Only implemented for ascii files"""  
-        if self.dataLoaded :
-            IVpath = QtWidgets.QFileDialog.getOpenFileNames(
-                self,
-                "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
-                self.wdir,
-                "Ascii file (*.asc)",
-            )
-            # getOpenFilesNames returns a tuple with Cits_names as first element
-            # and extension as second. We just need the names.
-            (
-                topo,
-                cits_add_data,
-                IV_channelList,
-                cits_params,
-            ) = readCitsAscii(IVpath[0][0])
-            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
-            self.dataAdded = True
-            IV_channelList = ['IV_'+x for x in IV_channelList]
-            self.channelList = np.concatenate((self.channelList, IV_channelList))
-            self.ui_channelBox.addItems(IV_channelList)
-        else:
-            logging.error(
-                "Please first load single dIdV CITS"
-                )
-        return
-
     # %% Reading and loading topo images methods
 
     def drawTopo(self):
@@ -861,9 +833,9 @@ class CitsWidget(QtWidgets.QMainWindow):
                 x_array,
                 voltage_array,
                 self.cits_data[chan, y_plot, x_plot, :].T,
-                cmap=self.ui_colorBarBox.currentText(),
+                cmap=self.ui_colorBarBox.currentText()
             )
-
+            
             # Colorbar set up
             fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             cbar = fig.colorbar(mapData, shrink=0.9, pad=0.05, aspect=15)
@@ -1113,6 +1085,36 @@ class CitsWidget(QtWidgets.QMainWindow):
 
 #%% Adding channels
 
+    def addCits(self):
+        """ Slot that launches the reading of the I(V) CITS 
+        that corresponds to the preniously opened single dIdV CITS.
+        TODO : Only implemented for ascii files"""  
+        if self.dataLoaded :
+            IVpath = QtWidgets.QFileDialog.getOpenFileNames(
+                self,
+                "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
+                self.wdir,
+                "Ascii file (*.asc)",
+            )
+            # getOpenFilesNames returns a tuple with Cits_names as first element
+            # and extension as second. We just need the names.
+            (
+                topo,
+                cits_add_data,
+                IV_channelList,
+                cits_params,
+            ) = readCitsAscii(IVpath[0][0])
+            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
+            self.dataAdded = True
+            IV_channelList = ['IV_'+x for x in IV_channelList]
+            self.channelList = self.channelList + IV_channelList
+            self.ui_channelBox.addItems(IV_channelList)
+        else:
+            logging.error(
+                "Please first load single dIdV CITS"
+                )
+        return
+
     def normalizeCurrentChannel(self):
         """ Adds the normalized current data as a new channel """
         if self.dataLoaded:
@@ -1123,28 +1125,38 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
-    def calculateFFT(self):
-        """ Adds the FFT data as a new channel """
+    def derivateCurrentChannel(self):
+        """ Adds the derivative of current data as a new channel """
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             self.addChannel(
-                (np.abs(np.fft.fftshift(np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2))))),
-                "FFT " + self.channelList[chan],
+                derivate_IV(self.cits_data[chan], self.cits_params["dV"]),
+                "Derivated " + self.channelList[chan],
+            )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
+    def calculateFFT(self):
+        """ Adds the 2D FFT data as a new channel """
+        if self.dataLoaded:
+            chan = self.ui_channelBox.currentIndex()
+            self.addChannel(
+                (np.abs(np.fft.fftshift(np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)))),
+                "FFT of " + self.channelList[chan],
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def FeenstraCits(self):
           """ Slot that launches the calculation of Feenstra CITS 
-          corresponding to the preniously opened single dIdV and I(V) CITS.
+          corresponding to the previously opened single dIdV and I(V) CITS.
           TODO : Only implemented for ascii files"""  
           if self.dataLoaded and self.dataAdded :
               self.cits_params["LIsensi"] = self.ui_LIBox.value()
               self.cits_params["AmpMod"] = self.ui_AmpBox.value()
               self.cits_params["Gain"] = self.ui_GainBox.value()
-              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params)
-              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params)
+              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params, self.channelList)
+              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params, self.channelList)
               Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
-              self.channelList = np.concatenate((self.channelList, Feenstra_channelList))
+              self.channelList = self.channelList + Feenstra_channelList
               self.ui_channelBox.addItems(Feenstra_channelList)
               self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis = 0)
           else:
