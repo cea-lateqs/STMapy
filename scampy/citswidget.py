@@ -781,8 +781,11 @@ class CitsWidget(QtWidgets.QMainWindow):
         return self.cutPlot(x_plot, y_plot)
 
     def cutPlot(self, x_plot, y_plot):
-        """ Method called by cutAlongLine.
-        Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) """
+        """ 
+        Method called by cutAlongLine.
+        Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) 
+        if asked, plots FFT of cut
+        """
         # Build the data to plot with v as Y and z (number of pixels gone through) as X
         zPt = self.cits_params["zPt"]
         voltage_indices = np.arange(zPt)
@@ -793,7 +796,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Plot the built map in a new figure
         fig = pyplot.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
         self.ui_mapWidget.draw()
 
@@ -829,12 +831,26 @@ class CitsWidget(QtWidgets.QMainWindow):
                 ax.set_xlabel("Pixels")
             ax.set_xlim([x_array[0], x_array[-1]])
 
-            mapData = pyplot.pcolormesh(
+            #display FFT if asked 
+            if self.ui_plotFFTBox.isChecked():
+                ax.set_title("{} - FFT of Cut {}".format(self.ui_channelBox.currentText(), fig.number))
+                datafft = np.array([np.abs(np.fft.fftshift(
+                    np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
+                )) for i in range(np.shape(self.cits_data)[-1])])
+                mapData = pyplot.pcolormesh(
                 x_array,
                 voltage_array,
-                self.cits_data[chan, y_plot, x_plot, :].T,
+                datafft,
                 cmap=self.ui_colorBarBox.currentText()
-            )
+                )
+            else:
+                ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
+                mapData = pyplot.pcolormesh(
+                    x_array,
+                    voltage_array,
+                    self.cits_data[chan, y_plot, x_plot, :].T,
+                    cmap=self.ui_colorBarBox.currentText()
+                )
             
             # Colorbar set up
             fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
@@ -848,7 +864,9 @@ class CitsWidget(QtWidgets.QMainWindow):
                 )
             else:
                 mapData.set_clim(0)
+
         fig.show()
+        
 
     def launchBigCut(self):
         """ Launches a cut in the big diagonal """
