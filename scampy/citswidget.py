@@ -823,8 +823,16 @@ class CitsWidget(QtWidgets.QMainWindow):
             if self.ui_scaleMetric.isChecked():
                 dx = self.cits_params["xL"] / self.cits_params["xPx"]
                 dy = self.cits_params["yL"] / self.cits_params["yPx"]
-                x_array = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
-                ax.set_xlabel("Distance (nm)")
+                if self.ui_plotFFTBox.isChecked():
+                    d=np.sqrt((dx * (x_plot[-1] - xi)) ** 2 + (dy * (y_plot[-1] - yi)) ** 2)
+                    x_array = np.arange(
+                        -len(x_plot)/(2*d), len(x_plot)/(2*d),1/d
+                    )
+                    ax.set_xlabel("K Distance (1/nm)")
+                else:
+                    x_array = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
+                    ax.set_xlabel("Distance (nm)")
+
             else:
                 dx, dy = 1, 1
                 x_array = np.arange(len(x_plot))
