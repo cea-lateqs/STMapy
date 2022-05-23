@@ -41,10 +41,10 @@
       <widget class="QWidget" name="scrollAreaWidgetContents_2">
        <property name="geometry">
         <rect>
-         <x>0</x>
+         <x>-96</x>
          <y>0</y>
          <width>1317</width>
-         <height>1140</height>
+         <height>1173</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
@@ -67,16 +67,6 @@
             <layout class="QVBoxLayout" name="verticalLayout_6">
              <item>
               <layout class="QGridLayout" name="gridLayout_5">
-               <item row="0" column="1">
-                <widget class="QRadioButton" name="ui_plot2DButton">
-                 <property name="text">
-                  <string>2D plot</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
                <item row="0" column="0">
                 <widget class="QRadioButton" name="ui_waterfallButton">
                  <property name="text">
@@ -87,17 +77,27 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="0">
+               <item row="1" column="1">
+                <widget class="QCheckBox" name="ui_plotFFTBox">
+                 <property name="text">
+                  <string>Plot FFT of cut</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
                 <widget class="QCheckBox" name="ui_viewSelectedBox">
                  <property name="text">
                   <string>View selected spectra</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <widget class="QCheckBox" name="ui_plotFFTBox">
+               <item row="1" column="0">
+                <widget class="QRadioButton" name="ui_plot2DButton">
                  <property name="text">
-                  <string>Plot FFT</string>
+                  <string>2D plot</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -296,8 +296,18 @@
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_7">
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_8">
-               <item>
+              <layout class="QGridLayout" name="gridLayout_6">
+               <item row="0" column="1">
+                <widget class="QCheckBox" name="ui_scaleMetric">
+                 <property name="text">
+                  <string>Scale in metric units</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
                 <widget class="QCheckBox" name="ui_scaleVoltage">
                  <property name="text">
                   <string>Scale in Volts</string>
@@ -307,13 +317,17 @@
                  </property>
                 </widget>
                </item>
-               <item>
-                <widget class="QCheckBox" name="ui_scaleMetric">
+               <item row="1" column="0">
+                <widget class="QCheckBox" name="ui_vLineBox">
                  <property name="text">
-                  <string>Scale in metric units</string>
+                  <string>Voltage index guideline</string>
                  </property>
-                 <property name="checked">
-                  <bool>true</bool>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QCheckBox" name="ui_legendBox">
+                 <property name="text">
+                  <string>Deactivate legend</string>
                  </property>
                 </widget>
                </item>
@@ -328,16 +342,66 @@
                 <enum>QLayout::SetFixedSize</enum>
                </property>
                <item>
-                <widget class="QCheckBox" name="ui_vLineBox">
+                <widget class="QPushButton" name="ui_MakeGifButton">
                  <property name="text">
-                  <string>Voltage index guideline</string>
+                  <string>Make Gif</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="ui_legendBox">
+                <widget class="QLabel" name="label_22">
                  <property name="text">
-                  <string>Deactivate legend</string>
+                  <string>gif start</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="ui_gifstartBox">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>500</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_21">
+                 <property name="text">
+                  <string>gif stop</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="ui_gifstopBox">
+                 <property name="minimum">
+                  <number>2</number>
+                 </property>
+                 <property name="maximum">
+                  <number>500</number>
+                 </property>
+                 <property name="value">
+                  <number>100</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_23">
+                 <property name="text">
+                  <string>gif step</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="ui_gifstepBox">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>100</number>
+                 </property>
+                 <property name="value">
+                  <number>10</number>
                  </property>
                 </widget>
                </item>
@@ -362,9 +426,6 @@
                    <string>0</string>
                   </property>
                  </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QComboBox" name="ui_colorBarBox"/>
                 </item>
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_10">
@@ -412,6 +473,9 @@
                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                   </property>
                  </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="ui_colorBarBox"/>
                 </item>
                </layout>
               </widget>
@@ -792,19 +856,6 @@
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="0">
-                 <widget class="QSpinBox" name="ui_belowBox">
-                  <property name="alignment">
-                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                  </property>
-                  <property name="maximum">
-                   <number>100</number>
-                  </property>
-                  <property name="value">
-                   <number>50</number>
-                  </property>
-                 </widget>
-                </item>
                 <item row="2" column="7">
                  <widget class="QProgressBar" name="ui_aboveBar">
                   <property name="value">
@@ -904,6 +955,19 @@
                  <widget class="QLabel" name="label_4">
                   <property name="text">
                    <string>Maximum value for the above averaging</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QSpinBox" name="ui_belowBox">
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="value">
+                   <number>50</number>
                   </property>
                  </widget>
                 </item>

@@ -23,6 +23,7 @@ from .processing import (
     derivate_IV,
 )
 from . import plotting
+from PIL import Image, ImageFile
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
@@ -140,6 +141,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitLowerBox.setVisible)
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitUpperLabel.setVisible)
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitLowerLabel.setVisible)
+        self.ui_MakeGifButton.clicked.connect(self.make_gif)
+
 
     @property
     def metric_ratios(self):
@@ -1190,4 +1193,53 @@ class CitsWidget(QtWidgets.QMainWindow):
                   "Please first load single dIdV CITS and its corresponding I(V) CITS"
                   )
           return
-  
+
+#%% Extract gif
+    
+    def make_gif(self):
+        n = self.ui_gifstartBox.value()
+        m = self.ui_gifstopBox.value()
+        step = self.ui_gifstepBox.value()
+        xPx = self.cits_params["xPx"]
+        yPx = self.cits_params["yPx"]
+        assert m>n
+        frames = []
+        chan = self.ui_channelBox.currentIndex()
+
+        for i in np.arange(n,m, step) :
+            figif = pyplot.figure()
+            XYmap = pyplot.pcolormesh(
+                self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
+            )
+            # If the map is an Omicron one, invert the y-axis
+            if self.mapType == "Omicron":
+                pyplot.axis([0, xPx, yPx, 0])
+            else:
+                pyplot.axis([0, xPx, 0, yPx])
+            # Colorbar
+            cbar = figif.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
+            cbar.ax.yaxis.set_ticks_position("both")
+            cbar.ax.tick_params(axis="y", direction="in")
+            if self.ui_cbarCustomCheckbox.isChecked():
+                XYmap.set_clim(
+                    float(self.ui_cbarLowerBox.text()),
+                    float(self.ui_cbarUpperBox.text()),
+                )
+            else:
+                XYmap.set_clim(0)
+            
+            pyplot.savefig(self.wdir+'/giftemp{}.png'.format(i))
+
+            frame = Image.open(self.wdir+'/giftemp{}.png'.format(i))
+            frames.append(frame)
+            
+            pyplot.close()
+            
+            os.remove(self.wdir+'/giftemp{}.png'.format(i)) 
+
+        frame_one = frames[0]
+
+        frame_one.save(self.wdir+'/'+
+                       self.cits_name+'channel '+self.channelList[chan]+'.gif',
+                       format="GIF", append_images=frames,
+                        save_all=True, duration=500, loop=0, dpi=50)
