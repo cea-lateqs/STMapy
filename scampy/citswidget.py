@@ -93,8 +93,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_fitLowerLabel.hide()
         self.ui_fitUpperBox.hide()
         self.ui_fitLowerBox.hide()
-        # Check 'Colorbar settings' by default
-        self.ui_cbarCheckBox.setChecked(True)
         # Calls the loading method at launch
         if self.config["autoload"]:
             self.askCits()
@@ -920,7 +918,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_mapWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
         self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
         # Use metric dimensions if the corresponding box is checked (work in progress)
-        if self.ui_scaleMetric.isChecked() and False:
+        if self.ui_scaleMetric.isChecked() :
             xL = self.cits_params["xL"]
             yL = self.cits_params["yL"]
             x_m = np.linspace(0, xL, xPx)
@@ -929,6 +927,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText()
             )
             self.ax_map.axis([0, xL, 0, yL])
+            self.ax_map.set_ylabel('Y (nm)')
+            self.ax_map.set_xlabel('X (nm)')
         # Else, use pixels
         else:
             XYmap = self.ax_map.pcolormesh(
@@ -940,9 +940,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 self.ax_map.axis([0, xPx, 0, yPx])
         # Colorbar stuff
-        cbar = fig_map.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
-        cbar.ax.yaxis.set_ticks_position("both")
-        cbar.ax.tick_params(axis="y", direction="in")
+        cbar = fig_map.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15, ax=self.ax_map)
+        cbar.set_label('LDOS (arb. units)', rotation=90)
         # Recreate the shapes points saved in shapes_clicked
         self.drawShapesClicked(fig_map, self.fig_topo, True)
         return XYmap
@@ -1208,18 +1207,31 @@ class CitsWidget(QtWidgets.QMainWindow):
 
         for i in np.arange(n,m, step) :
             figif = pyplot.figure()
-            XYmap = pyplot.pcolormesh(
-                self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
-            )
+            # Use metric dimensions if the corresponding box is checked (work in progress)
+            if self.ui_scaleMetric.isChecked() :
+                xL = self.cits_params["xL"]
+                yL = self.cits_params["yL"]
+                x_m = np.linspace(0, xL, xPx)
+                y_m = np.linspace(0, yL, yPx)
+                XYmap = pyplot.pcolormesh(
+                    x_m, y_m, self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
+                )
+                pyplot.axis([0, xL, 0, yL])
+                pyplot.ylabel('Y (nm)')
+                pyplot.xlabel('X (nm)')
+            # Else, use pixels
+            else:
+                XYmap = pyplot.pcolormesh(
+                    self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
+                )
             # If the map is an Omicron one, invert the y-axis
             if self.mapType == "Omicron":
                 pyplot.axis([0, xPx, yPx, 0])
             else:
                 pyplot.axis([0, xPx, 0, yPx])
             # Colorbar
-            cbar = figif.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
-            cbar.ax.yaxis.set_ticks_position("both")
-            cbar.ax.tick_params(axis="y", direction="in")
+            cbar = pyplot.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
+            cbar.set_label('LDOS (arb. units)', rotation=90)
             if self.ui_cbarCustomCheckbox.isChecked():
                 XYmap.set_clim(
                     float(self.ui_cbarLowerBox.text()),

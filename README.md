@@ -38,8 +38,6 @@ Requirements should automatically be installed when running the install with `pi
   - Matplotlib, at least version 2.0 (tested under 2.2.3)
 - PyQt 5
 
-NB : To open a Sm4 file, from RHK electronics, see Matlab File Selection for more info on the requirements of this part.
-
 ## Using Scampy
 
 ### Starting
@@ -76,7 +74,7 @@ This always succeeds for .3ds and .sm4 as it plots the topography contained in t
 
 If the loading succeed, a 2D plot should appear on the bottom-left widget. If not, check the console for error messages and report them (see **Further information** at the end).
 
-### List of commands
+#### List of commands
 
 #### Clicks on 2D plot
 
@@ -103,7 +101,7 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 
 #### Calculate Feenstra normalisation
 
-- **Calculate dIdV*V/I** (_button_): Calculates the Feenstra renormalisation. The result of will be added as a new channels named. Only works for ascii files, and if a dIdV and I(V )CITS have already been oppened. 
+- **Calculate dIdV*V/I** (_button_): Calculates the Feenstra renormalisation. The result of will be added as a new channel. Only tested for ascii files. Needs both dIdV and I(V) CITS to be already oppened. 
 
 #### Averaging
 
@@ -140,6 +138,7 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 - **Voltage index guideline** (_checkbox_): shows a dashed line in the bottom-right widget at the voltage selected in **V/Z index**.
 - **Deactivate legend** (_checkbox_): removes the legend when plotting spectra. Can be useful when many spectra are plotted.
 - **Colorbar settings** (_checkbox_): opens the colorbar widget where the colorbar to use can be changed. Custom limits can also be forced on the colormap by checking **Use custom limits**. <span style="color: red;">In this case, you must set both the lower AND the upper limit.</span>
+- **Make Gif** (_button_): Creates a gif from the current channel. The number of images is tuned through start, stop, and step boxes. Result is saved in the CITS folder.
 
 ## Configuration
 
@@ -160,7 +159,5 @@ The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analy
 
 ## Trouble shooting
 
-Some issues have been reported.
-- **Spip install issues** : try to run the `main.py`.
 - **`Scampy not found` issues** : change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
-- **`toolbar_map'' issue**: 'active' does not work with python 3.9 / matplotlib 3.5.1 : Downgrade matplotlib. The averything woks fine with python 3.7.13 / matplotlib 3.1.6. You can also try to remove the  '_toolbar_map_active' condition from onpressOnmap and  onreleaseOnmap functions. This will cause minor bugs such as : a line cut is drawn when zooming the CITS.
+- **`toolbar_map'' issue**: 'active' does not work with python 3.9 / matplotlib 3.5.1 : Downgrade matplotlib. Tested without issues up to python 3.7.13 / matplotlib 3.1.6. If you do not want to downgrade, you can also try to remove the  '_toolbar_map_active' condition from onpressOnmap and  onreleaseOnmap functions. This will cause minor bugs such as : a line cut is drawn when zooming on the CITS.
