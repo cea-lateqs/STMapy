@@ -2,6 +2,8 @@
 from matplotlib import patches
 
 
+            # event[0],
+            # event[1],
 def generateShape(event, fig_map, fig_topo, color, ratio_x, ratio_y):
     if event.button == 0:
         return Dot(

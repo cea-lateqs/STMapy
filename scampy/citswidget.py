@@ -606,8 +606,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         it will keep the data in storage to average it later.
         Otherwise it plots the spectrum in the corresponding widget """
         if self.dataLoaded and event.xdata is not None and event.ydata is not None:
-            PixelX = int(event.xdata)
-            PixelY = int(event.ydata)
+            PixelX = int(event.xdata/self.metric_ratios['x'])
+            PixelY = int(event.ydata/self.metric_ratios['y'])
             chan = self.ui_channelBox.currentIndex()
             # TODO: the slope part should be put in a function
             if "Slope" in self.channelList[chan]:
@@ -675,8 +675,9 @@ class CitsWidget(QtWidgets.QMainWindow):
         if (event.xdata is not None and event.ydata is not None) and (
             self.dataLoaded and self.toolbar_map._active is None
         ):
+            print(event, type(event))
             self.currentShape = generateShape(
-                event,
+                event,               # np.array([PixelX,PixelY]),
                 self.ui_mapWidget.figure,
                 self.fig_topo,
                 self.getSpectrumColor(self.nSpectraDrawn),
@@ -701,11 +702,15 @@ class CitsWidget(QtWidgets.QMainWindow):
                 yi = self.currentShape.yi
                 xf = self.currentShape.xf
                 yf = self.currentShape.yf
+                PixelY = int(event.ydata/self.metric_ratios['y'])
                 # If left-click : either a line was drawn or a spectrum picked
                 if event.button == 1:
                     # Cut along the XY line if a line is traced (X or Y different)
                     if xf != xi or yf != yi:
-                        self.cutAlongLine(xi, xf, yi, yf)
+                        self.cutAlongLine(int(xi/self.metric_ratios['x']), 
+                                          int(xf/self.metric_ratios['x']), 
+                                          int(yi/self.metric_ratios['y']), 
+                                          int(yf/self.metric_ratios['y']))
                     # Pick spectrum otherwise and change the line shape to a point
                     else:
                         self.currentShape = changeToDot(self.currentShape)
@@ -713,7 +718,10 @@ class CitsWidget(QtWidgets.QMainWindow):
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
                     if xf != xi or yf != yi:
-                        self.averageSpectrum(xi, xf, yi, yf)
+                        self.averageSpectrum(int(xi/self.metric_ratios['x']), 
+                                             int(xf/self.metric_ratios['x']), 
+                                             int(yi/self.metric_ratios['y']), 
+                                             int(yf/self.metric_ratios['y']))
                     # If X=Y, we need to force the updating of the Shape so it is drawn around the X,Y point
                     # and not starting at X,Y (TODO: This can be refactored)
                     else:
@@ -917,16 +925,16 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ax_map = self.ui_mapWidget.figure.add_subplot(111)
         self.ui_mapWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
         self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
-        # Use metric dimensions if the corresponding box is checked (work in progress)
+        # Use metric dimensions if the corresponding box is checked
         if self.ui_scaleMetric.isChecked() :
             xL = self.cits_params["xL"]
             yL = self.cits_params["yL"]
-            x_m = np.linspace(0, xL, xPx)
-            y_m = np.linspace(0, yL, yPx)
+            x_m = np.linspace(0, xL, xPx+1)
+            y_m = np.linspace(0, yL, yPx+1)
             XYmap = self.ax_map.pcolormesh(
-                x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText()
-            )
-            self.ax_map.axis([0, xL, 0, yL])
+                x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText(),
+             )
+            self.ax_map.invert_yaxis()
             self.ax_map.set_ylabel('Y (nm)')
             self.ax_map.set_xlabel('X (nm)')
         # Else, use pixels
@@ -1216,7 +1224,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 XYmap = pyplot.pcolormesh(
                     x_m, y_m, self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
                 )
-                pyplot.axis([0, xL, 0, yL])
+                pyplot.gca().invert_yaxis()
                 pyplot.ylabel('Y (nm)')
                 pyplot.xlabel('X (nm)')
             # Else, use pixels
