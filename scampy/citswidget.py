@@ -854,12 +854,23 @@ class CitsWidget(QtWidgets.QMainWindow):
                 datafft = np.array([np.abs(np.fft.fftshift(
                     np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
                 )) for i in range(np.shape(self.cits_data)[-1])])
-                mapData = pyplot.pcolormesh(
-                x_array,
-                voltage_array,
-                datafft,
-                cmap=self.ui_colorBarBox.currentText()
-                )
+                #work in progress
+                if self.ui_cbarCustomCheckbox.isChecked():
+                    mapData = pyplot.pcolormesh(
+                    x_array,
+                    voltage_array,
+                    np.sqrt(datafft),
+                    cmap=self.ui_colorBarBox.currentText()
+                    # norm=matplotlib.colors.LogNorm(vmin=float(self.ui_cbarLowerBox.text()), 
+                    #                       vmax=float(self.ui_cbarUpperBox.text()))
+                      )
+                else:
+                    mapData = pyplot.pcolormesh(
+                    x_array,
+                    voltage_array,
+                    datafft,
+                    cmap=self.ui_colorBarBox.currentText(),
+                    )
             else:
                 ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
                 mapData = pyplot.pcolormesh(
@@ -874,11 +885,13 @@ class CitsWidget(QtWidgets.QMainWindow):
             cbar = fig.colorbar(mapData, shrink=0.9, pad=0.05, aspect=15)
             cbar.ax.yaxis.set_ticks_position("both")
             cbar.ax.tick_params(axis="y", direction="in")
+            cbar.set_label('LDOS (arb. units)', rotation=90)
             if self.ui_cbarCustomCheckbox.isChecked():
                 mapData.set_clim(
                     float(self.ui_cbarLowerBox.text()),
                     float(self.ui_cbarUpperBox.text()),
                 )
+
             else:
                 mapData.set_clim(0)
 
@@ -924,7 +937,10 @@ class CitsWidget(QtWidgets.QMainWindow):
         yPx = self.cits_params["yPx"]
         self.ax_map = self.ui_mapWidget.figure.add_subplot(111)
         self.ui_mapWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
-        self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
+        if self.ui_ForceAspect_Box.isChecked() :
+            self.ax_map.set_aspect("equal")
+        else:
+            self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
         # Use metric dimensions if the corresponding box is checked
         if self.ui_scaleMetric.isChecked() :
             xL = self.cits_params["xL"]
@@ -1176,7 +1192,11 @@ class CitsWidget(QtWidgets.QMainWindow):
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             self.addChannel(
-                (np.abs(np.fft.fftshift(np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)))),
+                np.sqrt((np.abs(np.fft.fftshift(
+                    np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)
+                        )
+                 )
+                )),
                 "FFT of " + self.channelList[chan],
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)

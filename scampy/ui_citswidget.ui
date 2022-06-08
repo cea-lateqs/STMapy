@@ -517,15 +517,15 @@
            <number>0</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <item>
+           <layout class="QGridLayout" name="gridLayout_7">
+            <item row="0" column="1">
              <widget class="QPushButton" name="ui_openButton">
               <property name="text">
                <string>Open CITS</string>
               </property>
              </widget>
             </item>
-            <item>
+            <item row="0" column="2">
              <spacer name="horizontalSpacer_2">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -538,10 +538,31 @@
               </property>
              </spacer>
             </item>
-            <item>
+            <item row="2" column="1">
+             <widget class="QPushButton" name="ui_addCITSButton">
+              <property name="text">
+               <string>Open I(V) CITS as new channel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="3">
              <widget class="QPushButton" name="ui_topoButton">
               <property name="text">
                <string>Draw topo</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QPushButton" name="ui_FFTButton">
+              <property name="text">
+               <string>FFT(CITS channel)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="3">
+             <widget class="QPushButton" name="ui_derivateButton">
+              <property name="text">
+               <string>derivative(CITS channel)</string>
               </property>
              </widget>
             </item>
@@ -572,23 +593,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="ui_FFTButton">
+                <widget class="QCheckBox" name="ui_ForceAspect_Box">
                  <property name="text">
-                  <string>FFT(CITS)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="ui_addCITSButton">
-                 <property name="text">
-                  <string>Open I(V) CITS channel</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="ui_derivateButton">
-                 <property name="text">
-                  <string>Derivative</string>
+                  <string>Force CITS aspect to equal</string>
                  </property>
                 </widget>
                </item>
