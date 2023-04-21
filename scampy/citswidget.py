@@ -22,8 +22,18 @@ from .processing import (
     FeenstraNormalization_log,
     derivate_IV,
 )
-from . import plotting
+from .plotting import (
+    visualize_statistics, 
+    visualize_statistics_topo, 
+    waterfallPlot, 
+    lineTopoPlot, 
+    imageTopoPlot
+)
 from PIL import Image, ImageFile
+from scipy.signal import find_peaks
+
+#Set styl explicitly. TODO
+matplotlib.pyplot.style.use('/home/florie/Documents/THESE/LABO/Python/nature.mplstyle') #pour avoir les jolies ecritures
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
@@ -154,7 +164,9 @@ class CitsWidget(QtWidgets.QMainWindow):
                 logging.warning(
                     "Metric ratios could not be computed. Is the CITS loaded with all parameters ?"
                 )
-        return {"x": ratioX, "y": ratioY}
+        return {"x": ratioX, "y": ratioY}    
+    
+    #TODO : the plotting on topo is wrong when npx(CITS) neq npx(Topo)
 
     # %% Reading and loading CITS methods
     def askCits(self):
@@ -292,10 +304,10 @@ class CitsWidget(QtWidgets.QMainWindow):
             ax_label = "Pixels"
 
         if yPx == 1:
-            self.ax_topo = plotting.lineTopoPlot(self.fig_topo, max_x, self.topo)
+            self.ax_topo = lineTopoPlot(self.fig_topo, max_x, self.topo)
             self.ax_topo.set_ylabel("Z (nm)")
         else:
-            self.ax_topo = plotting.imageTopoPlot(
+            self.ax_topo = imageTopoPlot(
                 self.fig_topo,
                 max_x,
                 max_y,
@@ -372,7 +384,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             event.xdata is not None
             and event.ydata is not None
             and self.dataLoaded
-            and self.toolbar_spec._active is None
+            and not self.toolbar_spec.mode.value
         ):
             # If the scale is in volts, need to divide by dV to have the index
             if self.ui_scaleVoltage.isChecked():
@@ -504,6 +516,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 vEnd = self.cits_params["vEnd"]
                 zPt = self.cits_params["zPt"]
                 voltages = np.arange(vStart, vEnd, dV) + shiftX
+                self.ax_spec.set_xlabel('$V_{bias}$ (eV)')
+                self.ax_spec.set_ylabel('LDOS (arb. units)')
                 # Check consistency of voltages array with the number of points.
                 if len(voltages) != zPt:
                     logging.warning(
@@ -673,7 +687,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         """ Slot called when a press event is detected. Creates a Shape object
         that will be dynamically updated when the mouse moves """
         if (event.xdata is not None and event.ydata is not None) and (
-            self.dataLoaded and self.toolbar_map._active is None
+            self.dataLoaded and not self.toolbar_map.mode.value
         ):
             print(event, type(event))
             self.currentShape = generateShape(
@@ -694,8 +708,10 @@ class CitsWidget(QtWidgets.QMainWindow):
         Disconnects the updating of the currentShape and
         launches the appropriate method depending on which button
         was pressed and where it was released """
-        if self.dataLoaded and self.toolbar_map._active is None:
+        if self.dataLoaded and not self.toolbar_map.mode.value:
+
             if event.xdata is not None and event.ydata is not None:
+                square=False
                 # Disconnects the updating of the current Shape and gets its coordinates
                 self.ui_mapWidget.mpl_disconnect(self.motionConnection)
                 xi = self.currentShape.xi
@@ -717,6 +733,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
+                    square=True
                     if xf != xi or yf != yi:
                         self.averageSpectrum(int(xi/self.metric_ratios['x']), 
                                              int(xf/self.metric_ratios['x']), 
@@ -738,6 +755,11 @@ class CitsWidget(QtWidgets.QMainWindow):
                             max(0, yi - n),
                             min(self.cits_params["yPx"], yf + n),
                         )
+                
+                #if asked, find peaks that define gap and correlate them
+                if self.ui_StatisticsGapBox.isChecked():
+                    self.find_peaks_statistics([xi,xf], [yi,yf], square)
+                    
                 # Add the current Shape to the list of clicked Shapes
                 self.addToShapesClicked(self.currentShape)
             logging.debug("RELEASE")
@@ -815,7 +837,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         )
 
         if self.ui_waterfallButton.isChecked():
-            plotting.waterfallPlot(
+            waterfallPlot(
                 ax,
                 voltage_array,
                 self.cits_data[chan, y_plot, x_plot],
@@ -830,22 +852,22 @@ class CitsWidget(QtWidgets.QMainWindow):
             ax.set_ylim([voltage_array[0], voltage_array[-1]])
 
             if self.ui_scaleMetric.isChecked():
-                dx = self.cits_params["xL"] / self.cits_params["xPx"]
-                dy = self.cits_params["yL"] / self.cits_params["yPx"]
+                dx = self.metric_ratios['x']
+                dy = self.metric_ratios['y']
                 if self.ui_plotFFTBox.isChecked():
                     d=np.sqrt((dx * (x_plot[-1] - xi)) ** 2 + (dy * (y_plot[-1] - yi)) ** 2)
-                    x_array = np.arange(
-                        -len(x_plot)/(2*d), len(x_plot)/(2*d),1/d
+                    x_array = 2*np.pi/d*np.arange(
+                        -len(x_plot)/(2), len(x_plot)/(2),1
                     )
-                    ax.set_xlabel("K Distance (1/nm)")
+                    print(len(x_plot), len(x_array))
+                    ax.set_xlabel("K Distance ($nm^{-1}$)")
                 else:
                     x_array = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
                     ax.set_xlabel("Distance (nm)")
-
             else:
-                dx, dy = 1, 1
                 x_array = np.arange(len(x_plot))
                 ax.set_xlabel("Pixels")
+                print(len(x_plot), len(x_array))
             ax.set_xlim([x_array[0], x_array[-1]])
 
             #display FFT if asked 
@@ -854,7 +876,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 datafft = np.array([np.abs(np.fft.fftshift(
                     np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
                 )) for i in range(np.shape(self.cits_data)[-1])])
-                #work in progress
+                #work in progress to optimize plotting : Log Norm too long ?
                 if self.ui_cbarCustomCheckbox.isChecked():
                     mapData = pyplot.pcolormesh(
                     x_array,
@@ -870,6 +892,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     voltage_array,
                     datafft,
                     cmap=self.ui_colorBarBox.currentText(),
+                    norm=matplotlib.colors.LogNorm(vmin=5),
                     )
             else:
                 ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
@@ -894,8 +917,8 @@ class CitsWidget(QtWidgets.QMainWindow):
 
             else:
                 mapData.set_clim(0)
-
         fig.show()
+
         
 
     def launchBigCut(self):
@@ -989,6 +1012,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 + str(
                     self.cits_params["vStart"] + voltage_index * self.cits_params["dV"]
                 )
+                + " (V)"
             )
             self.setColorMapLims()
             self.ui_mapWidget.draw()
@@ -1222,7 +1246,7 @@ class CitsWidget(QtWidgets.QMainWindow):
           return
 
 #%% Extract gif
-    
+
     def make_gif(self):
         n = self.ui_gifstartBox.value()
         m = self.ui_gifstopBox.value()
@@ -1233,30 +1257,45 @@ class CitsWidget(QtWidgets.QMainWindow):
         frames = []
         chan = self.ui_channelBox.currentIndex()
 
-        for i in np.arange(n,m, step) :
+        for i in np.arange(n,m, step):
             figif = pyplot.figure()
+            ax_gif = figif.add_subplot(111)
+            figif.subplots_adjust(**SUBPLOTS_DIMS)
+            # Set title
+            pyplot.title(
+                "$V_{BIAS}$="
+                + str(
+                    round(
+                        self.cits_params["vStart"] + i * self.cits_params["dV"]
+                        ,3)
+                )
+                + " V"
+            )
+            if self.ui_ForceAspect_Box.isChecked():
+                ax_gif.set_aspect("equal")
             # Use metric dimensions if the corresponding box is checked (work in progress)
             if self.ui_scaleMetric.isChecked() :
                 xL = self.cits_params["xL"]
                 yL = self.cits_params["yL"]
-                x_m = np.linspace(0, xL, xPx)
-                y_m = np.linspace(0, yL, yPx)
-                XYmap = pyplot.pcolormesh(
-                    x_m, y_m, self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
+                x_m = np.linspace(0, xL, xPx+1)
+                y_m = np.linspace(0, yL, yPx+1)
+                XYmap = ax_gif.pcolormesh(
+                    x_m, y_m, self.cits_data[chan][:,:,i],
+                    cmap=self.ui_colorBarBox.currentText()
                 )
-                pyplot.gca().invert_yaxis()
-                pyplot.ylabel('Y (nm)')
-                pyplot.xlabel('X (nm)')
+                ax_gif.invert_yaxis()
+                ax_gif.set_ylabel('Y (nm)')
+                ax_gif.set_xlabel('X (nm)')
             # Else, use pixels
             else:
-                XYmap = pyplot.pcolormesh(
+                XYmap = ax_gif.pcolormesh(
                     self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
                 )
-            # If the map is an Omicron one, invert the y-axis
-            if self.mapType == "Omicron":
-                pyplot.axis([0, xPx, yPx, 0])
-            else:
-                pyplot.axis([0, xPx, 0, yPx])
+                # If the map is an Omicron one, invert the y-axis
+                if self.mapType == "Omicron":
+                    pyplot.axis([0, xPx, yPx, 0])
+                else:
+                    pyplot.axis([0, xPx, 0, yPx])
             # Colorbar
             cbar = pyplot.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
             cbar.set_label('LDOS (arb. units)', rotation=90)
@@ -1267,14 +1306,14 @@ class CitsWidget(QtWidgets.QMainWindow):
                 )
             else:
                 XYmap.set_clim(0)
-            
+
             pyplot.savefig(self.wdir+'/giftemp{}.png'.format(i))
 
             frame = Image.open(self.wdir+'/giftemp{}.png'.format(i))
             frames.append(frame)
-            
+
             pyplot.close()
-            
+
             os.remove(self.wdir+'/giftemp{}.png'.format(i)) 
 
         frame_one = frames[0]
@@ -1283,3 +1322,102 @@ class CitsWidget(QtWidgets.QMainWindow):
                        self.cits_name+'channel '+self.channelList[chan]+'.gif',
                        format="GIF", append_images=frames,
                         save_all=True, duration=500, loop=0, dpi=50)
+
+#%% methods related to correlation between peak position and gap value
+    def find_peaks_statistics(self, x, y,square=False):
+        DEgap = 0.026 #V
+        centergap = -0.1 #V
+        chan = self.ui_channelBox.currentIndex()
+
+        voltage_array = np.arange(
+            int((np.abs(self.cits_params["vStart"]-centergap)-2*DEgap)/self.cits_params["dV"]),
+            int((np.abs(self.cits_params["vStart"]-centergap)+2*DEgap)/self.cits_params["dV"])
+            )
+
+        print(len(x))
+        
+        peaks_index = []
+        topo_array = []
+        if square:
+            average=False #work in progress
+            if average:
+                n_avg = int(self.ui_CitsAvgBox.value())
+                self.averageSpectrum()
+                avg_data = np.mean(self.cits_data[chan, y[0]:y[1], x[0]:x[1]], axis=(0, 1))
+
+            else:
+                ldos_array = self.cits_data[chan, y[0]:y[1], x[0]:x[1],voltage_array[0]-1:voltage_array[-1]]
+                print(np.shape(ldos_array), np.shape(self.cits_data[chan]), np.shape(self.topo))
+    
+                # find peaks
+                nTx = np.shape(self.topo)[1]
+                nTy = np.shape(self.topo)[0]
+                nSx = np.shape(self.cits_data[chan])[1]
+                nSy = np.shape(self.cits_data[chan])[0]
+                rx = nTx/nSx
+                ry = nTy/nSy
+                print(int(round(y[0]*ry)),int(round(x[0]*rx)), int(round(y[1]*ry)), int(x[1]*rx))
+                print(np.shape(self.topo[int(round(y[0]*ry)):int(round(y[1]*ry)), 
+                                         int(round(x[0]*rx)):int(round(x[1]*rx))]))
+                for i, ldos in enumerate([
+                        ldos_array[n,m,:] 
+                        for n in range(np.shape(ldos_array)[0]) 
+                        for m in range(np.shape(ldos_array)[1])
+                        ]):
+                    print(i)
+                    peaks, properties = find_peaks(ldos, prominence=0.5, width=0.01)
+                    if len(peaks)==2 :
+                        peaks_index.append(peaks)
+                        if self.fig_topo:
+                            n = int(round(y[0]*ry))+int(round((i//(np.shape(ldos_array)[0])-1)*ry))
+                            m = int(round(x[0]*rx))+int(round((i%(np.shape(ldos_array)[0]))*rx))
+                            topo_array.append(self.topo[n,m])
+
+        else:
+            x_plot, y_plot = findPixelsOnLine(x[0], x[1], y[0], y[1])
+            ldos_array = self.cits_data[chan, y_plot, x_plot, voltage_array[0]-1:voltage_array[-1]]
+            print(np.shape(ldos_array))
+
+            figTest = 1
+            if figTest and not(square):
+                # Plot the in a new figure
+                fig = pyplot.figure()
+                ax = fig.add_subplot(1, 1, 1)  
+                waterfallPlot(
+                    ax,
+                    voltage_array*self.cits_params["dV"],
+                    ldos_array, #self.cits_data[chan, y_plot, x_plot],
+                    offset=float(self.ui_shiftYBox.text()),
+                )
+                
+                if self.ui_scaleVoltage.isChecked():
+                    ax.set_xlabel("Bias (V)")
+                else:
+                    ax.set_xlabel("Voltage index")
+    
+            # find peaks
+            for i, ldos in enumerate(ldos_array):
+                peaks, properties = find_peaks(ldos, prominence=0.4, width=0.01)
+                if len(peaks)==2 :
+                    peaks_index.append(peaks)
+                    if figTest:
+                        ax.plot((voltage_array[0]+peaks)*self.cits_params['dV'], 
+                                ldos[peaks]+i*float(self.ui_shiftYBox.text()), 'x', color='r')
+                # print(properties["prominences"], properties["widths"])
+        
+        print (np.shape(peaks_index))
+        fig_visualize = pyplot.figure()
+        if self.fig_topo is None:
+            visualize_statistics(
+                fig_visualize, 
+                self.cits_params["vStart"]+(voltage_array[0]+peaks_index)*self.cits_params['dV']
+                )
+        else:
+            visualize_statistics_topo(
+                fig_visualize, 
+                self.cits_params["vStart"]+(voltage_array[0]+peaks_index)*self.cits_params['dV'],
+                topo_array
+                )        
+        
+        return (voltage_array[0]+peaks_index)*self.cits_params['dV']
+        

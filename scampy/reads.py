@@ -175,11 +175,13 @@ def readCitsAscii(filepath):
     topo = readTopo(topopath) if os.path.exists(topopath) else None
     return topo, m_data, channelList, m_params
 
+def conv(x):
+    return x.replace(',', '.').encode()
 
 def readTopo(filepath):
     """ Reads a topography file (in test). Used for txt files. """
-    return np.genfromtxt(filepath, delimiter="\t", comments="#")
-
+    # return np.genfromtxt(filepath, delimiter="\t", comments="#")
+    return np.genfromtxt((conv(x) for x in open(filepath)), delimiter='\t', comments="#")
 
 def readCits3dsBin(filepath):
     # The divider is already taken into account by Nanonis during the experiment so no need to process it again*

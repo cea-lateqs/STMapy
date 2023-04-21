@@ -160,4 +160,4 @@ The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analy
 ## Trouble shooting
 
 - **`Scampy not found` issues** : change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
-- **`toolbar_map'' issue**: 'active' does not work with python 3.9 / matplotlib 3.5.1 : Downgrade matplotlib. Tested without issues up to python 3.7.13 / matplotlib 3.1.6. If you do not want to downgrade, you can also try to remove the  '_toolbar_map_active' condition from onpressOnmap and  onreleaseOnmap functions. This will cause minor bugs such as : a line cut is drawn when zooming on the CITS.
+
