@@ -1,0 +1,34 @@
+axes.labelsize: 23.0
+axes.linewidth: 3.
+axes.titlesize: 23.0
+axes.xmargin: 0.0
+axes.ymargin: 0.0
+
+figure.titlesize: 23.0
+figure.labelsize: 23.0
+
+font.family: Liberation Sans
+font.cursive: Liberation Sans
+font.size: 23.0
+
+mathtext.fontset: custom
+mathtext.it: Liberation Sans:italic
+mathtext.rm: Liberation Sans
+
+image.aspect: equal
+
+savefig.format: svg
+
+xtick.labelsize: 23.0
+xtick.major.width: 1.9
+xtick.minor.width: 1.9
+xtick.major.pad: 8.0
+
+ytick.labelsize: 23.0
+ytick.major.width: 1.9
+ytick.minor.width: 1.9
+ytick.major.pad: 8.0
+
+legend.fontsize: 23.0
+legend.frameon: False
+legend.borderaxespad : 1.

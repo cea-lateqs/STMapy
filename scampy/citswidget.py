@@ -32,8 +32,8 @@ from .plotting import (
 from PIL import Image, ImageFile
 from scipy.signal import find_peaks
 
-#Set styl explicitly. TODO
-matplotlib.pyplot.style.use('/home/florie/Documents/THESE/LABO/Python/nature.mplstyle') #pour avoir les jolies ecritures
+#Set style
+matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'scampy.mplstyle')) #pour avoir les jolies ecritures
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
@@ -825,7 +825,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         yi = y_plot[0]
         # Matlab convention : Y (v) first then X (z)
         # Plot the built map in a new figure
-        fig = pyplot.figure()
+        fig = pyplot.figure(figsize=(4,5))
         ax = fig.add_subplot(1, 1, 1)
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
         self.ui_mapWidget.draw()
