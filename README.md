@@ -135,6 +135,7 @@ The following buttons add a new channel in the last position of the **Displayed 
 - **Shift plot along X** (_text_): shifts the plotted spectra along the voltage axis by the given value. If 'topo' is given, the spectra will be shifted by the Z value at this position (unstable !).
 - **Shift plot along Y** (_text_): shifts the plotted spectra along the channel axis by the given value.
 - **Plot log of the spectrum** (_checkbox_): plots the logarithm of the spectrum instead of the spectrum.
+- **Statistics Gap and position** (_checkbox_): Calculates statistics in the shape defined by the user - this feature is highly data dependent and should be tuned carefully in the code first.
 - **Plot derivative** (_checkbox_): plots the derivative of the spectrum in addition to the spectrum. The derivative is computed by a [Savitzy-Golay filter](https://docs.scipy.org/doc/scipy-0.16.1/reference/generated/scipy.signal.savgol_filter.html) with a window length that can be changed in the spinbox **Window length**.
 - **Fit spectra** (_button_): tries to fit the last spectra plotted by a linear function. The range on which the fit must be computed can be set by checking **Use a custom range** and setting the lower and upper limits.
 

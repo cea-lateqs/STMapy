@@ -1,3 +1,17 @@
+## 0.4.0
+
+### New features
+
+- Added the possibility to open new channels, including calculated ones : FFT , Feenstra renormalisation, derivative
+- Added display features : new mplstyle, cits aspect checkbox, fft cuts calculations
+- Added statistics analysis function.
+- Gifs can now be exported
+- Added citation file
+
+### Fixes
+
+- Fixed minor issues
+
 ## 0.3.0
 
 ### New features

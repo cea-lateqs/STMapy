@@ -1,0 +1,11 @@
+cff-version: 0.4.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Huder
+    given-names: Loïc
+  - family-names: Mesple
+    given-names: Florie
+title: "#SCAnning tunneling Microscopy analysis in PYthon"
+version: 0.4.0
+doi: todo
+date-released: 2023-05-30
