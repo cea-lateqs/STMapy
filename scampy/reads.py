@@ -368,14 +368,6 @@ def readSm4FileHeader(f, ObjectIDCode):
     ObjectFieldSize = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
     Reserved = int(np.fromfile(f, dtype=np.uint32, count=2)[0])
 
-    # iterate over the known objects from file header
-    #        ObjectlistName = []
-    #        ObjectlistOffset = []
-    #        ObjectlistSize = []
-    #        for i in range(ObjectListCount):
-    #            ObjectlistName.append(ObjectIDCode[np.fromfile(f, dtype=np.uint32, count=1)[0]])
-    #            ObjectlistOffset.append(np.fromfile(f, dtype=np.uint32, count=1))
-    #            ObjectlistSize.append(np.fromfile(f, dtype=np.uint32, count=1))
     f.seek(ObjectListCount * 3 * 4, 1)
 
     # Read and record the Page Index Header
@@ -606,7 +598,7 @@ def readCitsSm4Bin(filepath):
                 )
             )
             # /4 because total data size is divided by the number of bytes that use each 'long' data
-            #!!! This takes too much time ?
+            #TODO: This takes too much time
             ScaleData = [
                 x * PageHeader[j]["ZScale"] + PageHeader[j]["ZOffset"] for x in Data[-1]
             ]
@@ -616,7 +608,7 @@ def readCitsSm4Bin(filepath):
             # order Fortran = "F" to match readCITSsm4File function
 
             ###################### Spatial Data
-            # is it label topo ? # cf p.28 of SM4 DATA FILE FORMAT V5.pdf
+            # is it label topo ?
             logging.debug("Page {0} contains {1}".format(j, TextStrings[j]["strLabel"]))
             if (
                 TextStrings[j]["strLabel"] == "Topography"
@@ -650,7 +642,7 @@ def readCitsSm4Bin(filepath):
                     logging.warning("There is more current data than expected")
 
             ###################### Spectral Data - can be Point or Line
-            # Is it Spectral Point(38) ? Not taken in charge currently
+            # Is it Spectral Point(38) ? TODO: Not taken in charge currently
             elif PageHeader[j]["PageType_DataSource"] == 38:
                 logging.error("You didnt load a CITS. Use sm4_reader to read this data")
 

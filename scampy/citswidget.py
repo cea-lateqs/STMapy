@@ -33,13 +33,10 @@ from PIL import Image, ImageFile
 from scipy.signal import find_peaks
 
 #Set style
-matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'scampy.mplstyle')) #pour avoir les jolies ecritures
+matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'scampy.mplstyle')) 
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
-
-SUBPLOTS_DIMS = {"left": 0.125, "right": 0.95, "bottom": 0.15, "top": 0.92}
-
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow):
@@ -63,7 +60,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.toolbar_map = NavigationToolbar(self.ui_mapWidget, self)
         # Set up spectrum figure
         self.ax_spec = self.ui_specWidget.figure.add_subplot(111)
-        self.ui_specWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
+        self.ui_specWidget.figure.subplots_adjust()
         self.voltageLine = None
         self.toolbar_spec = NavigationToolbar(self.ui_specWidget, self)
         # Add csv save button
@@ -94,7 +91,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Connect all widgets
         self.connect()
         self.nSpectraDrawn = 0
-        self.spectrumColor = ["b", "g", "r", "c", "m", "y", "k"]
         self.lastSpectrum = []
         # Set up layouts
         self.ui_avgWidget.hide()
@@ -165,8 +161,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     "Metric ratios could not be computed. Is the CITS loaded with all parameters ?"
                 )
         return {"x": ratioX, "y": ratioY}    
-    
-    #TODO : the plotting on topo is wrong when npx(CITS) neq npx(Topo)
+        #TODO : the plotting on topo is incorrect when npx(CITS) neq npx(Topo)
 
     # %% Reading and loading CITS methods
     def askCits(self):
@@ -322,7 +317,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ax_topo.set_ylabel(ax_label)
         self.ax_topo.set_xlabel(ax_label)
 
-        self.fig_topo.subplots_adjust(**SUBPLOTS_DIMS)
+        self.fig_topo.subplots_adjust()
         self.fig_topo.canvas.draw()
         self.fig_topo.show()
 
@@ -332,6 +327,91 @@ class CitsWidget(QtWidgets.QMainWindow):
         """
         logging.debug("Topo closing")
         self.fig_topo = None
+
+#%% Adding channels
+    def addCits(self):
+        """ Slot that launches the reading of the I(V) CITS 
+        that corresponds to the preniously opened single dIdV CITS.
+        TODO : Only implemented for ascii files"""  
+        if self.dataLoaded :
+            IVpath = QtWidgets.QFileDialog.getOpenFileNames(
+                self,
+                "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
+                self.wdir,
+                "Ascii file (*.asc)",
+            )
+            # getOpenFilesNames returns a tuple with Cits_names as first element
+            # and extension as second. We just need the names.
+            (
+                topo,
+                cits_add_data,
+                IV_channelList,
+                cits_params,
+            ) = readCitsAscii(IVpath[0][0])
+            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
+            self.dataAdded = True
+            IV_channelList = ['IV_'+x for x in IV_channelList]
+            self.channelList = self.channelList + IV_channelList
+            self.ui_channelBox.addItems(IV_channelList)
+        else:
+            logging.error(
+                "Please first load single dIdV CITS"
+                )
+        return
+
+    def normalizeCurrentChannel(self):
+        """ Adds the normalized current data as a new channel """
+        if self.dataLoaded:
+            chan = self.ui_channelBox.currentIndex()
+            self.addChannel(
+                normalizeDOS(self.cits_data[chan]),
+                "Normalized " + self.channelList[chan],
+            )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
+    def derivateCurrentChannel(self):
+        """ Adds the derivative of current data as a new channel """
+        if self.dataLoaded:
+            chan = self.ui_channelBox.currentIndex()
+            self.addChannel(
+                derivate_IV(self.cits_data[chan], self.cits_params["dV"]),
+                "Derivated " + self.channelList[chan],
+            )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
+    def calculateFFT(self):
+        """ Adds the 2D FFT data as a new channel """
+        if self.dataLoaded:
+            chan = self.ui_channelBox.currentIndex()
+            self.addChannel(
+                np.sqrt((np.abs(np.fft.fftshift(
+                    np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)
+                        )
+                 )
+                )),
+                "FFT of " + self.channelList[chan],
+            )
+            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
+
+    def FeenstraCits(self):
+          """ Slot that launches the calculation of Feenstra CITS 
+          corresponding to the previously opened single dIdV and I(V) CITS.
+          TODO : Only implemented for ascii files"""  
+          if self.dataLoaded and self.dataAdded :
+              self.cits_params["LIsensi"] = self.ui_LIBox.value()
+              self.cits_params["AmpMod"] = self.ui_AmpBox.value()
+              self.cits_params["Gain"] = self.ui_GainBox.value()
+              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params, self.channelList)
+              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params, self.channelList)
+              Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
+              self.channelList = self.channelList + Feenstra_channelList
+              self.ui_channelBox.addItems(Feenstra_channelList)
+              self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis = 0)
+          else:
+              logging.error(
+                  "Please first load single dIdV CITS and its corresponding I(V) CITS"
+                  )
+          return
 
     # %% Updating methods. Usually called by signals
     def updateAvgVariables(self):
@@ -606,8 +686,11 @@ class CitsWidget(QtWidgets.QMainWindow):
     def getSpectrumColor(self, n):
         """ Returns the color corresponding to a spectrum of given index
         according to spectrumColor """
-        # TODO: this should be removed in favour of matplotlib color_cycle or an iterator
-        return self.spectrumColor[n % len(self.spectrumColor)]
+        return matplotlib.rcParams[
+            'axes.prop_cycle'
+            ].by_key()['color'][
+                n % len(matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+                ]
 
     def launchAvgSpectrum(self):
         """ Slot called to average the spectra of the whole map """
@@ -825,7 +908,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         yi = y_plot[0]
         # Matlab convention : Y (v) first then X (z)
         # Plot the built map in a new figure
-        fig = pyplot.figure(figsize=(4,5))
+        fig = pyplot.figure()
         ax = fig.add_subplot(1, 1, 1)
         self.ax_map.text(xi + 0.5, yi + 0.5, str(fig.number))
         self.ui_mapWidget.draw()
@@ -959,7 +1042,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         xPx = self.cits_params["xPx"]
         yPx = self.cits_params["yPx"]
         self.ax_map = self.ui_mapWidget.figure.add_subplot(111)
-        self.ui_mapWidget.figure.subplots_adjust(**SUBPLOTS_DIMS)
+        self.ui_mapWidget.figure.subplots_adjust()
         if self.ui_ForceAspect_Box.isChecked() :
             self.ax_map.set_aspect("equal")
         else:
@@ -1159,92 +1242,6 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.addChannel(FFTData, "FFT of " + self.channelList[chan_index_to_fft])
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
-#%% Adding channels
-
-    def addCits(self):
-        """ Slot that launches the reading of the I(V) CITS 
-        that corresponds to the preniously opened single dIdV CITS.
-        TODO : Only implemented for ascii files"""  
-        if self.dataLoaded :
-            IVpath = QtWidgets.QFileDialog.getOpenFileNames(
-                self,
-                "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
-                self.wdir,
-                "Ascii file (*.asc)",
-            )
-            # getOpenFilesNames returns a tuple with Cits_names as first element
-            # and extension as second. We just need the names.
-            (
-                topo,
-                cits_add_data,
-                IV_channelList,
-                cits_params,
-            ) = readCitsAscii(IVpath[0][0])
-            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
-            self.dataAdded = True
-            IV_channelList = ['IV_'+x for x in IV_channelList]
-            self.channelList = self.channelList + IV_channelList
-            self.ui_channelBox.addItems(IV_channelList)
-        else:
-            logging.error(
-                "Please first load single dIdV CITS"
-                )
-        return
-
-    def normalizeCurrentChannel(self):
-        """ Adds the normalized current data as a new channel """
-        if self.dataLoaded:
-            chan = self.ui_channelBox.currentIndex()
-            self.addChannel(
-                normalizeDOS(self.cits_data[chan]),
-                "Normalized " + self.channelList[chan],
-            )
-            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
-
-    def derivateCurrentChannel(self):
-        """ Adds the derivative of current data as a new channel """
-        if self.dataLoaded:
-            chan = self.ui_channelBox.currentIndex()
-            self.addChannel(
-                derivate_IV(self.cits_data[chan], self.cits_params["dV"]),
-                "Derivated " + self.channelList[chan],
-            )
-            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
-
-    def calculateFFT(self):
-        """ Adds the 2D FFT data as a new channel """
-        if self.dataLoaded:
-            chan = self.ui_channelBox.currentIndex()
-            self.addChannel(
-                np.sqrt((np.abs(np.fft.fftshift(
-                    np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)
-                        )
-                 )
-                )),
-                "FFT of " + self.channelList[chan],
-            )
-            self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
-
-    def FeenstraCits(self):
-          """ Slot that launches the calculation of Feenstra CITS 
-          corresponding to the previously opened single dIdV and I(V) CITS.
-          TODO : Only implemented for ascii files"""  
-          if self.dataLoaded and self.dataAdded :
-              self.cits_params["LIsensi"] = self.ui_LIBox.value()
-              self.cits_params["AmpMod"] = self.ui_AmpBox.value()
-              self.cits_params["Gain"] = self.ui_GainBox.value()
-              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params, self.channelList)
-              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params, self.channelList)
-              Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
-              self.channelList = self.channelList + Feenstra_channelList
-              self.ui_channelBox.addItems(Feenstra_channelList)
-              self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis = 0)
-          else:
-              logging.error(
-                  "Please first load single dIdV CITS and its corresponding I(V) CITS"
-                  )
-          return
-
 #%% Extract gif
 
     def make_gif(self):
@@ -1260,7 +1257,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         for i in np.arange(n,m, step):
             figif = pyplot.figure()
             ax_gif = figif.add_subplot(111)
-            figif.subplots_adjust(**SUBPLOTS_DIMS)
+            figif.subplots_adjust()
             # Set title
             pyplot.title(
                 "$V_{BIAS}$="

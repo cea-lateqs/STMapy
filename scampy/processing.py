@@ -254,5 +254,4 @@ def derivate_IV(IVdata, dV):
             savgolderivative(IVdata, 31, 2, np.shape(IVdata[:,:,0])), 
             np.shape(IVdata[:,:,0])
                                  )/dV
-    
     return dIVdata

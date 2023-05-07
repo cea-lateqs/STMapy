@@ -98,10 +98,16 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 - **Normalize current channel** (_button_): normalises the current channel. The result of this normalisation will be added as a new channel named 'Normalised' followed by the channel name.
 - **V/Z index** (_spinbox_): changes the index of the voltage/altitude at which the 2D plot is displayed. The corresponding value is shown in the header of the 2D plot.
 - **Open I(V) CITS channel** (_button_): Open I(V) data from folder. The data is added in a new channel. Only works for ascii files, and if a dIdV CITS has already been oppened. 
+- **Force CITS aspect to equal** (_checkbox_): When next updated, the CITS aspect will be set to equal.
 
-#### Calculate Feenstra normalisation
+#### Additional CITS Channels
 
-- **Calculate dIdV*V/I** (_button_): Calculates the Feenstra renormalisation. The result of will be added as a new channel. Only tested for ascii files. Needs both dIdV and I(V) CITS to be already oppened. 
+The following buttons add a new channel in the last position of the **Displayed channel** (_dropdown_).
+
+- **Open I(V) CITS as new channel** (_button_): allows to select an additional I(V) CITS, if dIdV channel has already been loaded.
+- **FFT (CITS channel)** (_button_): Calculates the 2D FFT of the currently displayed CITS channel.
+- **derivative (CITS channel)** (_button_): Calculates the 2D derivative of the currently displayed CITS channel. Usually used on I(V) channels.
+- **Calculate dIdV*V/I** (_button_): Calculates the Feenstra renormalisation. The result of will be added as a new channel. Only tested for ascii files. Needs both dIdV and I(V) CITS to be already oppened. The Lock in sensitivity ; Modulation amplitude and Gain of the current can be specified for consistency of the results.
 
 #### Averaging
 
@@ -120,6 +126,7 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 
 - **Waterfall** or **2D plot** (_radio buttons_): sets the type of representation for cuts.
 - **View selected spectra** (_checkbox_): shows the pixels in the 2D plot that are chosen when doing a cut (debugging purposes).
+- **Plot FFT of cut** (_checkbox_): shows the FFT of the chosen cut with respect to the energy.
 - **Whole length cut** (_button_): does a cut of the 2D plot along the great diagonal.
 
 #### Spectra plot
@@ -134,11 +141,13 @@ If the loading succeed, a 2D plot should appear on the bottom-left widget. If no
 #### Display parameters
 
 - **Scale in Volts** (_checkbox_): sets voltage axis in Volts for cuts and spectra. Uses indexes otherwise.
-- **Scale in metric units** (_checkbox_): sets the X and Y axis in metric units for the topo and the cuts (NOT for the 2D plot). Uses pixels otherwise.
+- **Scale in metric units** (_checkbox_): sets the X and Y axis in metric units. Uses pixels otherwise.
 - **Voltage index guideline** (_checkbox_): shows a dashed line in the bottom-right widget at the voltage selected in **V/Z index**.
 - **Deactivate legend** (_checkbox_): removes the legend when plotting spectra. Can be useful when many spectra are plotted.
 - **Colorbar settings** (_checkbox_): opens the colorbar widget where the colorbar to use can be changed. Custom limits can also be forced on the colormap by checking **Use custom limits**. <span style="color: red;">In this case, you must set both the lower AND the upper limit.</span>
-- **Make Gif** (_button_): Creates a gif from the current channel. The number of images is tuned through start, stop, and step boxes. Result is saved in the CITS folder.
+- **Make Gif** (_button_): Creates a gif from the current channel. The number of images is tuned through start, stop, and step boxes using V/Z index labels. Result is saved in the CITS folder.
+
+Various parameters for the plotting can be adjusted in the `scampy.mplstyle` file located in the `scampy` folder.
 
 ## Configuration
 
