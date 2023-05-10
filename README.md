@@ -1,61 +1,63 @@
-# Scampy (SCAnning tunneling Microscopy analysis in PYthon)
+# STMapy (Scanning Tunneling Microscopy Analysis in PYthon)
 
 ## Presentation
 
-**Scampy** (previously STM_Data_Analysis) is a Graphical User Interface (GUI) to analyse CITS recorded under Nanonis (.3ds), MATRIX (.asc) or RHK (.sm4).
+**STMapy** (previously STM_Data_Analysis and Scampy) is a Graphical User Interface (GUI) to analyse CITS recorded under Nanonis (.3ds), MATRIX (.asc) or RHK (.sm4).
 It is written in Python using PyQt for the GUI.
 
 ## Installation
 
-For now, Scampy must be installed from its source code (_soon on PyPI !_).
+STMapy can also be installed using PyPI : `pip install stmapy`
+
+STMapy can also be installed from its source code.
 
 To do this:
 
-- Fetch the sources from its [git repository](https://gitlab.com/lateqs/scampy/). Ex: `git clone https://gitlab.com/lateqs/scampy.git`
+- Fetch the sources from its [git repository](https://gitlab.com/lateqs/stmapy/). Ex: `git clone https://gitlab.com/lateqs/stmapy.git`
 - Once downloaded, move in the source folder and run the install with `pip`:
 
 ```bash
-cd scampy
+cd stmapy
 pip install [-e] . [--user]
 ```
 
 If needed, put `-e` for an install in editable mode (useful for development as sources will be directly linked to package) and/or `--user` to install it only for the current user (local installation).
 
-You can test if the installation succedeed by importing scampy in a Python console:
+You can test if the installation succedeed by importing stmapy in a Python console:
 
 ```python
->>> import scampy
->>> print(scampy.__version__)
+>>> import stmapy
+>>> print(stmapy.__version__)
 ```
 
 ### Requirements
 
-Requirements should automatically be installed when running the install with `pip`. Using Scampy requires the following installations :
+Requirements should automatically be installed when running the install with `pip`. Using stmapy requires the following installations :
 
-- Python 3 (tested under Python 3.6) with the following packages
-  - Numpy (tested under 1.15)
-  - Scipy (tested under 1.1)
-  - Matplotlib, at least version 2.0 (tested under 2.2.3)
+- Python 3 (tested under Python 3.10) with the following packages
+  - Numpy (tested under 1.23)
+  - Scipy (tested under 1.10)
+  - Matplotlib, at least version 2.0 (tested under 3.7.0)
 - PyQt 5
 
-## Using Scampy
+## Using Stmapy
 
 ### Starting
 
-To start Scampy, run `scampy` in the console:
+To start Stmapy, run `stmapy` in the console:
 
 ```
-scampy
+stmapy
 ```
 
 It should display the following interface.
 
-<img src="scampy.png" alt="Scampy GUI">
+<img src="stmapy.png" alt="stmapy GUI">
 
-If it is not working, run directly the `main.py` file from scampy sources:
+If it is not working, run directly the `main.py` file from Stmapy sources:
 
 ```bash
-python3 scampy/main.py
+python3 stmapy/main.py
 ```
 
 #### File selection
@@ -64,7 +66,7 @@ To load a CITS, click on the **Open CITS** button on top-left corner. A window w
 
 #### Topography
 
-Once the CITS was selected, Scampy will load the spectroscopic data and will attempt to read the topography to plot it in a seperate window.
+Once the CITS was selected, Stmapy will load the spectroscopic data and will attempt to read the topography to plot it in a seperate window.
 
 This always succeeds for .3ds and .sm4 as it plots the topography contained in the file. For .asc however, it will search for a file 'Topo.txt' in the same folder of the selected file. This 'Topo.txt' can be created by using the _Export to TXT_ method of [Gwyddion](http://gwyddion.net/). If no topographic file is found, no topography will be plotted.
 
@@ -148,16 +150,16 @@ The following buttons add a new channel in the last position of the **Displayed 
 - **Colorbar settings** (_checkbox_): opens the colorbar widget where the colorbar to use can be changed. Custom limits can also be forced on the colormap by checking **Use custom limits**. <span style="color: red;">In this case, you must set both the lower AND the upper limit.</span>
 - **Make Gif** (_button_): Creates a gif from the current channel. The number of images is tuned through start, stop, and step boxes using V/Z index labels. Result is saved in the CITS folder.
 
-Various parameters for the plotting can be adjusted in the `scampy.mplstyle` file located in the `scampy` folder.
+Various parameters for the plotting can be adjusted in the `stmapy.mplstyle` file located in the `stmapy` folder.
 
 ## Configuration
 
-It is possible to set various parameters in the `config.json` file located in the `scampy` folder:
+It is possible to set various parameters in the `config.json` file located in the `stmapy` folder:
 
 - `working_directory`: Name of a directory that will be taken as root when asking to load a CITS. _Default: HOME directory_.
 - `matplotlib_stylesheet`: Name of a valid [stylesheet](https://matplotlib.org/tutorials/introductory/customizing.html#using-style-sheets) to be imported at launch to tune matplotlib aspect. _Default: None_.
 - `autoload`: Boolean to trigger the loading of a CITS at launch. _Default: false_.
-- `default_cmap`: Name of the [colormap](https://matplotlib.org/api/pyplot_summary.html?highlight=colormaps#matplotlib.pyplot.colormaps) to use for the CITS map. Note that this is only at launch as the colormap can be changed afterwards in scampy. _Default: magma_r_.
+- `default_cmap`: Name of the [colormap](https://matplotlib.org/api/pyplot_summary.html?highlight=colormaps#matplotlib.pyplot.colormaps) to use for the CITS map. Note that this is only at launch as the colormap can be changed afterwards in stmapy. _Default: magma_r_.
 - `topo_cmap`: Name of the colormap to use for the topography. This colormap cannot be changed after launch. _Default: afm_hot_.
 - `level_topo`: Type of leveling to use before plotting for the topo: can be `line`, `plane` or `no` to deactivate leveling. _Default: no_.
 
@@ -169,5 +171,5 @@ The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analy
 
 ## Trouble shooting
 
-- **`Scampy not found` issues** : change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the scampy folder.
+- **`Stmapy not found` issues** : change spyder path. If it doesn't solve the problem, you can try to copy `main.py` out of the stmapy folder.
 

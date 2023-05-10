@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from scampy import processing
+from stmapy import processing
 
 YPX = 10
 XPX = 10

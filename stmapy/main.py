@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# Main program for launching Scampy
+# Main program for launching Stmapy
 import PyQt5.QtWidgets as QtWidgets
 import sys
 import logging
-from scampy import citswidget
+from stmapy import citswidget
 
 
 def main():

@@ -8,7 +8,7 @@ import struct
 import os.path
 import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
-from scampy.processing import extractSlope, stringify
+from stmapy.processing import extractSlope, stringify
 
 DEFAULT_CONFIG = {
     "working_directory": "~",

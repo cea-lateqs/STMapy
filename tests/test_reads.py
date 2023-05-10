@@ -2,13 +2,13 @@ import os.path
 import unittest
 import h5py
 import numpy as np
-from scampy import reads
+from stmapy import reads
 
-DATA_DIR = os.path.join(os.path.expanduser("~"), "scampy_test_data")
+DATA_DIR = os.path.join(os.path.expanduser("~"), "stmapy_test_data")
 
 
 class TestCITSReads(unittest.TestCase):
-    """ Tests for reads. Needs scampy_test_data in HOME folder """
+    """ Tests for reads. Needs stmapy_test_data in HOME folder """
 
     def assertCloseToBenchmark(self, data, data_type):
         with h5py.File(os.path.join(DATA_DIR, "benchmarks.h5"), "r") as h5file:
