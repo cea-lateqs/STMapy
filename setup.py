@@ -1,5 +1,6 @@
 import setuptools
 
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -10,14 +11,18 @@ assert __version__ is not None
 
 setuptools.setup(
     name="stmapy",
-    version="0.4.0",
+    version="0.4.4",
     authors="Loïc Huder, Florie Mesple",
     author_email="loic.huder@gmail.com, florie.mesple@gmail.com",
     description="Scanning tunneling microscopy analysis in Python",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.com/lateqs/stmapy",
+    url="https://github.com/cea-lateqs/STMapy",
     packages=setuptools.find_packages(),
+    package_data={
+    	"stmapy": ["*.json", "*.mplstyle","*.png"],
+	},
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

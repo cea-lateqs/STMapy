@@ -33,7 +33,7 @@ from PIL import Image, ImageFile
 from scipy.signal import find_peaks
 
 #Set style
-matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'stmapy.mplstyle')) 
+matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'stmapyStyle.mplstyle')) 
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
