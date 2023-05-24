@@ -9,6 +9,7 @@ import os.path
 import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
 from stmapy.processing import extractSlope, stringify
+import access2thematrix as a2m
 
 DEFAULT_CONFIG = {
     "working_directory": "~",
@@ -92,8 +93,81 @@ def setUpConfig(config_filepath):
     return config
 
 
+def readCitsMtrx(filepath):
+    """ Reads Mtrx CITS file (Omicron) and stores all the parameters, 
+    using S. Zevenhuizen package access2thematrix 
+    https://pypi.org/project/access2theMatrix/ """
+    divider = 1
+    mtrxdata = a2m.MtrxData() 
+    #mtrxdata is a class type
+    mtrxdata.open(filepath)
+    params=mtrxdata.param
+    
+    #debug purposes
+    traces, message = mtrxdata.open(filepath)
+    
+    if not('Successfully' in message) :
+        logging.error(
+            "Problem while reading the file : " + message
+        )
+        return False 
+    
+    elif len(params)==1 : 
+        logging.error(
+            "Problem while reading the file : could not find result file chain, please keep it in the same folder as the CITS file"
+        )
+        return False
+    
+    xL=float(params['EEPA::XYScanner.Width'][0])*10**9
+    yL=float(params['EEPA::XYScanner.Height'][0])*10**9
+    xPx=int(params['EEPA::XYScanner.Points'][0])
+    yPx=int(params['EEPA::XYScanner.Lines'][0])
+    vStart=float(params['EEPA::Spectroscopy.Device_1_Start'][0])
+    vEnd=float(params['EEPA::Spectroscopy.Device_1_End'][0])
+    
+    
+    scandirection = ['forward/up', 'backward/up','forward/down', 'backward/down']
+    tracedirection = ['trace', 'retrace']
+    channelList = []
+    m_data = []
+    for scan in scandirection:
+        for trace in tracedirection: 
+            try:
+                im_3d = mtrxdata.volume_scan[scan][trace]
+                if len(m_data)==0 : 
+                    m_data.append(im_3d)
+                else:
+                    m_data = np.concatenate(
+                        (m_data, [im_3d]), axis=0
+                        )
+                channelList.append(scan+" ["+trace+"]")
+            except KeyError:
+                pass
+            
+    zPt=np.shape(m_data)[-1]
+
+    # Store the parameters in a dictonnary to use them later
+    m_params = {
+        "xPx": xPx,
+        "yPx": yPx,
+        "xL": xL,
+        "yL": yL,
+        "zPt": zPt,
+        "vStart": vStart / divider,
+        "vEnd": vEnd / divider,
+        "dV": abs(vEnd - vStart) / (divider * zPt),
+    }
+    if divider != 1:
+        logging.info("A divider of " + str(divider) + " was found and applied")
+
+    # Check if a topo file exists and read it if yes
+    topopath = os.path.join(os.path.dirname(filepath), "Topo.txt")
+    topo = readTopo(topopath) if os.path.exists(topopath) else None
+    return topo, m_data, channelList, m_params
+
 def readCitsAscii(filepath):
-    """ Reads an Ascii CITS file (Omicron) and stores all the parameters"""
+    """ Reads an Ascii CITS file (Omicron exported from SPIP) 
+    and stores all the parameters"""
     with open(filepath, "r") as f:
         divider = 10
         unit = 1

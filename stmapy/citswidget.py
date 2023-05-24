@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationTo
 from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot, Dot, Line
-from .reads import readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
+from .reads import readCitsMtrx, readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
 from .processing import (
     normalizeDOS,
     linearFitFunction,
@@ -171,7 +171,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self,
             "Choose a CITS file to read or several to average",
             self.wdir,
-            "Ascii file (*.asc);;RHK file (*.sm4);;3D binary file (*.3ds);;Text file (*.txt);;All files (*)",
+            "Mtrx file (*_mtrx);;Ascii file (*.asc);;RHK file (*.sm4);;3D binary file (*.3ds);;Text file (*.txt);;All files (*)",
         )
         # getOpenFilesNames returns a tuple with Cits_names as first element
         # and extension as second. We just need the names.
@@ -189,7 +189,17 @@ class CitsWidget(QtWidgets.QMainWindow):
         for cits in cits_names:
             logging.info("Loading {0}...".format(cits))
             extension = cits.split(".")[-1]
-            if extension == "asc":
+            if extension == "Aux1(V)_mtrx" or extension == "I(V)_mtrx":
+                self.clearMap()
+                self.mapType = "Omicron"
+                (
+                    self.topo,
+                    self.cits_data,
+                    self.channelList,
+                    self.cits_params,
+                ) = readCitsMtrx(cits)
+                self.dataLoaded = True            
+            elif extension == "asc":
                 self.clearMap()
                 self.mapType = "Omicron"
                 (
@@ -238,7 +248,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.dataLoaded = True
             else:
                 logging.error(
-                    "Extension {0} not supported ! Only asc, 3ds, txt and mat are valid.".format(
+                    "Extension {0} not supported ! Only Aux1(V)_mtrx, I(V)_mtrx, asc, 3ds, txt and mat are valid.".format(
                         extension
                     )
                 )
