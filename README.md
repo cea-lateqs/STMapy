@@ -2,7 +2,7 @@
 
 ## Presentation
 
-**STMapy** (previously STM_Data_Analysis and Scampy) is a Graphical User Interface (GUI) to analyse CITS recorded under Nanonis (.3ds), MATRIX (.asc) or RHK (.sm4).
+**STMapy** (previously STM_Data_Analysis and Scampy) is a Graphical User Interface (GUI) to analyse CITS recorded under Nanonis (.3ds), MATRIX (spip exported .asc or _mtrx) or RHK (.sm4).
 It is written in Python using PyQt for the GUI.
 
 ## Installation
@@ -13,7 +13,7 @@ STMapy can also be installed from its source code.
 
 To do this:
 
-- Fetch the sources from its [git repository](https://gitlab.com/lateqs/stmapy/). Ex: `git clone https://gitlab.com/lateqs/stmapy.git`
+- Fetch the sources from its [git repository](https://github.com/cea-lateqs/STMapy/). Ex: `git clone https://github.com/cea-lateqs/STMapy/`
 - Once downloaded, move in the source folder and run the install with `pip`:
 
 ```bash
@@ -62,13 +62,13 @@ python3 stmapy/main.py
 
 #### File selection
 
-To load a CITS, click on the **Open CITS** button on top-left corner. A window will appear, prompting to select a CITS of supported format (either .3ds, .sm4 or .asc). The filenames can be filtered according to the format by selecting _3D binary file_ (.3ds) or _RHK File_ (.sm4) or _Ascii files_ (.asc).
+To load a CITS, click on the **Open CITS** button on top-left corner. A window will appear, prompting to select a CITS of supported format (either .3ds, .sm4 or .asc). The filenames can be filtered according to the format by selecting _3D binary file_ (.3ds) or _RHK File_ (.sm4) or _Ascii files_ (.asc) or _mtrx files_ (_mtrx).
 
 #### Topography
 
 Once the CITS was selected, Stmapy will load the spectroscopic data and will attempt to read the topography to plot it in a seperate window.
 
-This always succeeds for .3ds and .sm4 as it plots the topography contained in the file. For .asc however, it will search for a file 'Topo.txt' in the same folder of the selected file. This 'Topo.txt' can be created by using the _Export to TXT_ method of [Gwyddion](http://gwyddion.net/). If no topographic file is found, no topography will be plotted.
+This always succeeds for .3ds and .sm4 as it plots the topography contained in the file. For .asc and mtrx however, it will search for a file 'Topo.txt' in the same folder of the selected file. This 'Topo.txt' can be created by using the _Export to TXT_ method of [Gwyddion](http://gwyddion.net/). If no topographic file is found, no topography will be plotted.
 
 <span style='color: red;'>No checks are done to see if 'Topo.txt' corresponds to the loaded CITS. Always check that the topography file was taken at the same location as the CITS.</span>
 
@@ -167,7 +167,8 @@ Any missing entry in `config.json` will be set to its default value.
 
 ## Further information
 
-The code is available on the [Git repo](https://gitlab.com/lateqs/STM_Data_Analysis). Bugs can be reported as Issues on the repository.
+The code is available on the [Git repo](https://github.com/cea-lateqs/STMapy/). Bugs can be reported as Issues on the repository.
+It includes use of the access2thematrix package developed by the Stephan J. M. Zevenhuizen.
 
 ## Trouble shooting
 

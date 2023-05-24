@@ -11,7 +11,7 @@ assert __version__ is not None
 
 setuptools.setup(
     name="stmapy",
-    version="0.4.4",
+    version="0.5.0",
     authors="Loïc Huder, Florie Mesple",
     author_email="loic.huder@gmail.com, florie.mesple@gmail.com",
     description="Scanning tunneling microscopy analysis in Python",
@@ -32,7 +32,7 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Visualization",
         "Environment :: X11 Applications :: Qt",
     ],
-    install_requires=["numpy", "scipy>=0.17", "matplotlib>=2.0", "pyqt5"],
+    install_requires=["numpy", "scipy>=0.17", "matplotlib>=2.0", "pyqt5", "access2thematrix"],
     tests_require=["h5py"],
     python_requires=">=3.6",
     entry_points={"console_scripts": ["stmapy = stmapy.main:main",]},

@@ -1,3 +1,13 @@
+## 0.5.0
+
+### New features
+
+- Added the possibility to open _mtrx files using oackage access2thematrix : https://pypi.org/project/access2theMatrix/
+
+### Fixes
+
+- cleanup
+
 ## 0.4.0
 
 ### New features
