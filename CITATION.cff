@@ -6,6 +6,8 @@ authors:
   - family-names: Mesple
     given-names: Florie
     orcid: 'https://orcid.org/0009-0007-0239-1534'
+  - family-names: Renard T.
+    given-names: Vincent
 title: "#Scanning Tunneling Microscopy Analysis in PYthon"
 version: 0.5.0
 doi: todo
