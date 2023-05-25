@@ -11,7 +11,7 @@ assert __version__ is not None
 
 setuptools.setup(
     name="stmapy",
-    version="0.5.0",
+    version="0.5.1",
     authors="Loïc Huder, Florie Mesple",
     author_email="loic.huder@gmail.com, florie.mesple@gmail.com",
     description="Scanning tunneling microscopy analysis in Python",
