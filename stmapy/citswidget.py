@@ -201,7 +201,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.dataLoaded = True            
             elif extension == "asc":
                 self.clearMap()
-                self.mapType = "Omicron"
+                self.mapType = "Omicron_ascii"
                 (
                     self.topo,
                     self.cits_data,
@@ -320,7 +320,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.config["topo_cmap"],
                 level_algo,
             )
-            if self.mapType == "Omicron":
+            if self.mapType == "Omicron_ascii":
                 self.ax_topo.axis([0, max_x, max_y, 0])
             else:
                 self.ax_topo.axis([0, max_x, 0, max_y])
@@ -924,7 +924,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_mapWidget.draw()
 
         voltage_array = (
-            self.cits_params["vStart"] + voltage_indices * self.cits_params["dV"]
+            self.cits_params["vStart"] + voltage_indices * self.cits_params["dV"] * np.sign(self.cits_params["dV"])
             if self.ui_scaleVoltage.isChecked()
             else voltage_indices
         )
@@ -970,6 +970,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
                 )) for i in range(np.shape(self.cits_data)[-1])])
                 #work in progress to optimize plotting : Log Norm too long ?
+
                 if self.ui_cbarCustomCheckbox.isChecked():
                     mapData = pyplot.pcolormesh(
                     x_array,
@@ -983,7 +984,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     mapData = pyplot.pcolormesh(
                     x_array,
                     voltage_array,
-                    datafft,
+                    np.sqrt(datafft),
                     cmap=self.ui_colorBarBox.currentText(),
                     norm=matplotlib.colors.LogNorm(vmin=5),
                     )
@@ -1008,8 +1009,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                     float(self.ui_cbarUpperBox.text()),
                 )
 
-            else:
-                mapData.set_clim(0)
+            # else:
+            #     mapData.set_clim(0,1)
         fig.show()
 
         
@@ -1066,7 +1067,11 @@ class CitsWidget(QtWidgets.QMainWindow):
             XYmap = self.ax_map.pcolormesh(
                 x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText(),
              )
-            self.ax_map.invert_yaxis()
+            
+            # If the map is an Omicron one, I have to invert the y-axis
+            if self.mapType == "Omicron_ascii":
+                self.ax_map.invert_yaxis()
+
             self.ax_map.set_ylabel('Y (nm)')
             self.ax_map.set_xlabel('X (nm)')
         # Else, use pixels
@@ -1075,7 +1080,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 map_data, cmap=self.ui_colorBarBox.currentText()
             )
             # If the map is an Omicron one, I have to invert the y-axis
-            if self.mapType == "Omicron":
+            if self.mapType == "Omicron_ascii":
                 self.ax_map.axis([0, xPx, yPx, 0])
             else:
                 self.ax_map.axis([0, xPx, 0, yPx])
@@ -1299,7 +1304,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
                 )
                 # If the map is an Omicron one, invert the y-axis
-                if self.mapType == "Omicron":
+                if self.mapType == "Omicron_ascii":
                     pyplot.axis([0, xPx, yPx, 0])
                 else:
                     pyplot.axis([0, xPx, 0, yPx])

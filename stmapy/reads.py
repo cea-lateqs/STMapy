@@ -98,6 +98,7 @@ def readCitsMtrx(filepath):
     using S. Zevenhuizen package access2thematrix 
     https://pypi.org/project/access2theMatrix/ """
     divider = 1
+    unit = 10**12 #pA
     mtrxdata = a2m.MtrxData() 
     #mtrxdata is a class type
     mtrxdata.open(filepath)
@@ -120,12 +121,13 @@ def readCitsMtrx(filepath):
     
     xL=float(params['EEPA::XYScanner.Width'][0])*10**9
     yL=float(params['EEPA::XYScanner.Height'][0])*10**9
-    xPx=int(params['EEPA::XYScanner.Points'][0])
-    yPx=int(params['EEPA::XYScanner.Lines'][0])
     vStart=float(params['EEPA::Spectroscopy.Device_1_Start'][0])
     vEnd=float(params['EEPA::Spectroscopy.Device_1_End'][0])
-    
-    
+    if vStart>0 :  # If start bias is positive, ascii is saved in reverse order
+        V2 = vStart
+        vStart = vEnd
+        vEnd = V2
+        
     scandirection = ['forward/up', 'backward/up','forward/down', 'backward/down']
     tracedirection = ['trace', 'retrace']
     channelList = []
@@ -143,8 +145,14 @@ def readCitsMtrx(filepath):
                 channelList.append(scan+" ["+trace+"]")
             except KeyError:
                 pass
-            
+    
+    m_data = np.flip(m_data, axis =-1)
+
+    if filepath.split(".")[-1]=='I(V)_mtrx':
+        m_data = m_data*unit
     zPt=np.shape(m_data)[-1]
+    xPx = np.shape(m_data)[-2]
+    yPx = np.shape(m_data)[-3]
 
     # Store the parameters in a dictonnary to use them later
     m_params = {
@@ -156,7 +164,9 @@ def readCitsMtrx(filepath):
         "vStart": vStart / divider,
         "vEnd": vEnd / divider,
         "dV": abs(vEnd - vStart) / (divider * zPt),
+        # "dV": np.sign(vEnd-vStart)*abs(vEnd - vStart) / (divider * zPt),
     }
+    print(xPx, yPx, xL,yL)
     if divider != 1:
         logging.info("A divider of " + str(divider) + " was found and applied")
 
@@ -241,6 +251,8 @@ def readCitsAscii(filepath):
         "vEnd": vEnd / divider,
         "dV": abs(vEnd - vStart) / (divider * zPt),
     }
+    print(xPx, yPx, xL,yL)
+
     if divider != 1:
         logging.info("A divider of " + str(divider) + " was found and applied")
 
