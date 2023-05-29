@@ -1,4 +1,4 @@
-cff-version: 0.5.1
+cff-version: 0.5.2
 message: "If you use this software, please cite it as below."
 authors:
   - family-names: Huder
@@ -9,6 +9,6 @@ authors:
   - family-names: Renard
     given-names: Vincent T.
 title: "#Scanning Tunneling Microscopy Analysis in PYthon"
-version: 0.5.1
+version: 0.5.2
 doi: todo
 date-released: 2023-05-30
