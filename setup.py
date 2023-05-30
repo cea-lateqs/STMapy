@@ -20,8 +20,8 @@ setuptools.setup(
     url="https://github.com/cea-lateqs/STMapy",
     packages=setuptools.find_packages(),
     package_data={
-    	"stmapy": ["*.json", "*.mplstyle","*.png"],
-	},
+        "stmapy": ["*.json", "*.mplstyle", "*.png"],
+    },
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -32,8 +32,18 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Visualization",
         "Environment :: X11 Applications :: Qt",
     ],
-    install_requires=["numpy", "scipy>=0.17", "matplotlib>=2.0", "pyqt5", "access2thematrix"],
+    install_requires=[
+        "numpy",
+        "scipy>=0.17",
+        "matplotlib>=2.0",
+        "pyqt5",
+        "access2thematrix",
+    ],
     tests_require=["h5py"],
     python_requires=">=3.6",
-    entry_points={"console_scripts": ["stmapy = stmapy.main:main",]},
+    entry_points={
+        "console_scripts": [
+            "stmapy = stmapy.main:main",
+        ]
+    },
 )

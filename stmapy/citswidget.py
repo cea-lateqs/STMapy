@@ -12,37 +12,45 @@ from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationTo
 from matplotlib import pyplot
 from PyQt5 import QtWidgets, uic
 from .shape import generateShape, changeToDot, Dot, Line
-from .reads import readCitsMtrx, readCitsAscii, readCits3dsBin, readCitsSm4Bin, setUpConfig
+from .reads import (
+    readCitsMtrx,
+    readCitsAscii,
+    readCits3dsBin,
+    readCitsSm4Bin,
+    setUpConfig,
+)
 from .processing import (
     normalizeDOS,
     linearFitFunction,
     findPixelsOnLine,
     directionAverageCITS,
     FeenstraNormalization,
-    FeenstraNormalization_log,
     derivate_IV,
 )
 from .plotting import (
-    visualize_statistics, 
-    visualize_statistics_topo, 
-    waterfallPlot, 
-    lineTopoPlot, 
-    imageTopoPlot
+    visualize_statistics,
+    visualize_statistics_topo,
+    waterfallPlot,
+    lineTopoPlot,
+    imageTopoPlot,
 )
 from PIL import Image, ImageFile
 from scipy.signal import find_peaks
 
-#Set style
-matplotlib.pyplot.style.use(os.path.join(os.path.dirname(__file__),'stmapyStyle.mplstyle')) 
+# Set style
+matplotlib.pyplot.style.use(
+    os.path.join(os.path.dirname(__file__), "stmapyStyle.mplstyle")
+)
 
 # Set explictly the backend to Qt for consistency with pyqt.
 matplotlib.use("qt5agg")
+
 
 # noinspection PyPep8Naming
 class CitsWidget(QtWidgets.QMainWindow):
     # %% Building methods
     def __init__(self, parent):
-        """ Builds the widget with parent widget in arg """
+        """Builds the widget with parent widget in arg"""
         QtWidgets.QMainWindow.__init__(self, parent)
         uic.loadUi(os.path.join(os.path.dirname(__file__), "ui_citswidget.ui"), self)
         # Set up the user interface from Designer.
@@ -104,7 +112,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.askCits()
 
     def connect(self):
-        """ Connects all the signals. Only called in the constructor """
+        """Connects all the signals. Only called in the constructor"""
         self.ui_openButton.clicked.connect(self.askCits)
         self.ui_topoButton.clicked.connect(self.drawTopo)
         self.ui_addCITSButton.clicked.connect(self.addCits)
@@ -147,7 +155,6 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_fitCustomCheckbox.toggled.connect(self.ui_fitLowerLabel.setVisible)
         self.ui_MakeGifButton.clicked.connect(self.make_gif)
 
-
     @property
     def metric_ratios(self):
         ratioX = 1
@@ -160,13 +167,13 @@ class CitsWidget(QtWidgets.QMainWindow):
                 logging.warning(
                     "Metric ratios could not be computed. Is the CITS loaded with all parameters ?"
                 )
-        return {"x": ratioX, "y": ratioY}    
-        #TODO : the plotting on topo is incorrect when npx(CITS) neq npx(Topo)
+        return {"x": ratioX, "y": ratioY}
+        # TODO : the plotting on topo is incorrect when npx(CITS) neq npx(Topo)
 
     # %% Reading and loading CITS methods
     def askCits(self):
-        """ Slot that only takes care of opening a file dialog
-        for the user to select one or several CITS - Returns the CITS paths """
+        """Slot that only takes care of opening a file dialog
+        for the user to select one or several CITS - Returns the CITS paths"""
         cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(
             self,
             "Choose a CITS file to read or several to average",
@@ -178,7 +185,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.loadCits(cits_names_and_ext[0])
 
     def loadCits(self, cits_names):
-        """ Slot that launches the reading of the CITS given in arguments.
+        """Slot that launches the reading of the CITS given in arguments.
         Having several CITS will prompt their averaging
         but they have to be of the same dimensions"""
         n_cits = len(cits_names)
@@ -198,7 +205,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     self.channelList,
                     self.cits_params,
                 ) = readCitsMtrx(cits)
-                self.dataLoaded = True            
+                self.dataLoaded = True
             elif extension == "asc":
                 self.clearMap()
                 self.mapType = "Omicron_ascii"
@@ -282,11 +289,11 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.cits_data = mean_data
         self.updateWidgets()
         return
-    
+
     # %% Reading and loading topo images methods
 
     def drawTopo(self):
-        """ Draws the topography read while opening the CITS."""
+        """Draws the topography read while opening the CITS."""
         assert self.topo.ndim == 2
         yPx, xPx = self.topo.shape
         level_algo = self.config["level_topo"]
@@ -332,18 +339,18 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.fig_topo.show()
 
     def handleClosingTopo(self, event):
-        """ Called when the topo figure is closed.
+        """Called when the topo figure is closed.
         Put back self.fig_topo to 0 to indicate that no topo figure exists.
         """
         logging.debug("Topo closing")
         self.fig_topo = None
 
-#%% Adding channels
+    # %% Adding channels
     def addCits(self):
-        """ Slot that launches the reading of the I(V) CITS 
+        """Slot that launches the reading of the I(V) CITS
         that corresponds to the preniously opened single dIdV CITS.
-        TODO : Only implemented for ascii files"""  
-        if self.dataLoaded :
+        TODO : Only implemented for ascii files"""
+        if self.dataLoaded:
             IVpath = QtWidgets.QFileDialog.getOpenFileNames(
                 self,
                 "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
@@ -358,19 +365,17 @@ class CitsWidget(QtWidgets.QMainWindow):
                 IV_channelList,
                 cits_params,
             ) = readCitsAscii(IVpath[0][0])
-            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis = 0)
+            self.cits_data = np.concatenate((self.cits_data, cits_add_data), axis=0)
             self.dataAdded = True
-            IV_channelList = ['IV_'+x for x in IV_channelList]
+            IV_channelList = ["IV_" + x for x in IV_channelList]
             self.channelList = self.channelList + IV_channelList
             self.ui_channelBox.addItems(IV_channelList)
         else:
-            logging.error(
-                "Please first load single dIdV CITS"
-                )
+            logging.error("Please first load single dIdV CITS")
         return
 
     def normalizeCurrentChannel(self):
-        """ Adds the normalized current data as a new channel """
+        """Adds the normalized current data as a new channel"""
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             self.addChannel(
@@ -380,7 +385,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def derivateCurrentChannel(self):
-        """ Adds the derivative of current data as a new channel """
+        """Adds the derivative of current data as a new channel"""
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             self.addChannel(
@@ -390,44 +395,51 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def calculateFFT(self):
-        """ Adds the 2D FFT data as a new channel """
+        """Adds the 2D FFT data as a new channel"""
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             self.addChannel(
-                np.sqrt((np.abs(np.fft.fftshift(
-                    np.fft.fft2(self.cits_data[chan], axes=(- 3, - 2)), axes=(- 3, - 2)
+                np.sqrt(
+                    (
+                        np.abs(
+                            np.fft.fftshift(
+                                np.fft.fft2(self.cits_data[chan], axes=(-3, -2)),
+                                axes=(-3, -2),
+                            )
                         )
-                 )
-                )),
+                    )
+                ),
                 "FFT of " + self.channelList[chan],
             )
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def FeenstraCits(self):
-          """ Slot that launches the calculation of Feenstra CITS 
-          corresponding to the previously opened single dIdV and I(V) CITS.
-          TODO : Only implemented for ascii files"""  
-          if self.dataLoaded and self.dataAdded :
-              self.cits_params["LIsensi"] = self.ui_LIBox.value()
-              self.cits_params["AmpMod"] = self.ui_AmpBox.value()
-              self.cits_params["Gain"] = self.ui_GainBox.value()
-              cits_feenstra = FeenstraNormalization(self.cits_data, self.cits_params, self.channelList)
-              # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params, self.channelList)
-              Feenstra_channelList = ['Feenstra_Data [Fwd]', 'Feenstra_Data [Bwd]']
-              self.channelList = self.channelList + Feenstra_channelList
-              self.ui_channelBox.addItems(Feenstra_channelList)
-              self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis = 0)
-          else:
-              logging.error(
-                  "Please first load single dIdV CITS and its corresponding I(V) CITS"
-                  )
-          return
+        """Slot that launches the calculation of Feenstra CITS
+        corresponding to the previously opened single dIdV and I(V) CITS.
+        TODO : Only implemented for ascii files"""
+        if self.dataLoaded and self.dataAdded:
+            self.cits_params["LIsensi"] = self.ui_LIBox.value()
+            self.cits_params["AmpMod"] = self.ui_AmpBox.value()
+            self.cits_params["Gain"] = self.ui_GainBox.value()
+            cits_feenstra = FeenstraNormalization(
+                self.cits_data, self.cits_params, self.channelList
+            )
+            # cits_feenstra = FeenstraNormalization_log(self.cits_data, self.cits_params, self.channelList)
+            Feenstra_channelList = ["Feenstra_Data [Fwd]", "Feenstra_Data [Bwd]"]
+            self.channelList = self.channelList + Feenstra_channelList
+            self.ui_channelBox.addItems(Feenstra_channelList)
+            self.cits_data = np.concatenate((self.cits_data, cits_feenstra), axis=0)
+        else:
+            logging.error(
+                "Please first load single dIdV CITS and its corresponding I(V) CITS"
+            )
+        return
 
     # %% Updating methods. Usually called by signals
     def updateAvgVariables(self):
-        """ Slot called by the toggling of the average box.
+        """Slot called by the toggling of the average box.
         Toggling on the box clears everything to start a new averaging.
-        Toggling off averages and plots the data stored by picking spectra """
+        Toggling off averages and plots the data stored by picking spectra"""
         if self.dataLoaded:
             # If toggled on, put everything to zero to be ready to store data
             if self.ui_avgBox.isChecked():
@@ -443,8 +455,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 )
 
     def updateAboveValue(self, value):
-        """ Slot called when the above slider is changed.
-        Changes the value of the textbox to reflect the change """
+        """Slot called when the above slider is changed.
+        Changes the value of the textbox to reflect the change"""
         self.ui_aboveBar.setValue(value)
         if self.dataLoaded:
             self.ui_aboveLine.setText(
@@ -452,8 +464,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
 
     def updateBelowValue(self, value):
-        """ Slot called when the below slider is changed.
-        Changes the value of the textbox to reflect the change """
+        """Slot called when the below slider is changed.
+        Changes the value of the textbox to reflect the change"""
         self.ui_belowBar.setValue(value)
         if self.dataLoaded:
             self.ui_belowLine.setText(
@@ -461,15 +473,15 @@ class CitsWidget(QtWidgets.QMainWindow):
             )
 
     def updateMap(self):
-        """ Updates the map by redrawing it.
-        Updates also the above and below sliders """
+        """Updates the map by redrawing it.
+        Updates also the above and below sliders"""
         self.drawXYMap(self.ui_indexBox.value())
         self.updateAboveValue(self.ui_aboveBar.value())
         self.updateBelowValue(self.ui_belowBar.value())
 
     def updateToPointedX(self, event):
-        """ Slot called when clicking on the spectrum window.
-        Updates map according to the position of the cursor when clicked """
+        """Slot called when clicking on the spectrum window.
+        Updates map according to the position of the cursor when clicked"""
         if (
             event.xdata is not None
             and event.ydata is not None
@@ -488,15 +500,15 @@ class CitsWidget(QtWidgets.QMainWindow):
             # The map updates itself because the change of value of the voltage box calls the drawXYMap method
 
     def updateIndexBox(self):
-        """ Method called by updateWidgets.
-        Sets the values of the index box """
+        """Method called by updateWidgets.
+        Sets the values of the index box"""
         self.ui_indexBox.setMinimum(0)
         self.ui_indexBox.setMaximum(self.cits_params["zPt"] - 1)
         self.ui_indexBox.setSingleStep(1)
 
     def updateWidgets(self):
-        """ Slot called after the reading of the CITS.
-        Sets the values combo box (voltage and channels) and draws the map """
+        """Slot called after the reading of the CITS.
+        Sets the values combo box (voltage and channels) and draws the map"""
         self.updateIndexBox()
         self.ui_channelBox.clear()
         self.ui_channelBox.addItems(self.channelList)
@@ -508,8 +520,8 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Methods related to spectra
     def averageSpectrum(self, xi, xf, yi, yf):
-        """ Averages the spectra contained in the rectangle drawn
-        by the points (xi,yi);(xf,yi);(xf,yf) and (xi,yf) """
+        """Averages the spectra contained in the rectangle drawn
+        by the points (xi,yi);(xf,yi);(xf,yf) and (xi,yf)"""
         if self.dataLoaded:
             chan = self.ui_channelBox.currentIndex()
             if yf < yi:
@@ -520,12 +532,15 @@ class CitsWidget(QtWidgets.QMainWindow):
             xavg = xi + (xf - xi) // 2
             yavg = yi + (yf - yi) // 2
             self.drawSpectrum(
-                avg_data, "Average around ({0},{1})".format(xavg, yavg), xavg, yavg,
+                avg_data,
+                "Average around ({0},{1})".format(xavg, yavg),
+                xavg,
+                yavg,
             )
             return avg_data
 
     def averageSpectrumWithValues(self):
-        """ Averages spectra according their values at a certain voltage """
+        """Averages spectra according their values at a certain voltage"""
         if self.dataLoaded:
             voltage_index = self.ui_indexBox.value()
             chan = self.ui_channelBox.currentIndex()
@@ -554,7 +569,11 @@ class CitsWidget(QtWidgets.QMainWindow):
                     pixel_pos = np.argwhere(isAbove).T + 0.5
                     color = self.getSpectrumColor(self.nSpectraDrawn - 1)
                     self.ax_map.plot(
-                        pixel_pos[0], pixel_pos[1], c=color, marker="o", ls="None",
+                        pixel_pos[0],
+                        pixel_pos[1],
+                        c=color,
+                        marker="o",
+                        ls="None",
                     )
                     self.ui_mapWidget.draw()
             N_belowV = len(belowValues)
@@ -569,12 +588,16 @@ class CitsWidget(QtWidgets.QMainWindow):
                     pixel_pos = np.argwhere(isBelow).T + 0.5
                     color = self.getSpectrumColor(self.nSpectraDrawn - 1)
                     self.ax_map.plot(
-                        pixel_pos[0], pixel_pos[1], c=color, marker="o", ls="None",
+                        pixel_pos[0],
+                        pixel_pos[1],
+                        c=color,
+                        marker="o",
+                        ls="None",
                     )
                     self.ui_mapWidget.draw()
 
     def clearSpectrum(self):
-        """ Clears the spectrum window """
+        """Clears the spectrum window"""
         self.ax_spec.clear()
         self.nSpectraDrawn = 0
         self.voltageLine = None
@@ -582,7 +605,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_specWidget.draw()
 
     def drawSpectrum(self, spectrum_data, label, x=-1, y=-1):
-        """ Method called each time a spectrum needs to be plotted.
+        """Method called each time a spectrum needs to be plotted.
         Takes care of the derivative and different scales stuff and updates the window.
         """
         shiftX = str(self.ui_shiftXBox.text()).lower()
@@ -606,8 +629,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 vEnd = self.cits_params["vEnd"]
                 zPt = self.cits_params["zPt"]
                 voltages = np.arange(vStart, vEnd, dV) + shiftX
-                self.ax_spec.set_xlabel('$V_{bias}$ (eV)')
-                self.ax_spec.set_ylabel('LDOS (arb. units)')
+                self.ax_spec.set_xlabel("$V_{bias}$ (eV)")
+                self.ax_spec.set_ylabel("LDOS (arb. units)")
                 # Check consistency of voltages array with the number of points.
                 if len(voltages) != zPt:
                     logging.warning(
@@ -658,10 +681,9 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_specWidget.draw()
 
     def fitSpectrum(self):
-        """ Linear fitting of the last spectrum plotted
-        that is stored in lastSpectrum """
+        """Linear fitting of the last spectrum plotted
+        that is stored in lastSpectrum"""
         if self.dataLoaded and self.lastSpectrum[0].size != 0:
-
             dV = self.cits_params["dV"]
             if self.ui_fitCustomCheckbox.isChecked():
                 limitL = float(self.ui_fitLowerBox.text())
@@ -694,27 +716,25 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_specWidget.draw()
 
     def getSpectrumColor(self, n):
-        """ Returns the color corresponding to a spectrum of given index
-        according to spectrumColor """
-        return matplotlib.rcParams[
-            'axes.prop_cycle'
-            ].by_key()['color'][
-                n % len(matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
-                ]
+        """Returns the color corresponding to a spectrum of given index
+        according to spectrumColor"""
+        return matplotlib.rcParams["axes.prop_cycle"].by_key()["color"][
+            n % len(matplotlib.rcParams["axes.prop_cycle"].by_key()["color"])
+        ]
 
     def launchAvgSpectrum(self):
-        """ Slot called to average the spectra of the whole map """
+        """Slot called to average the spectra of the whole map"""
         if self.dataLoaded:
             self.averageSpectrum(0, self.cits_params["xPx"], 0, self.cits_params["yPx"])
 
     def pickSpectrum(self, event):
-        """ Method called when a press-and-release event is done
+        """Method called when a press-and-release event is done
         at the same location of the map. If the average box is checked,
         it will keep the data in storage to average it later.
-        Otherwise it plots the spectrum in the corresponding widget """
+        Otherwise it plots the spectrum in the corresponding widget"""
         if self.dataLoaded and event.xdata is not None and event.ydata is not None:
-            PixelX = int(event.xdata/self.metric_ratios['x'])
-            PixelY = int(event.ydata/self.metric_ratios['y'])
+            PixelX = int(event.xdata / self.metric_ratios["x"])
+            PixelY = int(event.ydata / self.metric_ratios["y"])
             chan = self.ui_channelBox.currentIndex()
             # TODO: the slope part should be put in a function
             if "Slope" in self.channelList[chan]:
@@ -777,14 +797,14 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Methods related to the clicks on the map
     def onPressOnMap(self, event):
-        """ Slot called when a press event is detected. Creates a Shape object
-        that will be dynamically updated when the mouse moves """
+        """Slot called when a press event is detected. Creates a Shape object
+        that will be dynamically updated when the mouse moves"""
         if (event.xdata is not None and event.ydata is not None) and (
             self.dataLoaded and not self.toolbar_map.mode.value
         ):
             print(event, type(event))
             self.currentShape = generateShape(
-                event,               # np.array([PixelX,PixelY]),
+                event,  # np.array([PixelX,PixelY]),
                 self.ui_mapWidget.figure,
                 self.fig_topo,
                 self.getSpectrumColor(self.nSpectraDrawn),
@@ -797,41 +817,44 @@ class CitsWidget(QtWidgets.QMainWindow):
             logging.debug("PRESS")
 
     def onReleaseOnMap(self, event):
-        """ Slot called when a release event is detected.
+        """Slot called when a release event is detected.
         Disconnects the updating of the currentShape and
         launches the appropriate method depending on which button
-        was pressed and where it was released """
+        was pressed and where it was released"""
         if self.dataLoaded and not self.toolbar_map.mode.value:
-
             if event.xdata is not None and event.ydata is not None:
-                square=False
+                square = False
                 # Disconnects the updating of the current Shape and gets its coordinates
                 self.ui_mapWidget.mpl_disconnect(self.motionConnection)
                 xi = self.currentShape.xi
                 yi = self.currentShape.yi
                 xf = self.currentShape.xf
                 yf = self.currentShape.yf
-                PixelY = int(event.ydata/self.metric_ratios['y'])
+                PixelY = int(event.ydata / self.metric_ratios["y"])
                 # If left-click : either a line was drawn or a spectrum picked
                 if event.button == 1:
                     # Cut along the XY line if a line is traced (X or Y different)
                     if xf != xi or yf != yi:
-                        self.cutAlongLine(int(xi/self.metric_ratios['x']), 
-                                          int(xf/self.metric_ratios['x']), 
-                                          int(yi/self.metric_ratios['y']), 
-                                          int(yf/self.metric_ratios['y']))
+                        self.cutAlongLine(
+                            int(xi / self.metric_ratios["x"]),
+                            int(xf / self.metric_ratios["x"]),
+                            int(yi / self.metric_ratios["y"]),
+                            int(yf / self.metric_ratios["y"]),
+                        )
                     # Pick spectrum otherwise and change the line shape to a point
                     else:
                         self.currentShape = changeToDot(self.currentShape)
                         self.pickSpectrum(event)
                 # If right-click : either a rectangle was drawn or the center of the rectangle to average was picked
                 else:
-                    square=True
+                    square = True
                     if xf != xi or yf != yi:
-                        self.averageSpectrum(int(xi/self.metric_ratios['x']), 
-                                             int(xf/self.metric_ratios['x']), 
-                                             int(yi/self.metric_ratios['y']), 
-                                             int(yf/self.metric_ratios['y']))
+                        self.averageSpectrum(
+                            int(xi / self.metric_ratios["x"]),
+                            int(xf / self.metric_ratios["x"]),
+                            int(yi / self.metric_ratios["y"]),
+                            int(yf / self.metric_ratios["y"]),
+                        )
                     # If X=Y, we need to force the updating of the Shape so it is drawn around the X,Y point
                     # and not starting at X,Y (TODO: This can be refactored)
                     else:
@@ -848,22 +871,22 @@ class CitsWidget(QtWidgets.QMainWindow):
                             max(0, yi - n),
                             min(self.cits_params["yPx"], yf + n),
                         )
-                
-                #if asked, find peaks that define gap and correlate them
+
+                # if asked, find peaks that define gap and correlate them
                 if self.ui_StatisticsGapBox.isChecked():
-                    self.find_peaks_statistics([xi,xf], [yi,yf], square)
-                    
+                    self.find_peaks_statistics([xi, xf], [yi, yf], square)
+
                 # Add the current Shape to the list of clicked Shapes
                 self.addToShapesClicked(self.currentShape)
             logging.debug("RELEASE")
 
     def addToShapesClicked(self, shape):
-        """ Method called when a release was detected on the map.
-        The Shape is saved in the shapes_clicked list """
+        """Method called when a release was detected on the map.
+        The Shape is saved in the shapes_clicked list"""
         self.shapes_clicked.append(shape)
 
     def drawShapesClicked(self, fig_map, fig_topo, recreate):
-        """ Method that draws all the Shapes saved in shapes_clicked
+        """Method that draws all the Shapes saved in shapes_clicked
         or recreates them if the XYmap was cleared"""
         for shape in self.shapes_clicked:
             if recreate:
@@ -872,16 +895,16 @@ class CitsWidget(QtWidgets.QMainWindow):
                 shape.draw()
 
     def clearShapesClicked(self):
-        """ Method that clears all saved Shapes and
+        """Method that clears all saved Shapes and
         then redraws the mapto reflect the change.
-        No need to call Shape.remove as the XYmap will be cleared """
+        No need to call Shape.remove as the XYmap will be cleared"""
         self.shapes_clicked = []
         self.drawXYMap(self.ui_indexBox.value())
 
     def cutAlongLine(self, xi, xf, yi, yf):
-        """ Method that finds the positions of the pixels forming
+        """Method that finds the positions of the pixels forming
         the line from (xi,yi) to (xf,yf).
-        The plotting of the spectra is done in cutPlot called at the end """
+        The plotting of the spectra is done in cutPlot called at the end"""
         # If the line is vertical, the equation is x=xi with y varying from yi to yf
         logging.info(
             "Cut from ({}, {}) to ({}, {}) in {}".format(
@@ -905,9 +928,9 @@ class CitsWidget(QtWidgets.QMainWindow):
         return self.cutPlot(x_plot, y_plot)
 
     def cutPlot(self, x_plot, y_plot):
-        """ 
+        """
         Method called by cutAlongLine.
-        Plots the spectra for the pixels of positions (x_plot[i],y_plot[i]) 
+        Plots the spectra for the pixels of positions (x_plot[i],y_plot[i])
         if asked, plots FFT of cut
         """
         # Build the data to plot with v as Y and z (number of pixels gone through) as X
@@ -924,7 +947,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_mapWidget.draw()
 
         voltage_array = (
-            self.cits_params["vStart"] + voltage_indices * self.cits_params["dV"] * np.sign(self.cits_params["dV"])
+            self.cits_params["vStart"]
+            + voltage_indices * self.cits_params["dV"] * np.sign(self.cits_params["dV"])
             if self.ui_scaleVoltage.isChecked()
             else voltage_indices
         )
@@ -945,17 +969,24 @@ class CitsWidget(QtWidgets.QMainWindow):
             ax.set_ylim([voltage_array[0], voltage_array[-1]])
 
             if self.ui_scaleMetric.isChecked():
-                dx = self.metric_ratios['x']
-                dy = self.metric_ratios['y']
+                dx = self.metric_ratios["x"]
+                dy = self.metric_ratios["y"]
                 if self.ui_plotFFTBox.isChecked():
-                    d=np.sqrt((dx * (x_plot[-1] - xi)) ** 2 + (dy * (y_plot[-1] - yi)) ** 2)
-                    x_array = 2*np.pi/d*np.arange(
-                        -len(x_plot)/(2), len(x_plot)/(2),1
+                    d = np.sqrt(
+                        (dx * (x_plot[-1] - xi)) ** 2 + (dy * (y_plot[-1] - yi)) ** 2
+                    )
+                    x_array = (
+                        2
+                        * np.pi
+                        / d
+                        * np.arange(-len(x_plot) / (2), len(x_plot) / (2), 1)
                     )
                     print(len(x_plot), len(x_array))
                     ax.set_xlabel("K Distance ($nm^{-1}$)")
                 else:
-                    x_array = np.sqrt((dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2)
+                    x_array = np.sqrt(
+                        (dx * (x_plot - xi)) ** 2 + (dy * (y_plot - yi)) ** 2
+                    )
                     ax.set_xlabel("Distance (nm)")
             else:
                 x_array = np.arange(len(x_plot))
@@ -963,46 +994,59 @@ class CitsWidget(QtWidgets.QMainWindow):
                 print(len(x_plot), len(x_array))
             ax.set_xlim([x_array[0], x_array[-1]])
 
-            #display FFT if asked 
+            # display FFT if asked
             if self.ui_plotFFTBox.isChecked():
-                ax.set_title("{} - FFT of Cut {}".format(self.ui_channelBox.currentText(), fig.number))
-                datafft = np.array([np.abs(np.fft.fftshift(
-                    np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
-                )) for i in range(np.shape(self.cits_data)[-1])])
-                #work in progress to optimize plotting : Log Norm too long ?
+                ax.set_title(
+                    "{} - FFT of Cut {}".format(
+                        self.ui_channelBox.currentText(), fig.number
+                    )
+                )
+                datafft = np.array(
+                    [
+                        np.abs(
+                            np.fft.fftshift(
+                                np.fft.fft(self.cits_data[chan, y_plot, x_plot, i])
+                            )
+                        )
+                        for i in range(np.shape(self.cits_data)[-1])
+                    ]
+                )
+                # work in progress to optimize plotting : Log Norm too long ?
 
                 if self.ui_cbarCustomCheckbox.isChecked():
                     mapData = pyplot.pcolormesh(
-                    x_array,
-                    voltage_array,
-                    np.sqrt(datafft),
-                    cmap=self.ui_colorBarBox.currentText()
-                    # norm=matplotlib.colors.LogNorm(vmin=float(self.ui_cbarLowerBox.text()), 
-                    #                       vmax=float(self.ui_cbarUpperBox.text()))
-                      )
+                        x_array,
+                        voltage_array,
+                        np.sqrt(datafft),
+                        cmap=self.ui_colorBarBox.currentText()
+                        # norm=matplotlib.colors.LogNorm(vmin=float(self.ui_cbarLowerBox.text()),
+                        #                       vmax=float(self.ui_cbarUpperBox.text()))
+                    )
                 else:
                     mapData = pyplot.pcolormesh(
-                    x_array,
-                    voltage_array,
-                    np.sqrt(datafft),
-                    cmap=self.ui_colorBarBox.currentText(),
-                    norm=matplotlib.colors.LogNorm(vmin=5),
+                        x_array,
+                        voltage_array,
+                        np.sqrt(datafft),
+                        cmap=self.ui_colorBarBox.currentText(),
+                        norm=matplotlib.colors.LogNorm(vmin=5),
                     )
             else:
-                ax.set_title("{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number))
+                ax.set_title(
+                    "{} - Cut {}".format(self.ui_channelBox.currentText(), fig.number)
+                )
                 mapData = pyplot.pcolormesh(
                     x_array,
                     voltage_array,
                     self.cits_data[chan, y_plot, x_plot, :].T,
-                    cmap=self.ui_colorBarBox.currentText()
+                    cmap=self.ui_colorBarBox.currentText(),
                 )
-            
+
             # Colorbar set up
             fig.subplots_adjust(left=0.125, right=0.95, bottom=0.15, top=0.92)
             cbar = fig.colorbar(mapData, shrink=0.9, pad=0.05, aspect=15)
             cbar.ax.yaxis.set_ticks_position("both")
             cbar.ax.tick_params(axis="y", direction="in")
-            cbar.set_label('LDOS (arb. units)', rotation=90)
+            cbar.set_label("LDOS (arb. units)", rotation=90)
             if self.ui_cbarCustomCheckbox.isChecked():
                 mapData.set_clim(
                     float(self.ui_cbarLowerBox.text()),
@@ -1013,10 +1057,8 @@ class CitsWidget(QtWidgets.QMainWindow):
             #     mapData.set_clim(0,1)
         fig.show()
 
-        
-
     def launchBigCut(self):
-        """ Launches a cut in the big diagonal """
+        """Launches a cut in the big diagonal"""
         if self.dataLoaded:
             self.cutAlongLine(
                 0, self.cits_params["xPx"] - 1, 0, self.cits_params["yPx"] - 1
@@ -1038,7 +1080,7 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # %% Methods related to the map
     def clearMap(self):
-        """ Unloads the map and clears the map window """
+        """Unloads the map and clears the map window"""
         self.ui_mapWidget.figure.clear()
         self.clearShapesClicked()
         self.cits_data = np.ndarray([])
@@ -1047,33 +1089,36 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.dataLoaded = False
 
     def createXYMap(self, map_data):
-        """ Calls the getMapData function and draws the result
-        in the map window with the approriate formatting. """
+        """Calls the getMapData function and draws the result
+        in the map window with the approriate formatting."""
         fig_map = self.ui_mapWidget.figure
         xPx = self.cits_params["xPx"]
         yPx = self.cits_params["yPx"]
         self.ax_map = self.ui_mapWidget.figure.add_subplot(111)
         self.ui_mapWidget.figure.subplots_adjust()
-        if self.ui_ForceAspect_Box.isChecked() :
+        if self.ui_ForceAspect_Box.isChecked():
             self.ax_map.set_aspect("equal")
         else:
             self.ax_map.set_aspect("equal" if xPx == yPx else "auto")
         # Use metric dimensions if the corresponding box is checked
-        if self.ui_scaleMetric.isChecked() :
+        if self.ui_scaleMetric.isChecked():
             xL = self.cits_params["xL"]
             yL = self.cits_params["yL"]
-            x_m = np.linspace(0, xL, xPx+1)
-            y_m = np.linspace(0, yL, yPx+1)
+            x_m = np.linspace(0, xL, xPx + 1)
+            y_m = np.linspace(0, yL, yPx + 1)
             XYmap = self.ax_map.pcolormesh(
-                x_m, y_m, map_data, cmap=self.ui_colorBarBox.currentText(),
-             )
-            
+                x_m,
+                y_m,
+                map_data,
+                cmap=self.ui_colorBarBox.currentText(),
+            )
+
             # If the map is an Omicron one, I have to invert the y-axis
             if self.mapType == "Omicron_ascii":
                 self.ax_map.invert_yaxis()
 
-            self.ax_map.set_ylabel('Y (nm)')
-            self.ax_map.set_xlabel('X (nm)')
+            self.ax_map.set_ylabel("Y (nm)")
+            self.ax_map.set_xlabel("X (nm)")
         # Else, use pixels
         else:
             XYmap = self.ax_map.pcolormesh(
@@ -1086,14 +1131,14 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.ax_map.axis([0, xPx, 0, yPx])
         # Colorbar stuff
         cbar = fig_map.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15, ax=self.ax_map)
-        cbar.set_label('LDOS (arb. units)', rotation=90)
+        cbar.set_label("LDOS (arb. units)", rotation=90)
         # Recreate the shapes points saved in shapes_clicked
         self.drawShapesClicked(fig_map, self.fig_topo, True)
         return XYmap
 
     def drawXYMap(self, voltage_index):
-        """ Redraws the XYMap
-        Called at each change of voltage """
+        """Redraws the XYMap
+        Called at each change of voltage"""
         if self.dataLoaded:
             # Get the data of the map and draw it
             mapData, self.mapMin, self.mapMax = self.getMapData(voltage_index)
@@ -1119,8 +1164,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 self.drawVoltageLine(voltage_index)
 
     def getMapData(self, v):
-        """ Returns an array built from the data loaded that can be used to
-        display a map at fixed voltage """
+        """Returns an array built from the data loaded that can be used to
+        display a map at fixed voltage"""
         mapData = self.cits_data[self.ui_channelBox.currentIndex(), :, :, v]
         return mapData, np.min(mapData), np.max(mapData)
 
@@ -1158,19 +1203,19 @@ class CitsWidget(QtWidgets.QMainWindow):
     # %% Methods related to the voltage guide line in the spectra window
 
     def toggleVoltageLine(self, checked):
-        """ Slot attached to the toggle of the voltageLine checkbox. """
+        """Slot attached to the toggle of the voltageLine checkbox."""
         if checked:
             self.drawVoltageLine(self.ui_indexBox.value())
         else:
             self.clearVoltageLine()
 
     def createVoltageLine(self, voltage):
-        """ Creates the voltage line. Called in drawVoltageLine. """
+        """Creates the voltage line. Called in drawVoltageLine."""
         # Plot the dashed line
         self.voltageLine = self.ax_spec.axvline(voltage, color="k", linestyle="--")
 
     def drawVoltageLine(self, voltage_index):
-        """ Draws the vertical line at the given voltage index. Takes care of the creation if needed. """
+        """Draws the vertical line at the given voltage index. Takes care of the creation if needed."""
         # self.clearVoltageLine()
         if self.dataLoaded:
             # Get the current voltage : real voltage if the scale box is checked, voltage index otherwise
@@ -1187,7 +1232,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_specWidget.draw()
 
     def clearVoltageLine(self):
-        """ Removes the vertical voltage line. """
+        """Removes the vertical voltage line."""
         if self.voltageLine is not None:
             self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
             self.voltageLine = None
@@ -1195,7 +1240,7 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     # Post-processing methods
     def addChannel(self, new_channel_data, channel_name):
-        """ Adds a channel to the whole data array """
+        """Adds a channel to the whole data array"""
         try:
             self.cits_data = np.concatenate(
                 (self.cits_data, new_channel_data[np.newaxis, ...]), axis=0
@@ -1211,8 +1256,8 @@ class CitsWidget(QtWidgets.QMainWindow):
         self.ui_channelBox.addItems(self.channelList)
 
     def averageCITSOnAxis(self, direction="x"):
-        """ Slot that averages the spectras in one direction of the loaded
-        CITS and replaces the loaded CITS by the result """
+        """Slot that averages the spectras in one direction of the loaded
+        CITS and replaces the loaded CITS by the result"""
         if self.dataLoaded:  # Check if a CITS was loaded
             # Get the needed params
             Navg = int(self.ui_CitsAvgBox.value())
@@ -1233,7 +1278,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.updateWidgets()
 
     def extractDerivative(self, chan_index_to_deriv):
-        """ Extracts the derivative of a channel and adds it to the data """
+        """Extracts the derivative of a channel and adds it to the data"""
         if self.dataLoaded:
             derivData = sp.signal.savgol_filter(
                 self.cits_data[chan_index_to_deriv],
@@ -1250,14 +1295,14 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
     def extractFFT(self, chan_index_to_fft, axis_to_fft):
-        """ Extracts the FFT of a channel and adds it to the data """
+        """Extracts the FFT of a channel and adds it to the data"""
         if self.dataLoaded:
             FFTData = np.fft.fft(self.cits_data[chan_index_to_fft], axis=axis_to_fft)
             # Add the channel to the data
             self.addChannel(FFTData, "FFT of " + self.channelList[chan_index_to_fft])
             self.ui_channelBox.setCurrentIndex(len(self.channelList) - 1)
 
-#%% Extract gif
+    # %% Extract gif
 
     def make_gif(self):
         n = self.ui_gifstartBox.value()
@@ -1265,43 +1310,42 @@ class CitsWidget(QtWidgets.QMainWindow):
         step = self.ui_gifstepBox.value()
         xPx = self.cits_params["xPx"]
         yPx = self.cits_params["yPx"]
-        assert m>n
+        assert m > n
         frames = []
         chan = self.ui_channelBox.currentIndex()
 
-        for i in np.arange(n,m, step):
+        for i in np.arange(n, m, step):
             figif = pyplot.figure()
             ax_gif = figif.add_subplot(111)
             figif.subplots_adjust()
             # Set title
             pyplot.title(
                 "$V_{BIAS}$="
-                + str(
-                    round(
-                        self.cits_params["vStart"] + i * self.cits_params["dV"]
-                        ,3)
-                )
+                + str(round(self.cits_params["vStart"] + i * self.cits_params["dV"], 3))
                 + " V"
             )
             if self.ui_ForceAspect_Box.isChecked():
                 ax_gif.set_aspect("equal")
             # Use metric dimensions if the corresponding box is checked (work in progress)
-            if self.ui_scaleMetric.isChecked() :
+            if self.ui_scaleMetric.isChecked():
                 xL = self.cits_params["xL"]
                 yL = self.cits_params["yL"]
-                x_m = np.linspace(0, xL, xPx+1)
-                y_m = np.linspace(0, yL, yPx+1)
+                x_m = np.linspace(0, xL, xPx + 1)
+                y_m = np.linspace(0, yL, yPx + 1)
                 XYmap = ax_gif.pcolormesh(
-                    x_m, y_m, self.cits_data[chan][:,:,i],
-                    cmap=self.ui_colorBarBox.currentText()
+                    x_m,
+                    y_m,
+                    self.cits_data[chan][:, :, i],
+                    cmap=self.ui_colorBarBox.currentText(),
                 )
                 ax_gif.invert_yaxis()
-                ax_gif.set_ylabel('Y (nm)')
-                ax_gif.set_xlabel('X (nm)')
+                ax_gif.set_ylabel("Y (nm)")
+                ax_gif.set_xlabel("X (nm)")
             # Else, use pixels
             else:
                 XYmap = ax_gif.pcolormesh(
-                    self.cits_data[chan][:,:,i], cmap=self.ui_colorBarBox.currentText()
+                    self.cits_data[chan][:, :, i],
+                    cmap=self.ui_colorBarBox.currentText(),
                 )
                 # If the map is an Omicron one, invert the y-axis
                 if self.mapType == "Omicron_ascii":
@@ -1310,7 +1354,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                     pyplot.axis([0, xPx, 0, yPx])
             # Colorbar
             cbar = pyplot.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
-            cbar.set_label('LDOS (arb. units)', rotation=90)
+            cbar.set_label("LDOS (arb. units)", rotation=90)
             if self.ui_cbarCustomCheckbox.isChecked():
                 XYmap.set_clim(
                     float(self.ui_cbarLowerBox.text()),
@@ -1319,117 +1363,168 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 XYmap.set_clim(0)
 
-            pyplot.savefig(self.wdir+'/giftemp{}.png'.format(i))
+            pyplot.savefig(self.wdir + "/giftemp{}.png".format(i))
 
-            frame = Image.open(self.wdir+'/giftemp{}.png'.format(i))
+            frame = Image.open(self.wdir + "/giftemp{}.png".format(i))
             frames.append(frame)
 
             pyplot.close()
 
-            os.remove(self.wdir+'/giftemp{}.png'.format(i)) 
+            os.remove(self.wdir + "/giftemp{}.png".format(i))
 
         frame_one = frames[0]
 
-        frame_one.save(self.wdir+'/'+
-                       self.cits_name+'channel '+self.channelList[chan]+'.gif',
-                       format="GIF", append_images=frames,
-                        save_all=True, duration=500, loop=0, dpi=50)
+        frame_one.save(
+            self.wdir
+            + "/"
+            + self.cits_name
+            + "channel "
+            + self.channelList[chan]
+            + ".gif",
+            format="GIF",
+            append_images=frames,
+            save_all=True,
+            duration=500,
+            loop=0,
+            dpi=50,
+        )
 
-#%% methods related to correlation between peak position and gap value
-    def find_peaks_statistics(self, x, y,square=False):
-        DEgap = 0.026 #V
-        centergap = -0.1 #V
+    # %% methods related to correlation between peak position and gap value
+    def find_peaks_statistics(self, x, y, square=False):
+        DEgap = 0.026  # V
+        centergap = -0.1  # V
         chan = self.ui_channelBox.currentIndex()
 
         voltage_array = np.arange(
-            int((np.abs(self.cits_params["vStart"]-centergap)-2*DEgap)/self.cits_params["dV"]),
-            int((np.abs(self.cits_params["vStart"]-centergap)+2*DEgap)/self.cits_params["dV"])
-            )
+            int(
+                (np.abs(self.cits_params["vStart"] - centergap) - 2 * DEgap)
+                / self.cits_params["dV"]
+            ),
+            int(
+                (np.abs(self.cits_params["vStart"] - centergap) + 2 * DEgap)
+                / self.cits_params["dV"]
+            ),
+        )
 
         print(len(x))
-        
+
         peaks_index = []
         topo_array = []
         if square:
-            average=False #work in progress
+            average = False  # work in progress
             if average:
                 n_avg = int(self.ui_CitsAvgBox.value())
                 self.averageSpectrum()
-                avg_data = np.mean(self.cits_data[chan, y[0]:y[1], x[0]:x[1]], axis=(0, 1))
+                avg_data = np.mean(
+                    self.cits_data[chan, y[0] : y[1], x[0] : x[1]], axis=(0, 1)
+                )
 
             else:
-                ldos_array = self.cits_data[chan, y[0]:y[1], x[0]:x[1],voltage_array[0]-1:voltage_array[-1]]
-                print(np.shape(ldos_array), np.shape(self.cits_data[chan]), np.shape(self.topo))
-    
+                ldos_array = self.cits_data[
+                    chan,
+                    y[0] : y[1],
+                    x[0] : x[1],
+                    voltage_array[0] - 1 : voltage_array[-1],
+                ]
+                print(
+                    np.shape(ldos_array),
+                    np.shape(self.cits_data[chan]),
+                    np.shape(self.topo),
+                )
+
                 # find peaks
                 nTx = np.shape(self.topo)[1]
                 nTy = np.shape(self.topo)[0]
                 nSx = np.shape(self.cits_data[chan])[1]
                 nSy = np.shape(self.cits_data[chan])[0]
-                rx = nTx/nSx
-                ry = nTy/nSy
-                print(int(round(y[0]*ry)),int(round(x[0]*rx)), int(round(y[1]*ry)), int(x[1]*rx))
-                print(np.shape(self.topo[int(round(y[0]*ry)):int(round(y[1]*ry)), 
-                                         int(round(x[0]*rx)):int(round(x[1]*rx))]))
-                for i, ldos in enumerate([
-                        ldos_array[n,m,:] 
-                        for n in range(np.shape(ldos_array)[0]) 
+                rx = nTx / nSx
+                ry = nTy / nSy
+                print(
+                    int(round(y[0] * ry)),
+                    int(round(x[0] * rx)),
+                    int(round(y[1] * ry)),
+                    int(x[1] * rx),
+                )
+                print(
+                    np.shape(
+                        self.topo[
+                            int(round(y[0] * ry)) : int(round(y[1] * ry)),
+                            int(round(x[0] * rx)) : int(round(x[1] * rx)),
+                        ]
+                    )
+                )
+                for i, ldos in enumerate(
+                    [
+                        ldos_array[n, m, :]
+                        for n in range(np.shape(ldos_array)[0])
                         for m in range(np.shape(ldos_array)[1])
-                        ]):
+                    ]
+                ):
                     print(i)
                     peaks, properties = find_peaks(ldos, prominence=0.5, width=0.01)
-                    if len(peaks)==2 :
+                    if len(peaks) == 2:
                         peaks_index.append(peaks)
                         if self.fig_topo:
-                            n = int(round(y[0]*ry))+int(round((i//(np.shape(ldos_array)[0])-1)*ry))
-                            m = int(round(x[0]*rx))+int(round((i%(np.shape(ldos_array)[0]))*rx))
-                            topo_array.append(self.topo[n,m])
+                            n = int(round(y[0] * ry)) + int(
+                                round((i // (np.shape(ldos_array)[0]) - 1) * ry)
+                            )
+                            m = int(round(x[0] * rx)) + int(
+                                round((i % (np.shape(ldos_array)[0])) * rx)
+                            )
+                            topo_array.append(self.topo[n, m])
 
         else:
             x_plot, y_plot = findPixelsOnLine(x[0], x[1], y[0], y[1])
-            ldos_array = self.cits_data[chan, y_plot, x_plot, voltage_array[0]-1:voltage_array[-1]]
+            ldos_array = self.cits_data[
+                chan, y_plot, x_plot, voltage_array[0] - 1 : voltage_array[-1]
+            ]
             print(np.shape(ldos_array))
 
             figTest = 1
-            if figTest and not(square):
+            if figTest and not (square):
                 # Plot the in a new figure
                 fig = pyplot.figure()
-                ax = fig.add_subplot(1, 1, 1)  
+                ax = fig.add_subplot(1, 1, 1)
                 waterfallPlot(
                     ax,
-                    voltage_array*self.cits_params["dV"],
-                    ldos_array, #self.cits_data[chan, y_plot, x_plot],
+                    voltage_array * self.cits_params["dV"],
+                    ldos_array,  # self.cits_data[chan, y_plot, x_plot],
                     offset=float(self.ui_shiftYBox.text()),
                 )
-                
+
                 if self.ui_scaleVoltage.isChecked():
                     ax.set_xlabel("Bias (V)")
                 else:
                     ax.set_xlabel("Voltage index")
-    
+
             # find peaks
             for i, ldos in enumerate(ldos_array):
                 peaks, properties = find_peaks(ldos, prominence=0.4, width=0.01)
-                if len(peaks)==2 :
+                if len(peaks) == 2:
                     peaks_index.append(peaks)
                     if figTest:
-                        ax.plot((voltage_array[0]+peaks)*self.cits_params['dV'], 
-                                ldos[peaks]+i*float(self.ui_shiftYBox.text()), 'x', color='r')
+                        ax.plot(
+                            (voltage_array[0] + peaks) * self.cits_params["dV"],
+                            ldos[peaks] + i * float(self.ui_shiftYBox.text()),
+                            "x",
+                            color="r",
+                        )
                 # print(properties["prominences"], properties["widths"])
-        
-        print (np.shape(peaks_index))
+
+        print(np.shape(peaks_index))
         fig_visualize = pyplot.figure()
         if self.fig_topo is None:
             visualize_statistics(
-                fig_visualize, 
-                self.cits_params["vStart"]+(voltage_array[0]+peaks_index)*self.cits_params['dV']
-                )
+                fig_visualize,
+                self.cits_params["vStart"]
+                + (voltage_array[0] + peaks_index) * self.cits_params["dV"],
+            )
         else:
             visualize_statistics_topo(
-                fig_visualize, 
-                self.cits_params["vStart"]+(voltage_array[0]+peaks_index)*self.cits_params['dV'],
-                topo_array
-                )        
-        
-        return (voltage_array[0]+peaks_index)*self.cits_params['dV']
-        
+                fig_visualize,
+                self.cits_params["vStart"]
+                + (voltage_array[0] + peaks_index) * self.cits_params["dV"],
+                topo_array,
+            )
+
+        return (voltage_array[0] + peaks_index) * self.cits_params["dV"]

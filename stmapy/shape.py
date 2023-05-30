@@ -50,7 +50,7 @@ def changeToDot(shape):
 
 
 class Shape:
-    """ Shape class that is used to draw the shapes when clicking on the map """
+    """Shape class that is used to draw the shapes when clicking on the map"""
 
     def __init__(
         self, xi, yi, fig_map, fig_topo, color, ratio_x, ratio_y, xf=None, yf=None
