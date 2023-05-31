@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
 
 
 def readConfig(config_filepath):
-    """ Reads the config and sets defaults for entries not read """
+    """Reads the config and sets defaults for entries not read"""
     config = DEFAULT_CONFIG
     if not os.path.exists(config_filepath):
         raise IOError("{} is not a valid path to a configuration file !")
@@ -39,7 +39,7 @@ def readConfig(config_filepath):
 
 
 def setUpConfig(config_filepath):
-    """ Reads and set up config by doing various matplotlib checks. """
+    """Reads and set up config by doing various matplotlib checks."""
     config = readConfig(config_filepath)
 
     if not os.path.exists(config["working_directory"]):
@@ -94,31 +94,29 @@ def setUpConfig(config_filepath):
 
 
 def readCitsMtrx(filepath):
-    """ Reads Mtrx CITS file (Omicron) and stores all the parameters, 
-    using S. Zevenhuizen package access2thematrix 
-    https://pypi.org/project/access2theMatrix/ """
+    """Reads Mtrx CITS file (Omicron) and stores all the parameters,
+    using S. Zevenhuizen package access2thematrix
+    https://pypi.org/project/access2theMatrix/"""
     divider = 1
-    unit = 10**12 #pA
-    mtrxdata = a2m.MtrxData() 
-    #mtrxdata is a class type
+    unit = 10**12  # pA
+    mtrxdata = a2m.MtrxData()
+    # mtrxdata is a class type
     mtrxdata.open(filepath)
-    params=mtrxdata.param
-    
-    #debug purposes
+    params = mtrxdata.param
+
+    # debug purposes
     traces, message = mtrxdata.open(filepath)
-    
-    if not('Successfully' in message) :
-        logging.error(
-            "Problem while reading the file : " + message
-        )
-        return False 
-    
-    elif len(params)==1 : 
+
+    if not ("Successfully" in message):
+        logging.error("Problem while reading the file : " + message)
+        return False
+
+    elif len(params) == 1:
         logging.error(
             "Problem while reading the file : could not find result file chain, please keep it in the same folder as the CITS file"
         )
         return False
-    
+   
     xL=float(params['EEPA::XYScanner.Width'][0])*10**9
     yL=float(params['EEPA::XYScanner.Height'][0])*10**9
     vStart=float(params['EEPA::Spectroscopy.Device_1_Start'][0])
@@ -126,19 +124,18 @@ def readCitsMtrx(filepath):
 
     scandirection = ['forward/up', 'backward/up','forward/down', 'backward/down']
     tracedirection = ['trace', 'retrace']
+
     channelList = []
     m_data = []
     for scan in scandirection:
-        for trace in tracedirection: 
+        for trace in tracedirection:
             try:
                 im_3d = mtrxdata.volume_scan[scan][trace]
-                if len(m_data)==0 : 
+                if len(m_data) == 0:
                     m_data.append(im_3d)
                 else:
-                    m_data = np.concatenate(
-                        (m_data, [im_3d]), axis=0
-                        )
-                channelList.append(scan+" ["+trace+"]")
+                    m_data = np.concatenate((m_data, [im_3d]), axis=0)
+                channelList.append(scan + " [" + trace + "]")
             except KeyError:
                 pass
         
@@ -148,9 +145,9 @@ def readCitsMtrx(filepath):
         vEnd = V2
         m_data = np.flip(m_data, axis =-1)
 
-    if filepath.split(".")[-1]=='I(V)_mtrx':
-        m_data = m_data*unit
-    zPt=np.shape(m_data)[-1]
+    if filepath.split(".")[-1] == "I(V)_mtrx":
+        m_data = m_data * unit
+    zPt = np.shape(m_data)[-1]
     xPx = np.shape(m_data)[-2]
     yPx = np.shape(m_data)[-3]
 
@@ -166,7 +163,7 @@ def readCitsMtrx(filepath):
         "dV": abs(vEnd - vStart) / (divider * zPt),
         # "dV": np.sign(vEnd-vStart)*abs(vEnd - vStart) / (divider * zPt),
     }
-    print(xPx, yPx, xL,yL)
+    print(xPx, yPx, xL, yL)
     if divider != 1:
         logging.info("A divider of " + str(divider) + " was found and applied")
 
@@ -175,8 +172,9 @@ def readCitsMtrx(filepath):
     topo = readTopo(topopath) if os.path.exists(topopath) else None
     return topo, m_data, channelList, m_params
 
+
 def readCitsAscii(filepath):
-    """ Reads an Ascii CITS file (Omicron exported from SPIP) 
+    """Reads an Ascii CITS file (Omicron exported from SPIP)
     and stores all the parameters"""
     with open(filepath, "r") as f:
         divider = 10
@@ -236,7 +234,7 @@ def readCitsAscii(filepath):
                 # No need to reverse the backward data as it was from Vmin to Vmax in the file as the fwd data
                 # Backward data
                 m_data[1][y][x] = np.float64(data_list[zPt : 2 * zPt]) * unit
-    if vStart>0 :  # If start bias is positive, ascii is saved in reverse order
+    if vStart > 0:  # If start bias is positive, ascii is saved in reverse order
         V2 = vStart
         vStart = vEnd
         vEnd = V2
@@ -251,7 +249,7 @@ def readCitsAscii(filepath):
         "vEnd": vEnd / divider,
         "dV": abs(vEnd - vStart) / (divider * zPt),
     }
-    print(xPx, yPx, xL,yL)
+    print(xPx, yPx, xL, yL)
 
     if divider != 1:
         logging.info("A divider of " + str(divider) + " was found and applied")
@@ -261,13 +259,18 @@ def readCitsAscii(filepath):
     topo = readTopo(topopath) if os.path.exists(topopath) else None
     return topo, m_data, channelList, m_params
 
+
 def conv(x):
-    return x.replace(',', '.').encode()
+    return x.replace(",", ".").encode()
+
 
 def readTopo(filepath):
-    """ Reads a topography file (in test). Used for txt files. """
+    """Reads a topography file (in test). Used for txt files."""
     # return np.genfromtxt(filepath, delimiter="\t", comments="#")
-    return np.genfromtxt((conv(x) for x in open(filepath)), delimiter='\t', comments="#")
+    return np.genfromtxt(
+        (conv(x) for x in open(filepath)), delimiter="\t", comments="#"
+    )
+
 
 def readCits3dsBin(filepath):
     # The divider is already taken into account by Nanonis during the experiment so no need to process it again*
@@ -287,10 +290,10 @@ def readCits3dsBin(filepath):
                 yPx = int(splitted_line[-1])
             # Center coordinates and metric dimensions in nm (Grid settings also contains other data)
             elif "Grid settings" in line:
-                xC = float(line.split(";")[0].split("=")[-1]) * (10 ** 9)
-                yC = float(line.split(";")[1]) * (10 ** 9)
-                xL = float(line.split(";")[-3]) * (10 ** 9)
-                yL = float(line.split(";")[-2]) * (10 ** 9)
+                xC = float(line.split(";")[0].split("=")[-1]) * (10**9)
+                yC = float(line.split(";")[1]) * (10**9)
+                xL = float(line.split(";")[-3]) * (10**9)
+                yL = float(line.split(";")[-2]) * (10**9)
             elif "Sweep Signal" in line:
                 if line.split('"')[1] == "Z (m)":
                     zSpectro = True
@@ -326,8 +329,8 @@ def readCits3dsBin(filepath):
             return False
         # If it is a Z-Spectroscopy, put the Z boundaries in nm
         if zSpectro:
-            vStart = round(reading[0] * 10 ** 9, 6)
-            vEnd = round(reading[1] * 10 ** 9, 6)
+            vStart = round(reading[0] * 10**9, 6)
+            vEnd = round(reading[1] * 10**9, 6)
         else:
             vStart = round(reading[0], 6)
             vEnd = round(reading[1], 6)
@@ -419,10 +422,10 @@ def readCits3dsBin(filepath):
     for i in range(len(channelList)):
         chan = channelList[i]
         if "(A)" in chan:
-            m_data[i] = np.abs(m_data[i]) * 10 ** 9
+            m_data[i] = np.abs(m_data[i]) * 10**9
             channelList[i] = chan.replace("(A)", "(nA)")
     # Convert topo in nm
-    topo = topo * 10 ** 9
+    topo = topo * 10**9
     # Extract supplementary data for zSpectro
     if zSpectro:
         zSpectroData = {"zChannel": channelList[0]}
@@ -446,7 +449,6 @@ def readCits3dsBin(filepath):
 
 
 def readSm4FileHeader(f, ObjectIDCode):
-
     Header_size = int(np.fromfile(f, dtype=np.uint16, count=1)[0])
     Signature = stringify(np.fromfile(f, dtype=np.uint16, count=18))
     Total_Pagecount = int(np.fromfile(f, dtype=np.uint32, count=1)[0])
@@ -668,7 +670,6 @@ def readCitsSm4Bin(filepath):
         dIdV_Line_Speccount = 0
 
         for j in range(PageIndexHeader_PageCount):
-
             PageHeader, TextStrings = readSm4PageHeader(
                 f, PageHeader, TextStrings, PageIndex, PageIndexHeader_PageCount, j
             )
@@ -684,7 +685,7 @@ def readCitsSm4Bin(filepath):
                 )
             )
             # /4 because total data size is divided by the number of bytes that use each 'long' data
-            #TODO: This takes too much time
+            # TODO: This takes too much time
             ScaleData = [
                 x * PageHeader[j]["ZScale"] + PageHeader[j]["ZOffset"] for x in Data[-1]
             ]
@@ -804,11 +805,11 @@ def readCitsSm4Bin(filepath):
     # Center coordinates and metric dimensions in nm
     xL = abs(
         PageHeader[Spatialpagenumber]["XScale"] * PageHeader[Spatialpagenumber]["Width"]
-    ) * (10 ** 9)
+    ) * (10**9)
     yL = abs(
         PageHeader[Spatialpagenumber]["YScale"]
         * PageHeader[Spatialpagenumber]["Height"]
-    ) * (10 ** 9)
+    ) * (10**9)
 
     # size spatial data
     xPx = int(PageHeader[Spatialpagenumber]["Height"])

@@ -9,7 +9,7 @@ import scipy.optimize
 
 
 def directionAverageCITS(cits_data, nb_to_avg, direction):
-    """ Averages the CITS in one direction. """
+    """Averages the CITS in one direction."""
     nb_channels, yPx, xPx, zPt = cits_data.shape
 
     if direction == "y":
@@ -43,18 +43,18 @@ def normalizeDOS(dos, norm_length=None):
 
 
 def linearFitFunction(x, a, b):
-    """ Basic function for linear fitting. """
+    """Basic function for linear fitting."""
     return a * x + b
 
 
 def planeFitFunction(yx, a, b, c):
-    """ Basic function for plane fitting. """
+    """Basic function for plane fitting."""
     y, x = yx
     return a * x + b * y + c
 
 
 def levelTopoLine(topo):
-    """ Fit and substract a line background for each line of the topo. """
+    """Fit and substract a line background for each line of the topo."""
     yPx, xPx = topo.shape
     topo_leveled = np.zeros_like(topo)
     fit_x = np.arange(xPx)
@@ -69,7 +69,7 @@ def levelTopoLine(topo):
 
 
 def levelTopoPlane(topo):
-    """ Fit and substract by a plane the topo. """
+    """Fit and substract by a plane the topo."""
     Y, X = np.indices(topo.shape)
     fit_yx = np.vstack((Y.ravel(), X.ravel()))
     popt, pcov = sp.optimize.curve_fit(planeFitFunction, fit_yx, topo.ravel())
@@ -77,7 +77,7 @@ def levelTopoPlane(topo):
 
 
 def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
-    """ Do a linear fit of the data and returns the slope and the coef found.
+    """Do a linear fit of the data and returns the slope and the coef found.
     Called for zSpectros.
     """
     yPx, xPx, zPt = data_to_fit.shape
@@ -104,7 +104,7 @@ def extractSlope(topo, data_to_fit, delta_z, cut_off_value):
 
 
 def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
-    """ Finds the pixels on the line from (xi, yi) to (xf, yf) included.
+    """Finds the pixels on the line from (xi, yi) to (xf, yf) included.
     Returns integer arrays.
     """
     # First treat the vertical line case
@@ -167,91 +167,137 @@ def findPixelsOnLine(xi, xf, yi, yf, use_bresenham=False):
 def stringify(array):
     return "".join([chr(x) for x in array])
 
+
 def FeenstraNormalization(data, params, channelList):
-    '''
-    Performs conductance normalization as described in 
+    """
+    Performs conductance normalization as described in
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
-    '''
+    """
     dIdVindex = channelList.index("Data [Fwd]")
-    dIdVFwd = data[dIdVindex,:,:,:]
-    dIdVBwd = data[dIdVindex+1,:,:,:]
+    dIdVFwd = data[dIdVindex, :, :, :]
+    dIdVBwd = data[dIdVindex + 1, :, :, :]
     IVindex = channelList.index("IV_Data [Fwd]")
-    IVFwd = abs(data[IVindex,:,:,:])#+50*10**(-3) # unit : nA from matrix files
-    IVBwd = abs(data[IVindex+1,:,:,:])#+50*10**(-3) # unit : nA from matrix files
+    IVFwd = abs(data[IVindex, :, :, :])  # +50*10**(-3) # unit : nA from matrix files
+    IVBwd = abs(
+        data[IVindex + 1, :, :, :]
+    )  # +50*10**(-3) # unit : nA from matrix files
     # IVFwd = np.where(IVFwd<0.00001,1,IVFwd)
     # IVBwd = np.where(IVBwd<0.00001,1,IVBwd)
     # Vbias = np.array([np.log(abs(params["vStart"] + i * params["dV"]))
     #                     if not(abs(params["vStart"] + i * params["dV"])==0)
     #                     else 1 for i in range(np.shape(IVFwd)[-1])])
-    Vbias = np.array([abs(params["vStart"] + i * params["dV"])
-                      for i in range(np.shape(IVFwd)[-1])])
-    Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-2], axis=0)
-    Vbias = np.concatenate([Vbias]*np.shape(dIdVFwd)[-3], axis=0)
+    Vbias = np.array(
+        [abs(params["vStart"] + i * params["dV"]) for i in range(np.shape(IVFwd)[-1])]
+    )
+    Vbias = np.concatenate([Vbias] * np.shape(dIdVFwd)[-2], axis=0)
+    Vbias = np.concatenate([Vbias] * np.shape(dIdVFwd)[-3], axis=0)
     Vbias = np.reshape(Vbias, np.shape(dIdVFwd))
-    Norm_conductanceFwd = dIdVFwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVFwd)
-    Norm_conductanceBwd = dIdVBwd*params['LIsensi']*Vbias / (10*params['AmpMod']*params['Gain']*10**(-6)*IVBwd)
+    Norm_conductanceFwd = (
+        dIdVFwd
+        * params["LIsensi"]
+        * Vbias
+        / (10 * params["AmpMod"] * params["Gain"] * 10 ** (-6) * IVFwd)
+    )
+    Norm_conductanceBwd = (
+        dIdVBwd
+        * params["LIsensi"]
+        * Vbias
+        / (10 * params["AmpMod"] * params["Gain"] * 10 ** (-6) * IVBwd)
+    )
     Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
     return Norm_conductance
 
-def savgolderivative(data,window,polyorder,shape,dV,deriv=0,):
-    d = [sp.signal.savgol_filter(
-            data[i,j,:], window_length=window, polyorder=polyorder,deriv=deriv, delta=dV) 
-            for i in range(shape[0]) for j in range(shape[1]) ]
+
+def savgolderivative(
+    data,
+    window,
+    polyorder,
+    shape,
+    dV,
+    deriv=0,
+):
+    d = [
+        sp.signal.savgol_filter(
+            data[i, j, :],
+            window_length=window,
+            polyorder=polyorder,
+            deriv=deriv,
+            delta=dV,
+        )
+        for i in range(shape[0])
+        for j in range(shape[1])
+    ]
     return np.reshape(d, np.shape(data))
 
-def diffderivative(data,shape):
-     d = [np.hstack((data[i,j,0], data[i,j,:],data[i,j,-1]))[ 2:]
-          - np.hstack((data[i,j,0],data[i,j,:],data[i,j,-1]))[:-2]
-          for i in range(shape[0]) for j in range(shape[1])]
-     # d = np.reshape(d, (np.shape(data)[0], np.shape(data)[1], np.shape(data)[2]-2))
-     d = np.reshape(d, np.shape(data))
-     return d
+
+def diffderivative(data, shape):
+    d = [
+        np.hstack((data[i, j, 0], data[i, j, :], data[i, j, -1]))[2:]
+        - np.hstack((data[i, j, 0], data[i, j, :], data[i, j, -1]))[:-2]
+        for i in range(shape[0])
+        for j in range(shape[1])
+    ]
+    # d = np.reshape(d, (np.shape(data)[0], np.shape(data)[1], np.shape(data)[2]-2))
+    d = np.reshape(d, np.shape(data))
+    return d
+
 
 def FeenstraNormalization_log(data, params, channelList):
-    '''
-    Performs conductance normalization as described in 
+    """
+    Performs conductance normalization as described in
     R. M. Feenstra et al., Surface Science 181, (1986)
     https://www.sciencedirect.com/science/article/pii/0039602887901701
-    '''
-    savgolfilter=1
+    """
+    savgolfilter = 1
     IVindex = channelList.index("IV_Data [Fwd]")
-    IVFwd = abs(data[IVindex,:,:,:])
-    IVBwd = abs(data[IVindex+1,:,:,:])
-    lnIVFwd = np.array(np.log(IVFwd+5*10**(-3))) # unit : nA from matrix files
-    lnIVBwd = np.array(np.log(IVBwd+5*10**(-3)))
-    lnVbias = np.array([np.log(abs(params["vStart"] + i * params["dV"]))
-                        if not(abs(params["vStart"] + i * params["dV"])==0)
-                        else 1 for i in range(np.shape(lnIVFwd)[-1])])
+    IVFwd = abs(data[IVindex, :, :, :])
+    IVBwd = abs(data[IVindex + 1, :, :, :])
+    lnIVFwd = np.array(np.log(IVFwd + 5 * 10 ** (-3)))  # unit : nA from matrix files
+    lnIVBwd = np.array(np.log(IVBwd + 5 * 10 ** (-3)))
+    lnVbias = np.array(
+        [
+            np.log(abs(params["vStart"] + i * params["dV"]))
+            if not (abs(params["vStart"] + i * params["dV"]) == 0)
+            else 1
+            for i in range(np.shape(lnIVFwd)[-1])
+        ]
+    )
     # Vbias = np.array([params["vStart"] + i * params["dV"] if not (("vStart"] + i * params["dV"]) == 0) else for i in range(len(IVFwd))])
-    lnVbias = np.concatenate([lnVbias]*np.shape(lnIVFwd)[-2], axis=0)
-    lnVbias = np.concatenate([lnVbias]*np.shape(lnIVFwd)[-3], axis=0)
+    lnVbias = np.concatenate([lnVbias] * np.shape(lnIVFwd)[-2], axis=0)
+    lnVbias = np.concatenate([lnVbias] * np.shape(lnIVFwd)[-3], axis=0)
     lnVbias = np.reshape(lnVbias, np.shape(lnIVFwd))
     if savgolfilter:
-        dlnIVFwd = savgolderivative(lnIVFwd,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
-        dlnIVBwd = savgolderivative(lnIVBwd,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
-        dlnVbias = savgolderivative(lnVbias,31,2,np.shape(lnIVFwd[:,:,0]), deriv=1 )
+        dlnIVFwd = savgolderivative(lnIVFwd, 31, 2, np.shape(lnIVFwd[:, :, 0]), deriv=1)
+        dlnIVBwd = savgolderivative(lnIVBwd, 31, 2, np.shape(lnIVFwd[:, :, 0]), deriv=1)
+        dlnVbias = savgolderivative(lnVbias, 31, 2, np.shape(lnIVFwd[:, :, 0]), deriv=1)
     else:
-        dlnIVFwd = diffderivative(lnIVFwd, np.shape(lnIVFwd[:,:,0]))
-        dlnIVBwd = diffderivative(lnIVBwd, np.shape(lnIVFwd[:,:,0]))
-        dlnVbias = diffderivative(lnVbias, np.shape(lnIVFwd[:,:,0]))
-    Norm_conductanceFwd = dlnIVFwd/dlnVbias
-    Norm_conductanceBwd = dlnIVBwd/dlnVbias
+        dlnIVFwd = diffderivative(lnIVFwd, np.shape(lnIVFwd[:, :, 0]))
+        dlnIVBwd = diffderivative(lnIVBwd, np.shape(lnIVFwd[:, :, 0]))
+        dlnVbias = diffderivative(lnVbias, np.shape(lnIVFwd[:, :, 0]))
+    Norm_conductanceFwd = dlnIVFwd / dlnVbias
+    Norm_conductanceBwd = dlnIVBwd / dlnVbias
     Norm_conductance = np.concatenate(([Norm_conductanceFwd], [Norm_conductanceBwd]))
     return Norm_conductance
 
+
 def derivate_IV(IVdata, dV):
-    '''
+    """
     Calculates derivative of IVdata
     Using either savgol derivative or savgol filtering and by hand derivative
-    '''
+    """
     savgolfilter = 1
     if savgolfilter:
-        dIVdata = -savgolderivative(IVdata, 11, 2, np.shape(IVdata[:,:,0]), dV, deriv=1)
+        dIVdata = -savgolderivative(
+            IVdata, 11, 2, np.shape(IVdata[:, :, 0]), dV, deriv=1
+        )
         # dIVdata = savgolderivative(IVdata, 81, 2, np.shape(IVdata[:,:,0]))
     else:
-        dIVdata = -diffderivative(
-            savgolderivative(IVdata, 31, 2, np.shape(IVdata[:,:,0])), 
-            np.shape(IVdata[:,:,0])
-                                 )/dV
+        dIVdata = (
+            -diffderivative(
+                savgolderivative(IVdata, 31, 2, np.shape(IVdata[:, :, 0])),
+                np.shape(IVdata[:, :, 0]),
+            )
+            / dV
+        )
     return dIVdata

@@ -7,7 +7,7 @@ XPX = 10
 
 
 class TestProcessing(unittest.TestCase):
-    """ Tests for processing. """
+    """Tests for processing."""
 
     def gen_dummy_cits_data(self):
         return np.random.random((2, YPX, XPX, 100))
@@ -28,7 +28,7 @@ class TestProcessing(unittest.TestCase):
         return raw_topo, true_topo, line_background
 
     def test_directionAverageCITS(self):
-        """ Tests that the direction average returns the approriate shape. """
+        """Tests that the direction average returns the approriate shape."""
         cits_data = self.gen_dummy_cits_data()
         binning = 2
         initial_shape = cits_data.shape
@@ -54,27 +54,27 @@ class TestProcessing(unittest.TestCase):
         )
 
     def test_normalizeDOS(self):
-        """ Tests that normalizeDOS returns the approriate shape. """
+        """Tests that normalizeDOS returns the approriate shape."""
         cits_data = self.gen_dummy_cits_data()
         norm_cits = processing.normalizeDOS(cits_data)
         self.assertEqual(norm_cits.shape, cits_data.shape)
 
     def test_levelTopoLine(self):
-        """ Tests that levelTopoLine allows to remove line backgrounds. """
+        """Tests that levelTopoLine allows to remove line backgrounds."""
         raw_topo, true_topo, line_background = self.gen_real_topo()
         leveled_topo = processing.levelTopoLine(raw_topo)
 
         np.testing.assert_almost_equal(true_topo, leveled_topo)
 
     def test_levelTopoPlane(self):
-        """ Tests that levelTopoPlane allows to remove line backgrounds. """
+        """Tests that levelTopoPlane allows to remove line backgrounds."""
         raw_topo, true_topo, line_background = self.gen_real_topo()
         leveled_topo = processing.levelTopoPlane(raw_topo)
 
         np.testing.assert_almost_equal(true_topo, leveled_topo)
 
     def test_extractSlope(self):
-        """ Tests that extractSlope returns the approriate shapes. """
+        """Tests that extractSlope returns the approriate shapes."""
         dummy_channel = self.gen_dummy_cits_data()[0]
         dummy_topo = self.gen_dummy_topo()
         slope_data, coef_data, zg = processing.extractSlope(
@@ -85,7 +85,7 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(zg.shape, dummy_channel.shape)
 
     def test_findPixelsOnLine_45deg(self):
-        """ The algo should find pixels of coordinates (i,i) for a line at 45 degrees."""
+        """The algo should find pixels of coordinates (i,i) for a line at 45 degrees."""
         n_pixels = 5
         xi, xf = 0, n_pixels
         yi, yf = 0, n_pixels
@@ -95,7 +95,7 @@ class TestProcessing(unittest.TestCase):
             self.assertEqual(i, pixels_y[i])
 
     def test_findPixelsOnLine_vertical(self):
-        """ The algo should find pixels of coordinates (0,i) for a vertical line."""
+        """The algo should find pixels of coordinates (0,i) for a vertical line."""
         n_pixels = 5
         xi, xf = 0, 0
         yi, yf = 0, n_pixels
@@ -105,7 +105,7 @@ class TestProcessing(unittest.TestCase):
             self.assertEqual(i, pixels_y[i])
 
     def test_findPixelsOnLine_horizontal(self):
-        """ The algo should find pixels of coordinates (i,0) for an horizontal line."""
+        """The algo should find pixels of coordinates (i,0) for an horizontal line."""
         n_pixels = 5
         xi, xf = 0, n_pixels
         yi, yf = 0, 0
@@ -115,7 +115,7 @@ class TestProcessing(unittest.TestCase):
             self.assertEqual(0, pixels_y[i])
 
     def test_findPixelsOnLine_any(self):
-        """ The algo should a least include the first and the last pixel for any line. """
+        """The algo should a least include the first and the last pixel for any line."""
         n_pixels = 5
         xi, xf = np.random.randint(0, n_pixels, size=2)
         yi, yf = np.random.randint(0, n_pixels, size=2)
@@ -126,7 +126,7 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(yf, pixels_y[-1])
 
     def test_stringify(self):
-        """ Tests that an array is correctly converted in string. """
+        """Tests that an array is correctly converted in string."""
         test_string = "Array"
         array_to_str = np.array([ord(x) for x in test_string], dtype=int)
         self.assertEqual(processing.stringify(array_to_str), test_string)
