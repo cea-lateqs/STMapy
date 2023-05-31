@@ -123,11 +123,7 @@ def readCitsMtrx(filepath):
     yL=float(params['EEPA::XYScanner.Height'][0])*10**9
     vStart=float(params['EEPA::Spectroscopy.Device_1_Start'][0])
     vEnd=float(params['EEPA::Spectroscopy.Device_1_End'][0])
-    if vStart>0 :  # If start bias is positive, ascii is saved in reverse order
-        V2 = vStart
-        vStart = vEnd
-        vEnd = V2
-        
+
     scandirection = ['forward/up', 'backward/up','forward/down', 'backward/down']
     tracedirection = ['trace', 'retrace']
     channelList = []
@@ -145,8 +141,12 @@ def readCitsMtrx(filepath):
                 channelList.append(scan+" ["+trace+"]")
             except KeyError:
                 pass
-    
-    m_data = np.flip(m_data, axis =-1)
+        
+    if vStart>0 :  # If start bias is positive, ascii is saved in reverse order
+        V2 = vStart
+        vStart = vEnd
+        vEnd = V2
+        m_data = np.flip(m_data, axis =-1)
 
     if filepath.split(".")[-1]=='I(V)_mtrx':
         m_data = m_data*unit
