@@ -9,6 +9,7 @@ from stmapy import citswidget
 
 def main():
     logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
+    logging.getLogger('matplotlib.font_manager').disabled = True
     app = QtWidgets.QApplication(sys.argv)
     mw = citswidget.CitsWidget(None)
     mw.show()

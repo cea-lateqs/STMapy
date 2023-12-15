@@ -294,6 +294,9 @@ class CitsWidget(QtWidgets.QMainWindow):
 
     def drawTopo(self):
         """Draws the topography read while opening the CITS."""
+        if self.topo is None:
+            logging.error('Please provide valid topo.txt file')
+            return
         assert self.topo.ndim == 2
         yPx, xPx = self.topo.shape
         level_algo = self.config["level_topo"]
@@ -699,15 +702,14 @@ class CitsWidget(QtWidgets.QMainWindow):
                 vStart = self.cits_params["vStart"]
                 vEnd = self.cits_params["vEnd"]
                 dataToFit = self.lastSpectrum[0]
-            X = np.arange(vStart, vEnd, dV)
-            popt, pcov = sp.optimize.curve_fit(linearFitFunction, X, dataToFit)
+            popt, pcov = sp.optimize.curve_fit(linearFitFunction, voltages, dataToFit)
             slope, coef = popt
             logging.info(
                 "Linear fit gives a slope of {} and a coef of {}".format(slope, coef)
             )
             self.ax_spec.plot(
-                X,
-                slope * X + coef,
+                voltages,
+                slope * voltages + coef,
                 label="Linear fit of " + self.lastSpectrum[1],
                 color=self.getSpectrumColor(self.nSpectraDrawn - 1),
                 linestyle="--",
@@ -776,10 +778,20 @@ class CitsWidget(QtWidgets.QMainWindow):
         output = []
         for line in self.ax_spec.lines:
             # If first line, add the X-axis data
-            if len(output) == 0:
+            if len(output) == 0 and not(self.ui_vLineBox.isChecked()) :
                 header += "X-Axis,"
-                output.append(line._x)
-            output.append(line._y)
+                output.append(line.get_xdata())
+                output.append(line.get_ydata())
+            elif len(output) == 0:
+                header += "X-Axis,"
+                dV = self.cits_params["dV"]
+                vStart = self.cits_params["vStart"]
+                vEnd = self.cits_params["vEnd"]
+                voltages = np.arange(vStart, vEnd, dV)
+                output.append(voltages)
+                logging.info("Please unselect Voltage index guideline box for proper saving")
+            else: 
+                output.append(line.get_ydata())
             # Replace ',' in the labels to avoid problems when exporting as CSV
             header += line._label.replace(",", "/") + ","
         # Crop last comma after looping on lines
@@ -981,7 +993,6 @@ class CitsWidget(QtWidgets.QMainWindow):
                         / d
                         * np.arange(-len(x_plot) / (2), len(x_plot) / (2), 1)
                     )
-                    print(len(x_plot), len(x_array))
                     ax.set_xlabel("K Distance ($nm^{-1}$)")
                 else:
                     x_array = np.sqrt(
@@ -991,7 +1002,6 @@ class CitsWidget(QtWidgets.QMainWindow):
             else:
                 x_array = np.arange(len(x_plot))
                 ax.set_xlabel("Pixels")
-                print(len(x_plot), len(x_array))
             ax.set_xlim([x_array[0], x_array[-1]])
 
             # display FFT if asked
@@ -1234,7 +1244,7 @@ class CitsWidget(QtWidgets.QMainWindow):
     def clearVoltageLine(self):
         """Removes the vertical voltage line."""
         if self.voltageLine is not None:
-            self.ax_spec.lines.pop(self.ax_spec.lines.index(self.voltageLine))
+            self.ax_spec.lines[(self.ax_spec.lines.index(self.voltageLine))].remove
             self.voltageLine = None
             self.ui_specWidget.draw()
 
@@ -1362,7 +1372,10 @@ class CitsWidget(QtWidgets.QMainWindow):
                 )
             else:
                 XYmap.set_clim(0)
-
+            
+            
+            logging.info("Finished exporting gif at {}".format(self.wdir))
+            
             pyplot.savefig(self.wdir + "/giftemp{}.png".format(i))
 
             frame = Image.open(self.wdir + "/giftemp{}.png".format(i))
@@ -1374,12 +1387,24 @@ class CitsWidget(QtWidgets.QMainWindow):
 
         frame_one = frames[0]
 
+        # frame_one.save(
+        #     self.wdir
+        #     + "/"
+        #     + self.cits_name
+        #     + "channel "
+        #     + self.channelList[chan]
+        #     + ".gif",
+        #     format="GIF",
+        #     append_images=frames,
+        #     save_all=True,
+        #     duration=500,
+        #     loop=0,
+        #     dpi=50,
+        # )
         frame_one.save(
             self.wdir
             + "/"
-            + self.cits_name
-            + "channel "
-            + self.channelList[chan]
+            + "test"
             + ".gif",
             format="GIF",
             append_images=frames,
