@@ -12,7 +12,7 @@ assert __version__ is not None
 setuptools.setup(
     name="stmapy",
     version="0.5.2",
-    authors="Loïc Huder, Florie Mesple",
+    authors="Loïc Huder, Florie Mesple, Vincent Renard",
     author_email="loic.huder@gmail.com, florie.mesple@gmail.com",
     description="Scanning tunneling microscopy analysis in Python",
     long_description=long_description,
@@ -20,7 +20,7 @@ setuptools.setup(
     url="https://github.com/cea-lateqs/STMapy",
     packages=setuptools.find_packages(),
     package_data={
-        "stmapy": ["*.json", "*.mplstyle", "*.png"],
+        "stmapy": ["*.json", "*.mplstyle", "*.png","*.ui"],
     },
     include_package_data=True,
     classifiers=[
@@ -36,7 +36,7 @@ setuptools.setup(
         "numpy",
         "scipy>=0.17",
         "matplotlib>=2.0",
-        "pyqt5",
+        "PyQt5",
         "access2thematrix",
     ],
     tests_require=["h5py"],

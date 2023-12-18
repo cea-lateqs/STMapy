@@ -39,6 +39,7 @@ Requirements should automatically be installed when running the install with `pi
   - Scipy (tested under 1.10)
   - Matplotlib, at least version 2.0 (tested under 3.7.0)
 - PyQt 5
+-acces2thematrix
 
 ## Using Stmapy
 
