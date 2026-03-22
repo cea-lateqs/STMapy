@@ -5,7 +5,7 @@ import logging
 import json
 import numpy as np
 import struct
-import os.path
+from pathlib import Path
 import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
 from stmapy.processing import extractSlope, stringify
@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
 def readConfig(config_filepath):
     """Reads the config and sets defaults for entries not read"""
     config = DEFAULT_CONFIG
-    if not os.path.exists(config_filepath):
+    if not Path(config_filepath).exists():
         raise IOError("{} is not a valid path to a configuration file !")
     with open(config_filepath) as f:
         read_config = json.load(f)
@@ -33,7 +33,7 @@ def readConfig(config_filepath):
     config.update(read_config)
 
     # Expand '~' to $HOME
-    config["working_directory"] = os.path.expanduser(config["working_directory"])
+    config["working_directory"] = Path.home() / config["working_directory"]
 
     return config
 
@@ -42,15 +42,13 @@ def setUpConfig(config_filepath):
     """Reads and set up config by doing various matplotlib checks."""
     config = readConfig(config_filepath)
 
-    if not os.path.exists(config["working_directory"]):
+    if not Path(config["working_directory"]).exists():
         logging.warning(
             "{} is not a valid path ! Check your config file.".format(
                 config["working_directory"]
             )
         )
-        config["working_directory"] = os.path.expanduser(
-            DEFAULT_CONFIG["working_directory"]
-        )
+        config["working_directory"] = Path.home() / DEFAULT_CONFIG["working_directory"]
 
     if config["matplotlib_stylesheet"] is not None:
         try:
@@ -98,7 +96,6 @@ def readCitsMtrx(filepath):
     using S. Zevenhuizen package access2thematrix 
     https://pypi.org/project/access2theMatrix/ """
     divider = 1
-    LIfactor = -1
     offset = 0
     logscale = 0
     unit = 10**12 #pA
@@ -155,9 +152,9 @@ def readCitsMtrx(filepath):
     if filepath.split(".")[-1]=='I(V)_mtrx':
         m_data = m_data*unit
 
-    m_data = m_data*LIfactor+offset #!!!
+    m_data = m_data+offset
     if logscale :
-        m_data = np.log(m_data) #!!!
+        m_data = np.log(m_data)
     
     zPt=np.shape(m_data)[-1]
     xPx = np.shape(m_data)[-2]
@@ -175,20 +172,21 @@ def readCitsMtrx(filepath):
         "dV": abs(vEnd - vStart) / (divider * zPt),
         # "dV": np.sign(vEnd-vStart)*abs(vEnd - vStart) / (divider * zPt),
     }
-    print(xPx, yPx, xL,yL)
+
     if divider != 1:
         logging.info("A divider of " + str(divider) + " was found and applied")
-    if LIfactor != 1:
-        logging.info("An offset of " + str(LIfactor) + " was found and applied")
     if offset != 1:
         logging.info("An offset of " + str(offset) + " was found and applied")
     if logscale :
         logging.info("A logscale was applied")
 
 
-    # Check if a topo file exists and read it if yes
-    topopath = os.path.join(os.path.dirname(filepath), "Topo.txt")
-    topo = readTopo(topopath) if os.path.exists(topopath) else None
+    # Check if a topo file exists and read it if yes    # Check if a topo file exists and read it if yes
+    topopath = Path(filepath)
+    topopath.rename(topopath.with_suffix('.Z_mtrx'))
+    if Path(topopath).exists():
+        topo = readTopo(topopath)
+    else : topo = None
     return topo, m_data, channelList, m_params
 
 def readCitsAscii(filepath):
@@ -273,8 +271,10 @@ def readCitsAscii(filepath):
         logging.info("A divider of " + str(divider) + " was found and applied")
 
     # Check if a topo file exists and read it if yes
-    topopath = os.path.join(os.path.dirname(filepath), "Topo.txt")
-    topo = readTopo(topopath) if os.path.exists(topopath) else None
+    topopath = Path(filepath).parent / "Topo.txt"
+    if Path(topopath).exists():
+        topo = readTopo(topopath) 
+    else : topo = None
     return topo, m_data, channelList, m_params
 
 

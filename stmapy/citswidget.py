@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import os.path
+from pathlib import Path
 import numpy as np
 import scipy as sp
 import scipy.optimize
@@ -39,7 +39,7 @@ from scipy.signal import find_peaks
 
 # Set style
 matplotlib.pyplot.style.use(
-    os.path.join(os.path.dirname(__file__), "stmapyStyle.mplstyle")
+    Path(__file__).parent / "stmapyStyle.mplstyle"
 )
 
 # Set explictly the backend to Qt for consistency with pyqt.
@@ -52,7 +52,7 @@ class CitsWidget(QtWidgets.QMainWindow):
     def __init__(self, parent):
         """Builds the widget with parent widget in arg"""
         QtWidgets.QMainWindow.__init__(self, parent)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), "ui_citswidget.ui"), self)
+        uic.loadUi(Path(__file__).parent / "ui_citswidget.ui", self)
         # Set up the user interface from Designer.
         self.setAutoFillBackground(True)
         # TODO: CITS should be a dedicated object
@@ -85,9 +85,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         # Boolean that is True if a map is loaded
         self.dataAdded = False
         # Parse config
-        self.config = setUpConfig(
-            os.path.join(os.path.dirname(__file__), "config.json")
-        )
+        self.config = setUpConfig(Path(__file__).parent / "config.json")
         self.wdir = self.config["working_directory"]
         self.ui_colorBarBox.setCurrentIndex(
             self.ui_colorBarBox.findText(self.config["default_cmap"])
@@ -177,7 +175,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         cits_names_and_ext = QtWidgets.QFileDialog.getOpenFileNames(
             self,
             "Choose a CITS file to read or several to average",
-            self.wdir,
+            str(self.wdir),
             "Mtrx file (*_mtrx);;Ascii file (*.asc);;RHK file (*.sm4);;3D binary file (*.3ds);;Text file (*.txt);;All files (*)",
         )
         # getOpenFilesNames returns a tuple with Cits_names as first element
@@ -262,8 +260,8 @@ class CitsWidget(QtWidgets.QMainWindow):
                 return
             # After reading, check if the data was read correctly and update the working directory and the map name
             if self.dataLoaded:
-                self.wdir = os.path.dirname(cits)
-                self.cits_name = os.path.basename(cits)
+                self.wdir = Path(__file__).parent
+                self.cits_name = Path(cits).name
                 logging.info(self.cits_name + " read as a " + self.mapType + " map")
             else:
                 logging.error("Problem while reading " + cits)
@@ -357,7 +355,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             IVpath = QtWidgets.QFileDialog.getOpenFileNames(
                 self,
                 "Choose the I(V) CITS file correponding to the alreday loaded dIdV CITS file",
-                self.wdir,
+                str(self.wdir),
                 "Ascii file (*.asc)",
             )
             # getOpenFilesNames returns a tuple with Cits_names as first element
@@ -772,7 +770,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         Saves the plotted spectra *as-is* as CSV data
         """
         output_path, fmt = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Choose a path to save the CSV file", self.wdir, "CSV (*.csv)"
+            self, "Choose a path to save the CSV file", str(self.wdir), "CSV (*.csv)"
         )
         header = ""
         output = []
@@ -1374,21 +1372,22 @@ class CitsWidget(QtWidgets.QMainWindow):
                 XYmap.set_clim(0)
             
             
-            logging.info("Finished exporting gif at {}".format(self.wdir))
+            logging.info("Finished exporting gif at {}".format(str(self.wdir)))
             
-            pyplot.savefig(self.wdir + "/giftemp{}.png".format(i))
+            pyplot.savefig(str(self.wdir) + "/giftemp{}.png".format(i))
 
-            frame = Image.open(self.wdir + "/giftemp{}.png".format(i))
+            frame = Image.open(str(self.wdir) + "/giftemp{}.png".format(i))
             frames.append(frame)
 
             pyplot.close()
-
-            os.remove(self.wdir + "/giftemp{}.png".format(i))
+            
+            #remove temporary image
+            Path(str(self.wdir) + "/giftemp{}.png".format(i)).unlink()
 
         frame_one = frames[0]
 
         # frame_one.save(
-        #     self.wdir
+        #     str(self.wdir)
         #     + "/"
         #     + self.cits_name
         #     + "channel "
@@ -1402,7 +1401,7 @@ class CitsWidget(QtWidgets.QMainWindow):
         #     dpi=50,
         # )
         frame_one.save(
-            self.wdir
+            str(self.wdir)
             + "/"
             + "test"
             + ".gif",
