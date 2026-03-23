@@ -182,11 +182,14 @@ def readCitsMtrx(filepath):
 
 
     # Check if a topo file exists and read it if yes    # Check if a topo file exists and read it if yes
-    topopath = Path(filepath)
-    topopath.rename(topopath.with_suffix('.Z_mtrx'))
+    
+    
+    # Check if a topo file exists and read it if yes
+    topopath = Path(filepath).parent / "topo.txt"
     if Path(topopath).exists():
-        topo = readTopo(topopath)
+        topo = readTopo(topopath)[::-1] 
     else : topo = None
+    print(topopath)
     return topo, m_data, channelList, m_params
 
 def readCitsAscii(filepath):
@@ -273,7 +276,7 @@ def readCitsAscii(filepath):
     # Check if a topo file exists and read it if yes
     topopath = Path(filepath).parent / "Topo.txt"
     if Path(topopath).exists():
-        topo = readTopo(topopath) 
+        topo = readTopo(topopath)
     else : topo = None
     return topo, m_data, channelList, m_params
 
