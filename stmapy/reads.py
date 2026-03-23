@@ -303,7 +303,7 @@ def readCits3dsBin(filepath):
     with open(filepath, "rb") as f:
         for line in f:
             # Header lines can be treated as regular strings
-            line = line.decode("utf-8")
+            line = line.decode("utf-8", errors='ignore')
             # Pixel dimensions
             if "Grid dim" in line:
                 splitted_line = line.split('"')[1].split()
@@ -315,6 +315,9 @@ def readCits3dsBin(filepath):
                 yC = float(line.split(";")[1]) * (10**9)
                 xL = float(line.split(";")[-3]) * (10**9)
                 yL = float(line.split(";")[-2]) * (10**9)
+            # filetype, not used for now
+            elif "Filetype" in line:
+                filetype = str(line.split("=")[-1])
             elif "Sweep Signal" in line:
                 if line.split('"')[1] == "Z (m)":
                     zSpectro = True
@@ -328,6 +331,10 @@ def readCits3dsBin(filepath):
             # Experiment parameters. Not used for now, only the number is recorded to skip the corresponding bytes afterwards
             elif "Experiment parameters" in line:
                 nbExpParams = len(line.split(";"))
+            #comments from user. Not used for now #TOD, read comments and return them to user.
+            elif "Comment" in line:
+                comment = str(line.split("=")[-1])
+                logging.info("A user comment on this experiment was found :" + comment)
             # End of the header
             elif ":HEADER_END:" in line:
                 header_end_not_found = False
