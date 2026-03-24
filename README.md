@@ -7,7 +7,7 @@ It is written in Python using PyQt for the GUI.
 
 ## Installation
 
-STMapy can also be installed using PyPI : `pip install stmapy`
+STMapy can be installed using PyPI : `pip install stmapy`
 
 STMapy can also be installed from its source code.
 

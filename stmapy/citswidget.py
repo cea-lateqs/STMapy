@@ -260,7 +260,7 @@ class CitsWidget(QtWidgets.QMainWindow):
                 return
             # After reading, check if the data was read correctly and update the working directory and the map name
             if self.dataLoaded:
-                self.wdir = Path(__file__).parent
+                self.wdir = Path(cits).parent
                 self.cits_name = Path(cits).name
                 logging.info(self.cits_name + " read as a " + self.mapType + " map")
             else:
@@ -1155,15 +1155,7 @@ class CitsWidget(QtWidgets.QMainWindow):
             self.xy_map = self.createXYMap(mapData)
             # Set title
             self.ax_map.set_title(
-                self.cits_name
-                + " - "
-                + self.ui_channelBox.currentText()
-                + "\n"
-                + "V="
-                + str(
-                    self.cits_params["vStart"] + voltage_index * self.cits_params["dV"]
-                )
-                + " (V)"
+                "V={:.2E} V".format(self.cits_params["vStart"] + voltage_index * self.cits_params["dV"])
             )
             self.setColorMapLims()
             self.ui_mapWidget.draw()
@@ -1363,7 +1355,9 @@ class CitsWidget(QtWidgets.QMainWindow):
             # Colorbar
             cbar = pyplot.colorbar(XYmap, shrink=0.9, pad=0.05, aspect=15)
             cbar.set_label("LDOS (arb. units)", rotation=90)
-            if self.ui_cbarCustomCheckbox.isChecked():
+            if self.ui_cbarCustomCheckbox.isChecked() and not(
+                    self.ui_cbarLowerBox.text()=='') and not(
+                        self.ui_cbarLowerBox.text()=='') :
                 XYmap.set_clim(
                     float(self.ui_cbarLowerBox.text()),
                     float(self.ui_cbarUpperBox.text()),
