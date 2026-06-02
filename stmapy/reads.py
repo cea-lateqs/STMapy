@@ -323,7 +323,13 @@ def readCits3dsBin(filepath):
                     zSpectro = True
             # Number of points per channel
             elif "Points" in line:
-                zPt = int(line.split("=")[-1])
+                try : 
+                    zPt = int(line.split("=")[-1])
+                except ValueError : 
+                    logging.error(
+                    "Problem while reading the file : Please remove text **Points** from comment."
+                )
+                    pass
             # Channels recorded
             elif "Channels" in line:
                 channelList = line.split('"')[1].split(";")

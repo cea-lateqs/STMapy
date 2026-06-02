@@ -11,12 +11,8 @@ def waterfallPlot(ax, x_indices, yz_data, offset):
 
 def lineTopoPlot(fig, max_x, topo):
     """Draws the topography read while opening a Line Spectro"""
-    yPx, xPx = topo
-    # yPx is 1 (line spectro)
-    assert yPx == 1
-
     ax = fig.add_subplot(111)
-    x_data = np.linspace(0, max_x, xPx)
+    x_data = np.linspace(0, max_x, len(topo[0]))
 
     ax.plot(x_data, topo[0], label="Without line leveling")
     ax.plot(x_data, levelTopoLine(topo)[0], label="With line leveling")
