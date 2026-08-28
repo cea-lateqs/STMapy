@@ -303,7 +303,11 @@ def readCits3dsBin(filepath):
     with open(filepath, "rb") as f:
         for line in f:
             # Header lines can be treated as regular strings
-            line = line.decode("utf-8", errors='ignore')
+            try:
+                line = line.strip().decode()
+            except UnicodeDecodeError:
+                    logging.error('{} has non-uft-8 characters, replacing them.'.format(f.name))
+                    line = line.strip().decode('utf-8', errors='replace')
             # Pixel dimensions
             if "Grid dim" in line:
                 splitted_line = line.split('"')[1].split()
