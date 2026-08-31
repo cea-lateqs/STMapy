@@ -10,6 +10,7 @@ import PyQt5.QtWidgets as QtWidgets
 import matplotlib.pyplot as plt
 from stmapy.processing import extractSlope, stringify
 import access2thematrix as a2m
+import nanonispy
 
 DEFAULT_CONFIG = {
     "working_directory": "~",
@@ -292,8 +293,47 @@ def readTopo(filepath):
         (conv(x) for x in open(filepath)), delimiter="\t", comments="#"
     )
 
-
 def readCits3dsBin(filepath):
+    #TODO: add Z spectro
+    GridSpec = nanonispy.read.Grid(filepath)
+
+    #header
+    header = GridSpec.header
+    
+    #list of channels
+    channelList = list(GridSpec.signals.keys())
+    channelList.remove('params')
+    channelList.remove('topo')
+    channelList.remove('sweep_signal')
+    
+    #Vbias 
+    Bias = GridSpec.signals['sweep_signal']
+    
+    #topo
+    topo = GridSpec.signals['topo'] * 10**9 # in nm
+    
+    #data
+    m_data = np.array([GridSpec.signals[chan] for chan in channelList])
+    
+    m_params = {
+        "xPx": header['dim_px'][0],
+        "yPx": header['dim_px'][1],
+        "xC": header['pos_xy'][0],
+        "yC": header['pos_xy'][1],
+        "xL": header['size_xy'][0],
+        "yL": header['size_xy'][1],
+        "zPt": len(Bias),
+        "vStart": float(header['Bias Spectroscopy>Sweep Start (V)']),
+        "vEnd": float(header['Bias Spectroscopy>Sweep End (V)']),
+        "dV": abs(Bias[0]-Bias[1]),
+    }
+    
+    return topo, m_data, channelList, m_params, None
+
+
+def readCits3dsBin_struct(filepath):
+    #TODO : the negative sign is not read from the following
+    
     # The divider is already taken into account by Nanonis during the experiment so no need to process it again*
     half = False
     # Read the header of the map until its end ("HEADER_END")
