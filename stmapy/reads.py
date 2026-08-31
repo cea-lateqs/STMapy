@@ -325,7 +325,7 @@ def readCits3dsBin(filepath):
         "zPt": len(Bias),
         "vStart": float(header['Bias Spectroscopy>Sweep Start (V)']),
         "vEnd": float(header['Bias Spectroscopy>Sweep End (V)']),
-        "dV": abs(Bias[0]-Bias[1]),
+        "dV": (Bias[-1]-Bias[0])/len(Bias),
     }
     
     return topo, m_data, channelList, m_params, None
