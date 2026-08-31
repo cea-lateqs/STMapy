@@ -40,6 +40,7 @@ Requirements should automatically be installed when running the install with `pi
   - Matplotlib, at least version 2.0 (tested under 3.7.0)
 - PyQt 5
 - access2thematrix
+- nanonispy
 
 ## Using Stmapy
 
